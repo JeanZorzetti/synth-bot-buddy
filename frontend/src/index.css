@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Trading Bot Design System - Professional & Data-Oriented */
+
+@layer base {
+  :root {
+    /* Core Brand Colors - Professional Trading Theme */
+    --background: 218 23% 97%;
+    --foreground: 218 33% 15%;
+    
+    /* Trading-specific Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 355 7% 97%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 355 7% 97%;
+    --warning: 46 87% 55%;
+    --warning-foreground: 218 33% 15%;
+    
+    /* Professional UI Colors */
+    --primary: 217 91% 60%;
+    --primary-foreground: 355 7% 97%;
+    --secondary: 218 15% 90%;
+    --secondary-foreground: 218 33% 25%;
+    
+    /* Card & Surface Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 218 33% 15%;
+    --muted: 218 15% 95%;
+    --muted-foreground: 218 15% 45%;
+    --accent: 218 15% 92%;
+    --accent-foreground: 218 33% 15%;
+    
+    /* Interactive Elements */
+    --border: 218 15% 88%;
+    --input: 218 15% 92%;
+    --ring: 217 91% 60%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 218 33% 15%;
+    
+    /* Special Trading Colors */
+    --chart-bg: 218 20% 98%;
+    --grid-lines: 218 15% 92%;
+    --profit-light: 142 76% 95%;
+    --loss-light: 0 84% 96%;
+    
+    /* Component Styling */
+    --radius: 0.75rem;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 70%));
+    
+    /* Shadows */
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    /* Dark theme for professional trading environment */
+    --background: 218 33% 8%;
+    --foreground: 218 15% 92%;
+    
+    --success: 142 76% 46%;
+    --success-foreground: 218 33% 8%;
+    --danger: 0 84% 70%;
+    --danger-foreground: 218 33% 8%;
+    --warning: 46 87% 65%;
+    --warning-foreground: 218 33% 8%;
+    
+    --primary: 217 91% 70%;
+    --primary-foreground: 218 33% 8%;
+    --secondary: 218 25% 15%;
+    --secondary-foreground: 218 15% 85%;
+    
+    --card: 218 30% 12%;
+    --card-foreground: 218 15% 92%;
+    --muted: 218 25% 18%;
+    --muted-foreground: 218 15% 65%;
+    --accent: 218 25% 20%;
+    --accent-foreground: 218 15% 92%;
+    
+    --border: 218 25% 20%;
+    --input: 218 25% 18%;
+    --ring: 217 91% 70%;
+    --popover: 218 30% 12%;
+    --popover-foreground: 218 15% 92%;
+    
+    --chart-bg: 218 30% 10%;
+    --grid-lines: 218 25% 20%;
+    --profit-light: 142 76% 20%;
+    --loss-light: 0 84% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Trading-specific base styles */
+  .trading-gradient {
+    background: var(--gradient-primary);
+  }
+  
+  .success-gradient {
+    background: var(--gradient-success);
+  }
+  
+  .danger-gradient {
+    background: var(--gradient-danger);
+  }
+}
+
+@layer components {
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full animate-pulse;
+  }
+  
+  .status-running {
+    @apply bg-success;
+  }
+  
+  .status-stopped {
+    @apply bg-muted-foreground;
+  }
+  
+  .status-error {
+    @apply bg-danger;
+  }
+  
+  /* Trading cards */
+  .trading-card {
+    @apply bg-card border border-border rounded-lg shadow-sm;
+  }
+  
+  /* Chart container */
+  .chart-container {
+    @apply bg-chart-bg border border-border rounded-lg;
+  }
+}
