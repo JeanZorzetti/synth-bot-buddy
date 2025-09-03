@@ -14,9 +14,14 @@ import {
   BarChart3,
   AlertCircle,
   CheckCircle2,
-  Settings
+  Settings,
+  Wifi,
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBot } from '@/hooks/useBot';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TradeData {
   time: string;
@@ -31,11 +36,19 @@ interface ActivityLog {
 }
 
 export default function Dashboard() {
-  const [botRunning, setBotRunning] = useState(false);
-  const [balance, setBalance] = useState(1250.75);
-  const [sessionPnL, setSessionPnL] = useState(45.25);
-  const [winRate, setWinRate] = useState(68.5);
-  const [totalTrades, setTotalTrades] = useState(24);
+  const {
+    botStatus,
+    isLoading,
+    isApiAvailable,
+    startBot,
+    stopBot,
+    connectToApi,
+    isStarting,
+    isStopping,
+    isConnecting,
+    buyContract
+  } = useBot();
+  
   const [uptime, setUptime] = useState(0);
   
   const [activityLog, setActivityLog] = useState<ActivityLog[]>([
@@ -65,45 +78,45 @@ export default function Dashboard() {
     }
   ]);
 
-  // Simulate real-time updates
+  // Get real data from backend
+  const botRunning = botStatus?.is_running || false;
+  const balance = botStatus?.balance || 0;
+  const sessionPnL = botStatus?.session_pnl || 0;
+  const totalTrades = botStatus?.trades_count || 0;
+  const lastTick = botStatus?.last_tick;
+  const connectionStatus = botStatus?.connection_status || 'disconnected';
+  
+  // Calculate win rate (placeholder calculation)
+  const winRate = totalTrades > 0 ? Math.max(0, (sessionPnL / (totalTrades * 10)) * 100 + 50) : 0;
+
+  // Update activity log based on real data
+  useEffect(() => {
+    if (lastTick && lastTick.timestamp) {
+      const newActivity: ActivityLog = {
+        id: `tick-${lastTick.timestamp}`,
+        timestamp: new Date(lastTick.timestamp * 1000).toLocaleTimeString('pt-BR', { hour12: false }),
+        message: `Tick recebido: ${lastTick.symbol} = ${lastTick.price}`,
+        type: 'info'
+      };
+      
+      setActivityLog(prev => {
+        // Avoid duplicates
+        if (prev[0]?.id === newActivity.id) return prev;
+        return [newActivity, ...prev.slice(0, 9)];
+      });
+    }
+  }, [lastTick]);
+
+  // Update uptime counter
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (botRunning) {
       interval = setInterval(() => {
         setUptime(prev => prev + 1);
-        
-        // Randomly update activity log
-        if (Math.random() > 0.7) {
-          const messages = [
-            'Analisando Jump 25 Index',
-            'Analisando Volatility 100 Index', 
-            'Ordem PUT executada - $10.00',
-            'Trade finalizado - Lucro: $12.30',
-            'Verificando condições de mercado',
-            'Meta de stop loss atingida'
-          ];
-          
-          const types: ('info' | 'success' | 'error')[] = ['info', 'success', 'info', 'success', 'info', 'error'];
-          const randomIndex = Math.floor(Math.random() * messages.length);
-          
-          const newActivity: ActivityLog = {
-            id: Date.now().toString(),
-            timestamp: new Date().toLocaleTimeString('pt-BR', { hour12: false }),
-            message: messages[randomIndex],
-            type: types[randomIndex]
-          };
-          
-          setActivityLog(prev => [newActivity, ...prev.slice(0, 9)]);
-          
-          // Update stats occasionally
-          if (Math.random() > 0.8) {
-            setSessionPnL(prev => prev + (Math.random() - 0.5) * 20);
-            setTotalTrades(prev => prev + 1);
-            setWinRate(prev => Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 5)));
-          }
-        }
-      }, 3000);
+      }, 1000);
+    } else {
+      setUptime(0);
     }
 
     return () => {
@@ -112,10 +125,24 @@ export default function Dashboard() {
   }, [botRunning]);
 
   const toggleBot = () => {
-    setBotRunning(!botRunning);
-    if (!botRunning) {
-      setUptime(0);
+    if (botRunning) {
+      stopBot();
+    } else {
+      startBot();
     }
+  };
+
+  const handleConnect = () => {
+    connectToApi();
+  };
+
+  const handleBuyCall = () => {
+    buyContract({
+      contract_type: 'CALL',
+      amount: 10,
+      duration: 5,
+      symbol: 'R_75'
+    });
   };
 
   const formatUptime = (seconds: number) => {
@@ -147,7 +174,70 @@ export default function Dashboard() {
               Monitore o desempenho do seu bot de trading em tempo real
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            {isApiAvailable ? (
+              <Badge variant="default" className="gap-1">
+                <Wifi className="h-3 w-3" />
+                Backend Online
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="gap-1">
+                <WifiOff className="h-3 w-3" />
+                Backend Offline
+              </Badge>
+            )}
+          </div>
         </div>
+
+        {/* Connection Status Alert */}
+        {!isApiAvailable && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Backend não está disponível. Para usar o sistema:
+              <br />
+              1. Execute <code className="bg-muted px-1 rounded">python start.py</code> na pasta backend
+              <br />
+              2. Configure seu token Deriv no arquivo .env
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isApiAvailable && connectionStatus === 'disconnected' && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>Desconectado da API Deriv. Clique para conectar.</span>
+              <Button 
+                onClick={handleConnect} 
+                size="sm" 
+                disabled={isConnecting}
+                className="ml-2"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  <>
+                    <Wifi className="mr-2 h-4 w-4" />
+                    Conectar
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isLoading && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>
+              Carregando status do bot...
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -179,6 +269,7 @@ export default function Dashboard() {
               </div>
               <Button 
                 onClick={toggleBot}
+                disabled={!isApiAvailable || connectionStatus === 'disconnected' || isStarting || isStopping}
                 className={cn(
                   "w-full",
                   botRunning 
@@ -186,7 +277,17 @@ export default function Dashboard() {
                     : "success-gradient hover:opacity-90"
                 )}
               >
-                {botRunning ? (
+                {isStarting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Iniciando...
+                  </>
+                ) : isStopping ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Parando...
+                  </>
+                ) : botRunning ? (
                   <>
                     <Pause className="h-4 w-4 mr-2" />
                     Parar Bot
@@ -324,6 +425,17 @@ export default function Dashboard() {
                 <Activity className="h-4 w-4 mr-2" />
                 Relatório de Performance
               </Button>
+              {connectionStatus === 'authenticated' && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handleBuyCall}
+                  disabled={!botRunning}
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Teste: Comprar CALL
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
