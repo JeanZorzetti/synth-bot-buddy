@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 class ConnectRequest(BaseModel):
     api_token: str
 
+class ValidateTokenRequest(BaseModel):
+    api_token: str
+
 # Global instances
 ws_manager: DerivWebSocketManager = None
 capital_manager: CapitalManager = None
@@ -206,6 +209,59 @@ async def list_routes():
             })
     return {"routes": routes, "total": len(routes)}
 
+@app.post("/validate-token")
+async def validate_token(request: ValidateTokenRequest):
+    """Test token validity without affecting the main WebSocket connection"""
+    try:
+        # Create a temporary WebSocket manager for testing
+        app_id = os.getenv("DERIV_APP_ID", "1089")
+        test_ws_manager = DerivWebSocketManager(app_id=app_id, api_token=request.api_token)
+        
+        logger.info(f"Testing token: {request.api_token[:10]}...")
+        
+        # Try to connect
+        success = await test_ws_manager.connect()
+        if not success:
+            return {
+                "valid": False, 
+                "error": "Failed to establish WebSocket connection",
+                "state": test_ws_manager.state.value
+            }
+        
+        # Wait for authentication
+        max_wait = 15  # seconds
+        wait_time = 0
+        while test_ws_manager.state != ConnectionState.AUTHENTICATED and wait_time < max_wait:
+            if test_ws_manager.state == ConnectionState.ERROR:
+                break
+            await asyncio.sleep(0.5)
+            wait_time += 0.5
+        
+        # Check result
+        if test_ws_manager.state == ConnectionState.AUTHENTICATED:
+            # Disconnect test connection
+            await test_ws_manager.disconnect()
+            return {
+                "valid": True,
+                "message": "Token is valid and can authenticate with Deriv API",
+                "state": "authenticated"
+            }
+        else:
+            await test_ws_manager.disconnect()
+            return {
+                "valid": False,
+                "error": f"Authentication failed or timed out",
+                "state": test_ws_manager.state.value
+            }
+            
+    except Exception as e:
+        logger.error(f"Token validation error: {e}")
+        return {
+            "valid": False,
+            "error": str(e),
+            "state": "error"
+        }
+
 @app.get("/status")
 async def get_status():
     """Get current bot status"""
@@ -228,11 +284,13 @@ async def connect_to_deriv(request: ConnectRequest):
         ws_manager.set_connection_handler(handle_connection_status)
         
         # Connect
+        logger.info(f"Attempting connection with token: {request.api_token[:10]}...")
         success = await ws_manager.connect()
         if success:
-            logger.info(f"Connected to Deriv API with token: {request.api_token[:10]}...")
+            logger.info(f"WebSocket connected. Current state: {ws_manager.state.value}")
             return {"status": "connecting", "message": "Connection initiated with provided token"}
         else:
+            logger.error(f"Connection failed. Final state: {ws_manager.state.value}")
             raise HTTPException(status_code=500, detail="Failed to connect to Deriv API")
     except Exception as e:
         logger.error(f"Connection error: {e}")
@@ -271,12 +329,21 @@ async def start_bot():
         # Wait for authentication
         max_wait = 10  # seconds
         wait_time = 0
+        logger.info(f"Waiting for authentication... Current state: {ws_manager.state.value}")
+        
         while ws_manager.state != ConnectionState.AUTHENTICATED and wait_time < max_wait:
             await asyncio.sleep(0.5)
             wait_time += 0.5
+            if wait_time % 2 == 0:  # Log every 2 seconds
+                logger.info(f"Still waiting for auth... State: {ws_manager.state.value}, Wait time: {wait_time}s")
+        
+        logger.info(f"Final authentication state: {ws_manager.state.value}")
         
         if ws_manager.state != ConnectionState.AUTHENTICATED:
-            raise HTTPException(status_code=401, detail="Failed to authenticate with Deriv API")
+            if ws_manager.state == ConnectionState.ERROR:
+                raise HTTPException(status_code=401, detail="Authentication failed - Invalid API token or connection error")
+            else:
+                raise HTTPException(status_code=408, detail=f"Authentication timeout - Current state: {ws_manager.state.value}")
         
         # Subscribe to tick data
         await ws_manager.subscribe_to_ticks("R_75")  # Volatility 75 Index

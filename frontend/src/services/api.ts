@@ -186,6 +186,16 @@ class ApiService {
     return this.get('/capital/history');
   }
 
+  // Token validation
+  async validateToken(apiToken: string): Promise<{
+    valid: boolean;
+    error?: string;
+    message?: string;
+    state: string;
+  }> {
+    return this.post('/validate-token', { api_token: apiToken });
+  }
+
   // Utility method to check if API is available
   async isAvailable(): Promise<boolean> {
     try {

@@ -105,26 +105,38 @@ export const useAuth = () => {
       // Store the API key
       localStorage.setItem('deriv_api_key', apiKey);
 
-      // Try to connect to backend with the token
+      // Try to validate token with backend
       if (isBackendOnline) {
         try {
-          await apiService.connectToApi(apiKey);
-          toast({
-            title: "✅ Login realizado!",
-            description: "Conectado à Deriv API com sucesso.",
-          });
+          const validation = await apiService.validateToken(apiKey);
+          
+          if (validation.valid) {
+            toast({
+              title: "✅ Login realizado!",
+              description: "Token validado e conectado à Deriv API com sucesso.",
+            });
+          } else {
+            toast({
+              title: "⚠️ Token inválido",
+              description: `Erro: ${validation.error || 'Token rejeitado pela API da Deriv'}. Verifique se o token está correto.`,
+              variant: "destructive",
+            });
+            // Don't save invalid tokens
+            setAuthState(prev => ({ ...prev, isValidating: false }));
+            return false;
+          }
         } catch (error: any) {
-          console.error('Backend connection failed:', error);
+          console.error('Token validation failed:', error);
           toast({
-            title: "⚠️ Token salvo",
-            description: "Token salvo localmente. Conexão com Deriv falhará até corrigir o token.",
+            title: "⚠️ Não foi possível validar",
+            description: "Token salvo localmente. Será validado quando possível.",
             variant: "default",
           });
         }
       } else {
         toast({
           title: "✅ Token salvo",
-          description: "Token salvo localmente. Conexão será estabelecida quando backend estiver online.",
+          description: "Token salvo localmente. Será validado quando backend estiver online.",
         });
       }
 
