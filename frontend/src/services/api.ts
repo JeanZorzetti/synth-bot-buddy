@@ -107,7 +107,7 @@ class ApiService {
 
   // Health check
   async getHealth(): Promise<{ status: string; message: string; version: string }> {
-    return this.get('/');
+    return this.get('/health');
   }
 
   // Bot status

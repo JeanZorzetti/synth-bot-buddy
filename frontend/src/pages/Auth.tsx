@@ -251,7 +251,6 @@ export default function Auth() {
                 className="w-full mb-4"
                 onClick={() => {
                   setApiKey('FFJjPKCm9wnktDA');
-                  handleValidateKey();
                 }}
                 disabled={isValidating}
               >

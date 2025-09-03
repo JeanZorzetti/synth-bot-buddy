@@ -75,9 +75,9 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isValidating: true }));
 
     try {
-      // Basic validation
-      if (!apiKey.trim() || apiKey.length < 20) {
-        throw new Error('Token da API inválido. Deve ter pelo menos 20 caracteres.');
+      // Basic validation - accept shorter tokens for development
+      if (!apiKey.trim() || apiKey.length < 10) {
+        throw new Error('Token da API inválido. Deve ter pelo menos 10 caracteres.');
       }
 
       // Check if backend is available
