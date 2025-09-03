@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import os
 import logging
 import asyncio
+import time
 from typing import Dict, Any
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
@@ -60,7 +61,12 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend URLs
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://botderiv.roilabs.com.br",
+        "http://botderiv.roilabs.com.br"
+    ],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,8 +106,47 @@ async def root():
     return {
         "status": "ok", 
         "message": "Cérebro do Synth Bot Buddy está online!",
-        "version": "0.1.0"
+        "version": "0.1.0",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "timestamp": time.time()
     }
+
+@app.get("/health")
+async def health_check():
+    """Detailed health check endpoint for monitoring."""
+    global ws_manager, bot_status
+    
+    health_info = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "0.1.0",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "websocket_manager": {
+            "initialized": ws_manager is not None,
+            "state": ws_manager.state.value if ws_manager else "not_initialized"
+        },
+        "bot_status": bot_status,
+        "dependencies": {
+            "fastapi": True,
+            "websockets": True,
+            "deriv_token_configured": bool(os.getenv("DERIV_API_TOKEN"))
+        }
+    }
+    
+    return health_info
+
+@app.get("/routes")
+async def list_routes():
+    """List all available API routes."""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, 'methods') and hasattr(route, 'path'):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods),
+                "name": getattr(route, 'name', '')
+            })
+    return {"routes": routes, "total": len(routes)}
 
 @app.get("/status")
 async def get_status():
