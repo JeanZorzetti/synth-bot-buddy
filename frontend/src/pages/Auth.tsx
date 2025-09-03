@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,51 +14,76 @@ import {
   CheckCircle2,
   HelpCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Wifi,
+  WifiOff,
+  Loader2
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { apiService } from '@/services/api';
 
 export default function Auth() {
   const [apiKey, setApiKey] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  
+  const { login, isValidating, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+
+  // Check backend status on mount
+  useEffect(() => {
+    const checkBackendStatus = async () => {
+      try {
+        const isOnline = await apiService.isAvailable();
+        setBackendStatus(isOnline ? 'online' : 'offline');
+      } catch {
+        setBackendStatus('offline');
+      }
+    };
+
+    checkBackendStatus();
+    // Check every 30 seconds
+    const interval = setInterval(checkBackendStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleValidateKey = async () => {
     if (!apiKey.trim()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Por favor, insira sua chave de API da Deriv.",
-        variant: "destructive",
-      });
       return;
     }
 
-    setIsLoading(true);
-    
-    // Simulate API validation (in a real app, this would validate with Deriv's API)
-    setTimeout(() => {
-      if (apiKey.length >= 20) {
-        // Store the API key (in a real app, this should be encrypted)
-        localStorage.setItem('deriv_api_key', apiKey);
-        
-        toast({
-          title: "Conexão Estabelecida",
-          description: "Sua chave de API foi validada com sucesso!",
-        });
-        
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Chave Inválida",
-          description: "A chave de API fornecida é inválida. Verifique e tente novamente.",
-          variant: "destructive",
-        });
-      }
-      setIsLoading(false);
-    }, 2000);
+    const success = await login(apiKey);
+    if (success) {
+      navigate('/dashboard');
+    }
   };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isValidating) {
+      handleValidateKey();
+    }
+  };
+
+  const getStatusInfo = () => {
+    switch (backendStatus) {
+      case 'checking':
+        return { icon: Loader2, text: 'Verificando servidor...', color: 'text-muted-foreground', spin: true };
+      case 'online':
+        return { icon: Wifi, text: 'Servidor online', color: 'text-success', spin: false };
+      case 'offline':
+        return { icon: WifiOff, text: 'Servidor offline', color: 'text-danger', spin: false };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+  const StatusIcon = statusInfo.icon;
 
   const ApiGuideContent = () => (
     <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -113,11 +138,19 @@ export default function Auth() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center space-x-2">
             <TrendingUp className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Deriv AI Bot</span>
+            <span className="text-2xl font-bold">BotDeriv</span>
           </div>
           <p className="text-muted-foreground">
-            Bot de IA autônomo para trading em ativos sintéticos
+            Sistema de trading com gestão inteligente de capital
           </p>
+          
+          {/* Server Status */}
+          <div className="flex items-center justify-center space-x-2 pt-2">
+            <StatusIcon className={`h-4 w-4 ${statusInfo.color} ${statusInfo.spin ? 'animate-spin' : ''}`} />
+            <span className={`text-sm ${statusInfo.color}`}>
+              {statusInfo.text}
+            </span>
+          </div>
         </div>
 
         {/* Authentication Card */}
@@ -137,8 +170,10 @@ export default function Auth() {
                   type={showKey ? "text" : "password"}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Cole sua chave de API aqui..."
+                  onKeyPress={handleKeyPress}
+                  placeholder="Cole sua chave de API aqui... (ex: FFJjPKCm9wnktDA)"
                   className="pr-10"
+                  disabled={isValidating}
                 />
                 <button
                   type="button"
@@ -169,21 +204,32 @@ export default function Auth() {
 
             <Button 
               onClick={handleValidateKey}
-              disabled={isLoading}
+              disabled={isValidating || !apiKey.trim()}
               className="w-full success-gradient hover:opacity-90"
             >
-              {isLoading ? (
+              {isValidating ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Validando...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Validando token...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Validar e Salvar Chave
+                  {backendStatus === 'offline' ? 'Salvar Token (Servidor Offline)' : 'Validar e Conectar'}
                 </>
               )}
             </Button>
+
+            {/* Status Information */}
+            {backendStatus === 'offline' && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Servidor offline:</strong> O token será salvo localmente e validado 
+                  quando o servidor estiver disponível.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Security Notice */}
             <Alert>
@@ -194,25 +240,41 @@ export default function Auth() {
               </AlertDescription>
             </Alert>
 
-            {/* Features List */}
+            {/* Quick Login for Development */}
             <div className="pt-4 border-t border-border">
-              <h4 className="text-sm font-medium mb-3">O que você pode fazer:</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium">Login Rápido (Desenvolvimento):</h4>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full mb-4"
+                onClick={() => {
+                  setApiKey('FFJjPKCm9wnktDA');
+                  handleValidateKey();
+                }}
+                disabled={isValidating}
+              >
+                Usar Token de Desenvolvimento
+              </Button>
+              
+              <h4 className="text-sm font-medium mb-3">Funcionalidades do Sistema:</h4>
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Trading automatizado com IA
+                  Gestão inteligente de capital
                 </li>
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Gerenciamento de risco personalizado
+                  Reinvestimento progressivo (20%)
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
+                  Martingale controlado (1.25x)
                 </li>
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
                   Monitoramento em tempo real
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Histórico detalhado de operações
                 </li>
               </ul>
             </div>

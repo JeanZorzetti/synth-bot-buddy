@@ -12,7 +12,7 @@ import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
-// Check if user is authenticated
+// Simple auth check - the useAuth hook will handle the real validation
 const isAuthenticated = () => {
   return localStorage.getItem('deriv_api_key') !== null;
 };

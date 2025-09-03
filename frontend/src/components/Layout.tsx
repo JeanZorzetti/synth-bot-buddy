@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,9 +9,13 @@ import {
   TrendingUp,
   Shield,
   Menu,
-  X
+  X,
+  Wifi,
+  WifiOff,
+  AlertTriangle
 } from 'lucide-react';
-import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useBot } from '@/hooks/useBot';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -21,6 +25,8 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { logout } = useAuth();
+  const { isApiAvailable } = useBot();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
@@ -30,6 +36,25 @@ export function Layout({ children }: LayoutProps) {
 
   const isActive = (href: string) => location.pathname === href;
 
+  const getConnectionStatus = () => {
+    if (isApiAvailable) {
+      return {
+        icon: Wifi,
+        text: 'Backend Online',
+        color: 'text-success'
+      };
+    } else {
+      return {
+        icon: WifiOff,
+        text: 'Backend Offline',
+        color: 'text-danger'
+      };
+    }
+  };
+
+  const connectionStatus = getConnectionStatus();
+  const StatusIcon = connectionStatus.icon;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -38,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-6 w-6 text-primary" />
-              <span className="text-xl font-semibold">Deriv AI Bot</span>
+              <span className="text-xl font-semibold">BotDeriv</span>
             </div>
           </div>
 
@@ -75,10 +100,10 @@ export function Layout({ children }: LayoutProps) {
           {/* Status & Actions */}
           <div className="hidden md:flex items-center space-x-3">
             <div className="flex items-center space-x-2 text-sm">
-              <Shield className="h-4 w-4 text-success" />
-              <span className="text-muted-foreground">Conectado</span>
+              <StatusIcon className={`h-4 w-4 ${connectionStatus.color}`} />
+              <span className={connectionStatus.color}>{connectionStatus.text}</span>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={logout}>
               <Power className="h-4 w-4 mr-2" />
               Sair
             </Button>
@@ -107,10 +132,10 @@ export function Layout({ children }: LayoutProps) {
               ))}
               <div className="pt-2 mt-2 border-t border-border">
                 <div className="flex items-center space-x-2 text-sm mb-3">
-                  <Shield className="h-4 w-4 text-success" />
-                  <span className="text-muted-foreground">Conectado</span>
+                  <StatusIcon className={`h-4 w-4 ${connectionStatus.color}`} />
+                  <span className={connectionStatus.color}>{connectionStatus.text}</span>
                 </div>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={logout}>
                   <Power className="h-4 w-4 mr-2" />
                   Sair
                 </Button>
