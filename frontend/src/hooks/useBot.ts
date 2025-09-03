@@ -76,7 +76,7 @@ export const useBot = (autoRefresh: boolean = true): UseBotReturn => {
 
   // Mutations
   const connectMutation = useMutation({
-    mutationFn: () => apiService.connectToApi(),
+    mutationFn: (apiToken: string) => apiService.connectToApi(apiToken),
     onSuccess: (response) => {
       toast({
         title: "🔗 Conexão",
@@ -167,16 +167,44 @@ export const useBot = (autoRefresh: boolean = true): UseBotReturn => {
   });
 
   // Action callbacks
-  const startBot = useCallback(() => {
-    startMutation.mutate();
-  }, [startMutation]);
+  const startBot = useCallback(async () => {
+    // Ensure we have API token and connection before starting
+    const apiToken = localStorage.getItem('deriv_api_key');
+    if (!apiToken) {
+      toast({
+        title: "❌ Token não encontrado",
+        description: "Faça login primeiro para obter o token da API.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // First ensure connection is established
+      await connectMutation.mutateAsync(apiToken);
+      // Then start the bot
+      startMutation.mutate();
+    } catch (error) {
+      // Connection failed, don't try to start bot
+      console.error('Failed to connect before starting bot:', error);
+    }
+  }, [startMutation, connectMutation]);
 
   const stopBot = useCallback(() => {
     stopMutation.mutate();
   }, [stopMutation]);
 
   const connectToApi = useCallback(() => {
-    connectMutation.mutate();
+    const apiToken = localStorage.getItem('deriv_api_key');
+    if (!apiToken) {
+      toast({
+        title: "❌ Token não encontrado",
+        description: "Faça login primeiro para obter o token da API.",
+        variant: "destructive",
+      });
+      return;
+    }
+    connectMutation.mutate(apiToken);
   }, [connectMutation]);
 
   const disconnectFromApi = useCallback(() => {
