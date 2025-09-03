@@ -116,8 +116,8 @@ class ApiService {
   }
 
   // Connection management
-  async connectToApi(): Promise<ApiResponse> {
-    return this.post('/connect');
+  async connectToApi(apiToken: string): Promise<ApiResponse> {
+    return this.post('/connect', { api_token: apiToken });
   }
 
   async disconnectFromApi(): Promise<ApiResponse> {

@@ -46,14 +46,25 @@ export const useAuth = () => {
           return;
         }
 
-        // Try to connect with stored key - this validates it
-        // We'll add a validation endpoint to the backend
-        setAuthState({
-          isAuthenticated: true,
-          isLoading: false,
-          apiKey: storedKey,
-          isValidating: false,
-        });
+        // Try to connect with stored key to validate it
+        try {
+          await apiService.connectToApi(storedKey);
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            apiKey: storedKey,
+            isValidating: false,
+          });
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          // Keep token but note connection failed
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            apiKey: storedKey,
+            isValidating: false,
+          });
+        }
 
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -94,17 +105,35 @@ export const useAuth = () => {
       // Store the API key
       localStorage.setItem('deriv_api_key', apiKey);
 
+      // Try to connect to backend with the token
+      if (isBackendOnline) {
+        try {
+          await apiService.connectToApi(apiKey);
+          toast({
+            title: "✅ Login realizado!",
+            description: "Conectado à Deriv API com sucesso.",
+          });
+        } catch (error: any) {
+          console.error('Backend connection failed:', error);
+          toast({
+            title: "⚠️ Token salvo",
+            description: "Token salvo localmente. Conexão com Deriv falhará até corrigir o token.",
+            variant: "default",
+          });
+        }
+      } else {
+        toast({
+          title: "✅ Token salvo",
+          description: "Token salvo localmente. Conexão será estabelecida quando backend estiver online.",
+        });
+      }
+
       // Update auth state
       setAuthState({
         isAuthenticated: true,
         isLoading: false,
         apiKey: apiKey,
         isValidating: false,
-      });
-
-      toast({
-        title: "✅ Login realizado!",
-        description: "Token da API salvo com sucesso.",
       });
 
       return true;

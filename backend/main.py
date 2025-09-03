@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
 import os
 import logging
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
 from capital_manager import CapitalManager, TradeResult
@@ -13,6 +14,10 @@ from capital_manager import CapitalManager, TradeResult
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Request models
+class ConnectRequest(BaseModel):
+    api_token: str
 
 # Global instances
 ws_manager: DerivWebSocketManager = None
@@ -50,17 +55,9 @@ async def lifespan(app: FastAPI):
         martingale_multiplier=1.25  # 1.25x martingale
     )
     
-    # Initialize WebSocket manager
-    api_token = os.getenv("DERIV_API_TOKEN")
-    app_id = os.getenv("DERIV_APP_ID", "1089")
-    
-    ws_manager = DerivWebSocketManager(app_id=app_id, api_token=api_token)
-    
-    # Set up event handlers
-    ws_manager.set_tick_handler(handle_tick_data)
-    ws_manager.set_balance_handler(handle_balance_update)
-    ws_manager.set_trade_handler(handle_trade_result)
-    ws_manager.set_connection_handler(handle_connection_status)
+    # WebSocket manager will be initialized when /connect is called with token
+    # This allows dynamic token configuration from frontend
+    logger.info("WebSocket manager will be initialized on first /connect call")
     
     yield
     
@@ -215,20 +212,26 @@ async def get_status():
     return bot_status
 
 @app.post("/connect")
-async def connect_to_deriv():
-    """Connect to Deriv WebSocket API"""
+async def connect_to_deriv(request: ConnectRequest):
+    """Connect to Deriv WebSocket API with provided token"""
     global ws_manager
     
-    if not ws_manager:
-        raise HTTPException(status_code=500, detail="WebSocket manager not initialized")
-    
-    if ws_manager.state in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
-        return {"status": "already_connected", "connection_status": ws_manager.state.value}
-    
     try:
+        # Create new WebSocket manager with provided token
+        app_id = os.getenv("DERIV_APP_ID", "1089")
+        ws_manager = DerivWebSocketManager(app_id=app_id, api_token=request.api_token)
+        
+        # Set up event handlers
+        ws_manager.set_tick_handler(handle_tick_data)
+        ws_manager.set_balance_handler(handle_balance_update)
+        ws_manager.set_trade_handler(handle_trade_result)
+        ws_manager.set_connection_handler(handle_connection_status)
+        
+        # Connect
         success = await ws_manager.connect()
         if success:
-            return {"status": "connecting", "message": "Connection initiated"}
+            logger.info(f"Connected to Deriv API with token: {request.api_token[:10]}...")
+            return {"status": "connecting", "message": "Connection initiated with provided token"}
         else:
             raise HTTPException(status_code=500, detail="Failed to connect to Deriv API")
     except Exception as e:
