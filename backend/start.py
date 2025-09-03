@@ -25,41 +25,38 @@ def check_requirements():
         return False
 
 def check_env_file():
-    """Check if .env file exists and is configured"""
+    """Check if .env file exists (optional now - tokens are set dynamically)"""
     env_file = Path(".env")
     env_example = Path(".env.example")
     
     if not env_file.exists():
+        print("ℹ️  Arquivo .env não encontrado (opcional)")
+        print("💡 Tokens são configurados dinamicamente via frontend")
         if env_example.exists():
-            print("⚠️  Arquivo .env não encontrado")
-            print("💡 Copie .env.example para .env e configure seu token:")
-            print("   cp .env.example .env")
-            return False
-        else:
-            print("❌ Arquivos de configuração não encontrados")
-            return False
+            print("💡 Para configuração manual: cp .env.example .env")
+        return True  # Not required anymore
     
-    # Check if token is configured
+    # Check if token is configured (optional)
     with open(env_file, 'r') as f:
         content = f.read()
         if "your_deriv_api_token_here" in content:
-            print("⚠️  Token da API não configurado no arquivo .env")
-            print("💡 Configure seu DERIV_API_TOKEN no arquivo .env")
-            return False
+            print("ℹ️  Token não configurado no .env (será usado token do frontend)")
+        else:
+            print("✅ Arquivo .env configurado")
     
-    print("✅ Arquivo .env configurado")
     return True
 
 def main():
     print("🚀 Iniciando Synth Bot Buddy Backend...")
     print("=" * 50)
     
-    # Change to backend directory if not already there
+    # Already in backend directory, no need to change
     if not Path("main.py").exists():
-        backend_path = Path("backend")
-        if backend_path.exists():
-            os.chdir(backend_path)
-            print(f"📁 Mudando para diretório: {backend_path.absolute()}")
+        print("❌ main.py não encontrado no diretório atual")
+        print("💡 Execute o script a partir do diretório backend/")
+        return 1
+    
+    print(f"📁 Diretório atual: {Path.cwd()}")
     
     # Check requirements
     print("\n1. Verificando dependências...")
