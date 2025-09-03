@@ -70,7 +70,21 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 .\install.bat
 ```
 
+### "No module named pip" 
+```powershell
+# Repare o pip primeiro
+.\fix-pip.bat
+# Depois tente novamente
+.\install.bat
+```
+
 ### "ModuleNotFoundError: No module named 'fastapi'"
+```powershell
+# Instalação manual individual
+.\install-manual.bat
+```
+
+**Ou manualmente:**
 ```bash
 pip install fastapi uvicorn[standard] websockets pydantic python-dotenv requests
 ```
