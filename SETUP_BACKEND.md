@@ -7,23 +7,38 @@
 ## 🔧 Instalação Rápida
 
 ### 1. Instalar dependências
+
+**Windows:**
+```cmd
+cd backend
+install.bat
+```
+
+**Qualquer Sistema:**
 ```bash
 cd backend
 python install_deps.py
 ```
+*Ou tente: `python3 install_deps.py` ou `py install_deps.py`*
 
-Ou manualmente:
+**Manual:**
 ```bash
-cd backend
 pip install -r requirements.txt
 ```
 
 ### 2. Executar o servidor
+
+**Windows:**
+```cmd
+run.bat
+```
+
+**Qualquer Sistema:**
 ```bash
 # Opção 1: Script simples
 python run.py
 
-# Opção 2: Script completo com verificações
+# Opção 2: Script completo com verificações  
 python start.py
 
 # Opção 3: Direto com uvicorn
