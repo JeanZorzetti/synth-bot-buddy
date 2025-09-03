@@ -8,29 +8,47 @@ import time
 from typing import Dict, Any
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
+from capital_manager import CapitalManager, TradeResult
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global WebSocket manager instance
+# Global instances
 ws_manager: DerivWebSocketManager = None
+capital_manager: CapitalManager = None
+
 bot_status = {
     "is_running": False,
     "connection_status": "disconnected",
     "balance": 0.0,
     "last_tick": None,
     "session_pnl": 0.0,
-    "trades_count": 0
+    "trades_count": 0,
+    "capital_management": {
+        "next_amount": 0.0,
+        "current_sequence": 0,
+        "is_in_loss_sequence": False,
+        "accumulated_profit": 0.0,
+        "risk_level": "LOW"
+    }
 }
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan"""
-    global ws_manager
+    global ws_manager, capital_manager
     
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
+    
+    # Initialize Capital Manager
+    initial_capital = float(os.getenv("INITIAL_CAPITAL", "10.0"))
+    capital_manager = CapitalManager(
+        initial_capital=initial_capital,
+        reinvestment_rate=0.20,  # 20% reinvestment
+        martingale_multiplier=1.25  # 1.25x martingale
+    )
     
     # Initialize WebSocket manager
     api_token = os.getenv("DERIV_API_TOKEN")
@@ -88,9 +106,52 @@ async def handle_balance_update(balance_data: Dict[str, Any]):
 
 async def handle_trade_result(trade_data: Dict[str, Any]):
     """Handle trade execution results"""
-    global bot_status
+    global bot_status, capital_manager
+    
+    if not capital_manager:
+        logger.error("Capital manager not initialized")
+        return
+    
+    # Extract trade information
+    contract_id = trade_data.get("contract_id", "unknown")
+    trade_type = trade_data.get("type", "buy")
+    payout = trade_data.get("payout", 0.0)
+    price = trade_data.get("price", 0.0)
+    
+    # Determine result based on payout
+    if trade_type == "buy" and payout > 0:
+        result = TradeResult.WIN
+        profit_loss = payout - price
+    elif trade_type == "sell":
+        result = TradeResult.WIN if payout > 0 else TradeResult.LOSS
+        profit_loss = payout - price if payout > 0 else -price
+    else:
+        result = TradeResult.LOSS
+        profit_loss = -price
+    
+    # Record trade in capital manager
+    trade_record = capital_manager.record_trade(
+        trade_id=contract_id,
+        amount=price,
+        result=result,
+        payout=payout
+    )
+    
+    # Update bot status
     bot_status["trades_count"] += 1
-    logger.info(f"Trade executed: {trade_data}")
+    bot_status["session_pnl"] = capital_manager.accumulated_profit
+    
+    # Update capital management status
+    capital_stats = capital_manager.get_stats()
+    bot_status["capital_management"].update({
+        "next_amount": capital_manager.get_next_trade_amount(),
+        "current_sequence": capital_stats["capital_info"]["loss_sequence_count"],
+        "is_in_loss_sequence": capital_stats["capital_info"]["is_in_loss_sequence"],
+        "accumulated_profit": capital_stats["capital_info"]["accumulated_profit"],
+        "risk_level": capital_manager.get_risk_assessment()["risk_level"]
+    })
+    
+    logger.info(f"Trade processed: {contract_id} | Result: {result.value} | P/L: ${profit_loss:.2f} | Next: ${capital_manager.get_next_trade_amount():.2f}")
 
 async def handle_connection_status(status: ConnectionState):
     """Handle connection status changes"""
@@ -237,9 +298,9 @@ async def stop_bot():
     return {"status": "stopped", "message": "Bot parado com sucesso"}
 
 @app.post("/buy")
-async def buy_contract(contract_type: str, amount: float, duration: int = 5, symbol: str = "R_75"):
-    """Buy a trading contract"""
-    global ws_manager
+async def buy_contract(contract_type: str, amount: float = None, duration: int = 5, symbol: str = "R_75"):
+    """Buy a trading contract with smart capital management"""
+    global ws_manager, capital_manager
     
     if not ws_manager or ws_manager.state != ConnectionState.AUTHENTICATED:
         raise HTTPException(status_code=401, detail="Not connected or authenticated")
@@ -247,12 +308,149 @@ async def buy_contract(contract_type: str, amount: float, duration: int = 5, sym
     if not bot_status["is_running"]:
         raise HTTPException(status_code=400, detail="Bot is not running")
     
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
     try:
+        # Use capital manager amount if not specified
+        if amount is None:
+            amount = capital_manager.get_next_trade_amount()
+            logger.info(f"Using capital-managed amount: ${amount}")
+        
+        # Get risk assessment
+        risk_assessment = capital_manager.get_risk_assessment()
+        
+        # Check risk level
+        if risk_assessment["risk_level"] == "HIGH":
+            logger.warning(f"HIGH RISK TRADE: Amount ${amount} ({risk_assessment['risk_percentage']}% of initial capital)")
+        
         success = await ws_manager.buy_contract(contract_type, amount, duration, symbol)
         if success:
-            return {"status": "order_sent", "message": f"Order sent: {contract_type} {amount} on {symbol}"}
+            return {
+                "status": "order_sent", 
+                "message": f"Order sent: {contract_type} ${amount} on {symbol}",
+                "capital_info": {
+                    "amount": amount,
+                    "risk_level": risk_assessment["risk_level"],
+                    "risk_percentage": risk_assessment["risk_percentage"],
+                    "is_martingale": capital_manager.is_in_loss_sequence
+                }
+            }
         else:
             raise HTTPException(status_code=500, detail="Failed to send buy order")
     except Exception as e:
         logger.error(f"Buy order error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Capital Management Endpoints ---
+
+@app.get("/capital/stats")
+async def get_capital_stats():
+    """Get complete capital management statistics"""
+    global capital_manager
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    return capital_manager.get_stats()
+
+@app.get("/capital/risk")
+async def get_risk_assessment():
+    """Get current risk assessment"""
+    global capital_manager
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    return capital_manager.get_risk_assessment()
+
+@app.get("/capital/next-amount")
+async def get_next_amount():
+    """Get next trading amount"""
+    global capital_manager
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    next_amount = capital_manager.get_next_trade_amount()
+    risk_assessment = capital_manager.get_risk_assessment()
+    
+    return {
+        "next_amount": next_amount,
+        "risk_level": risk_assessment["risk_level"],
+        "risk_percentage": risk_assessment["risk_percentage"],
+        "is_in_loss_sequence": capital_manager.is_in_loss_sequence,
+        "recommendations": risk_assessment["recommendations"]
+    }
+
+@app.post("/capital/reset")
+async def reset_capital_session():
+    """Reset capital management session"""
+    global capital_manager, bot_status
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    capital_manager.reset_session()
+    
+    # Reset bot status capital info
+    bot_status["session_pnl"] = 0.0
+    bot_status["trades_count"] = 0
+    bot_status["capital_management"] = {
+        "next_amount": capital_manager.initial_capital,
+        "current_sequence": 0,
+        "is_in_loss_sequence": False,
+        "accumulated_profit": 0.0,
+        "risk_level": "LOW"
+    }
+    
+    return {"status": "reset", "message": "Capital management session reset successfully"}
+
+@app.post("/capital/simulate")
+async def simulate_trading_sequence(results: List[str]):
+    """Simulate a trading sequence to test capital management"""
+    global capital_manager
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    try:
+        # Convert string results to TradeResult enum
+        trade_results = []
+        for result_str in results:
+            if result_str.lower() in ["win", "w", "1"]:
+                trade_results.append(TradeResult.WIN)
+            elif result_str.lower() in ["loss", "lose", "l", "0"]:
+                trade_results.append(TradeResult.LOSS)
+            else:
+                raise HTTPException(status_code=400, detail=f"Invalid result: {result_str}. Use 'win'/'w'/'1' or 'loss'/'l'/'0'")
+        
+        simulation = capital_manager.simulate_sequence(trade_results, payout_multiplier=1.8)
+        
+        return {
+            "simulation": simulation,
+            "summary": {
+                "total_trades": len(results),
+                "wins": len([r for r in trade_results if r == TradeResult.WIN]),
+                "losses": len([r for r in trade_results if r == TradeResult.LOSS]),
+                "final_profit_loss": simulation["total_profit_loss"]
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Simulation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/capital/history")
+async def get_trade_history():
+    """Get complete trade history"""
+    global capital_manager
+    
+    if not capital_manager:
+        raise HTTPException(status_code=500, detail="Capital manager not initialized")
+    
+    return {
+        "trade_history": capital_manager.export_history(),
+        "total_trades": len(capital_manager.trade_history),
+        "current_stats": capital_manager.get_stats()
+    }
