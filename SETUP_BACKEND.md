@@ -8,7 +8,13 @@
 
 ### 1. Instalar dependências
 
-**Windows:**
+**Windows (PowerShell):**
+```powershell
+cd backend
+.\install.bat
+```
+
+**Windows (CMD):**
 ```cmd
 cd backend
 install.bat
@@ -28,7 +34,12 @@ pip install -r requirements.txt
 
 ### 2. Executar o servidor
 
-**Windows:**
+**Windows (PowerShell):**
+```powershell
+.\run.bat
+```
+
+**Windows (CMD):**
 ```cmd
 run.bat
 ```
@@ -53,6 +64,12 @@ python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ## ⚠️ Solução de Problemas
 
+### "install.bat não foi encontrado" (PowerShell)
+```powershell
+# Use .\ antes do arquivo
+.\install.bat
+```
+
 ### "ModuleNotFoundError: No module named 'fastapi'"
 ```bash
 pip install fastapi uvicorn[standard] websockets pydantic python-dotenv requests
@@ -61,7 +78,7 @@ pip install fastapi uvicorn[standard] websockets pydantic python-dotenv requests
 ### Python não encontrado
 - Windows: Instale do python.org ou Microsoft Store
 - Configure PATH corretamente
-- Use `python` ou `python3`
+- Use `python`, `python3` ou `py`
 
 ### Porta 8000 ocupada
 ```bash
