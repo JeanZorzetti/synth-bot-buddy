@@ -6,7 +6,7 @@ import os
 import logging
 import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
 from capital_manager import CapitalManager, TradeResult
