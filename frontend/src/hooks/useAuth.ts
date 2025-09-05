@@ -86,9 +86,18 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isValidating: true }));
 
     try {
-      // Basic validation - accept shorter tokens for development
-      if (!apiKey.trim() || apiKey.length < 10) {
-        throw new Error('Token da API inválido. Deve ter pelo menos 10 caracteres.');
+      // Validate Deriv API token format
+      if (!apiKey.trim()) {
+        throw new Error('Token da API é obrigatório.');
+      }
+      
+      // Deriv tokens start with "a1-" and have specific length
+      if (!apiKey.startsWith('a1-')) {
+        throw new Error('Token inválido. Tokens da Deriv devem começar com "a1-".');
+      }
+      
+      if (apiKey.length < 20) {
+        throw new Error('Token muito curto. Use um token válido da sua conta Deriv.');
       }
 
       // Check if backend is available

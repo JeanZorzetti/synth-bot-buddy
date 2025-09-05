@@ -171,7 +171,7 @@ export default function Auth() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Cole sua chave de API aqui... (ex: FFJjPKCm9wnktDA)"
+                  placeholder="Cole seu token aqui... (ex: a1-Abc123...)"
                   className="pr-10"
                   disabled={isValidating}
                 />
@@ -240,22 +240,27 @@ export default function Auth() {
               </AlertDescription>
             </Alert>
 
-            {/* Quick Login for Development */}
+            {/* How to Get Token */}
             <div className="pt-4 border-t border-border">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium">Login Rápido (Desenvolvimento):</h4>
+              <h4 className="text-sm font-medium mb-3">🔑 Como obter seu token da API:</h4>
+              <div className="text-sm text-muted-foreground space-y-2 mb-4">
+                <div className="flex items-start space-x-2">
+                  <span className="text-primary font-medium">1.</span>
+                  <span>Acesse <strong>app.deriv.com</strong></span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-primary font-medium">2.</span>
+                  <span>Settings → API Token</span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-primary font-medium">3.</span>
+                  <span>Crie token com escopos: <strong>Read, Trade, Payments</strong></span>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-primary font-medium">4.</span>
+                  <span>Copie o token (começa com <code className="bg-muted px-1 rounded">a1-</code>)</span>
+                </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full mb-4"
-                onClick={() => {
-                  setApiKey('FFJjPKCm9wnktDA');
-                }}
-                disabled={isValidating}
-              >
-                Usar Token de Desenvolvimento
-              </Button>
               
               <h4 className="text-sm font-medium mb-3">Funcionalidades do Sistema:</h4>
               <ul className="text-sm text-muted-foreground space-y-2">
