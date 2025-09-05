@@ -82,6 +82,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173", 
         "http://localhost:3000",
+        "http://localhost:8080",  # Vite dev server
+        "http://127.0.0.1:8080",
         "https://botderiv.roilabs.com.br",
         "http://botderiv.roilabs.com.br"
     ],  # Frontend URLs
