@@ -171,7 +171,7 @@ export default function Auth() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Cole seu token aqui... (ex: a1-Abc123...)"
+                  placeholder="Cole seu token aqui... (ex: m33T9o2uzJv0M9W)"
                   className="pr-10"
                   disabled={isValidating}
                 />
@@ -258,7 +258,7 @@ export default function Auth() {
                 </div>
                 <div className="flex items-start space-x-2">
                   <span className="text-primary font-medium">4.</span>
-                  <span>Copie o token (começa com <code className="bg-muted px-1 rounded">a1-</code>)</span>
+                  <span>Copie o token (ex: <code className="bg-muted px-1 rounded">m33T9o2uzJv0M9W</code>)</span>
                 </div>
               </div>
               
