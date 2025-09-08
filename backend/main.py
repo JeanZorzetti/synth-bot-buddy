@@ -12,6 +12,7 @@ from websocket_manager import DerivWebSocketManager, ConnectionState
 from enhanced_websocket_manager import EnhancedDerivWebSocket, ErrorType
 from capital_manager import CapitalManager, TradeResult
 from oauth_manager import oauth_manager, TokenData
+from trading_engine import TradingEngine, MarketTick, SignalType
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +49,7 @@ class TokenRefreshRequest(BaseModel):
 ws_manager: DerivWebSocketManager = None
 enhanced_ws_manager: EnhancedDerivWebSocket = None
 capital_manager: CapitalManager = None
+trading_engine: TradingEngine = None
 
 # Bot settings
 bot_settings = {
@@ -91,7 +93,7 @@ bot_status = {
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan"""
-    global ws_manager, capital_manager
+    global ws_manager, capital_manager, enhanced_ws_manager, trading_engine
     
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
@@ -114,9 +116,24 @@ async def lifespan(app: FastAPI):
         martingale_multiplier=1.25  # 1.25x martingale
     )
     
+    # Initialize Enhanced WebSocket Manager
+    enhanced_ws_manager = EnhancedDerivWebSocket(
+        app_id=app_id,
+        api_token="",  # Will be set when connecting
+        auto_reconnect=True,
+        max_reconnect_attempts=5,
+        reconnect_delay=5.0
+    )
+    
+    # Initialize Trading Engine
+    trading_engine = TradingEngine(
+        websocket_manager=enhanced_ws_manager,
+        settings=bot_settings
+    )
+    
     # WebSocket manager will be initialized when /connect is called with token
     # This allows dynamic token configuration from frontend
-    logger.info("WebSocket manager will be initialized on first /connect call")
+    logger.info("Trading engine and WebSocket manager initialized")
     
     yield
     
@@ -299,7 +316,7 @@ async def get_settings():
 @app.post("/settings")
 async def update_settings(settings: SettingsRequest):
     """Update bot settings"""
-    global bot_settings
+    global bot_settings, trading_engine
     
     try:
         # Validate settings
@@ -326,7 +343,15 @@ async def update_settings(settings: SettingsRequest):
             "selected_assets": settings.selected_assets
         })
         
+        # Update trading engine settings if it exists
+        if trading_engine:
+            trading_engine.settings = bot_settings.copy()
+            # Update signal detector settings as well
+            if trading_engine.signal_detector:
+                trading_engine.signal_detector.settings = bot_settings.copy()
+        
         logger.info(f"Settings updated: Stop Loss ${settings.stop_loss}, Take Profit ${settings.take_profit}")
+        logger.info(f"Trading engine settings synchronized")
         
         return {
             "status": "success",
@@ -338,6 +363,158 @@ async def update_settings(settings: SettingsRequest):
         raise
     except Exception as e:
         logger.error(f"Error updating settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Trading monitoring endpoints
+@app.get("/trading/signals/{symbol}")
+async def get_trading_signals(symbol: str):
+    """Get recent trading signals for a symbol"""
+    global trading_engine
+    
+    if not trading_engine or not trading_engine.signal_detector:
+        raise HTTPException(status_code=503, detail="Trading engine not available")
+    
+    try:
+        signals = trading_engine.signal_detector.signal_history.get(symbol, [])
+        recent_signals = signals[-10:]  # Last 10 signals
+        
+        return {
+            "symbol": symbol,
+            "recent_signals": [
+                {
+                    "signal_type": signal.signal_type.value,
+                    "strength": signal.strength,
+                    "confidence": signal.confidence,
+                    "timestamp": signal.timestamp,
+                    "indicators": signal.indicators,
+                    "reason": signal.reason
+                }
+                for signal in recent_signals
+            ],
+            "last_signal": {
+                "signal_type": recent_signals[-1].signal_type.value,
+                "strength": recent_signals[-1].strength,
+                "confidence": recent_signals[-1].confidence,
+                "reason": recent_signals[-1].reason
+            } if recent_signals else None
+        }
+    except Exception as e:
+        logger.error(f"Error getting trading signals: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/trading/performance")
+async def get_trading_performance():
+    """Get detailed trading performance metrics"""
+    global trading_engine
+    
+    if not trading_engine:
+        raise HTTPException(status_code=503, detail="Trading engine not available")
+    
+    try:
+        status = trading_engine.get_status()
+        win_rate = (trading_engine.wins / max(1, trading_engine.wins + trading_engine.losses)) * 100
+        
+        return {
+            "session_stats": {
+                "session_pnl": status['session_pnl'],
+                "total_trades": status['trades_count'],
+                "active_trades": status['active_trades'],
+                "wins": status['wins'],
+                "losses": status['losses'],
+                "win_rate": round(win_rate, 1),
+                "total_invested": status['total_invested'],
+                "total_returned": status['total_returned'],
+                "net_profit": round(status['total_returned'] - status['total_invested'], 2)
+            },
+            "risk_metrics": {
+                "current_risk_level": status['capital_management']['risk_level'],
+                "is_in_loss_sequence": status['capital_management']['is_in_loss_sequence'],
+                "next_trade_amount": status['capital_management']['next_amount'],
+                "accumulated_profit": status['capital_management']['accumulated_profit']
+            },
+            "trading_engine": {
+                "is_running": status['is_running'],
+                "active_since": time.time() - 3600 if status['is_running'] else None  # Simplified
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting trading performance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/trading/history")
+async def get_trade_history(limit: int = 50):
+    """Get recent trade history"""
+    global trading_engine
+    
+    if not trading_engine:
+        raise HTTPException(status_code=503, detail="Trading engine not available")
+    
+    try:
+        trades = trading_engine.trade_history[-limit:]  # Get last N trades
+        
+        formatted_trades = []
+        for trade in trades:
+            formatted_trades.append({
+                "trade_id": trade.trade_id,
+                "symbol": trade.symbol,
+                "contract_type": trade.contract_type,
+                "amount": trade.amount,
+                "entry_price": trade.entry_price,
+                "exit_price": trade.exit_price,
+                "entry_time": trade.entry_time,
+                "exit_time": trade.exit_time,
+                "duration": trade.duration,
+                "status": trade.status.value,
+                "pnl": trade.pnl,
+                "contract_id": trade.contract_id
+            })
+        
+        return {
+            "trades": formatted_trades,
+            "total_trades": len(trading_engine.trade_history),
+            "summary": {
+                "total_pnl": sum(t.pnl for t in trading_engine.trade_history if t.pnl),
+                "wins": len([t for t in trading_engine.trade_history if t.status.value == 'won']),
+                "losses": len([t for t in trading_engine.trade_history if t.status.value == 'lost']),
+                "win_rate": (len([t for t in trading_engine.trade_history if t.status.value == 'won']) / 
+                           max(1, len(trading_engine.trade_history))) * 100
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting trade history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/trading/reset-session")
+async def reset_trading_session():
+    """Reset the current trading session"""
+    global trading_engine
+    
+    if not trading_engine:
+        raise HTTPException(status_code=503, detail="Trading engine not available")
+    
+    try:
+        # Stop trading engine if running
+        was_running = trading_engine.is_running
+        if was_running:
+            trading_engine.stop()
+        
+        # Reset session
+        trading_engine.reset_session()
+        
+        # Restart if it was running
+        if was_running:
+            trading_engine.start()
+        
+        logger.info("Trading session reset")
+        
+        return {
+            "status": "success",
+            "message": "Trading session reset successfully",
+            "was_running": was_running,
+            "restarted": was_running
+        }
+    except Exception as e:
+        logger.error(f"Error resetting trading session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/config")
@@ -409,6 +586,22 @@ async def validate_token(request: ValidateTokenRequest):
 @app.get("/status")
 async def get_status():
     """Get current bot status"""
+    global bot_status, trading_engine, enhanced_ws_manager
+    
+    # Update status from trading engine if available
+    if trading_engine:
+        trading_status = trading_engine.get_status()
+        bot_status.update(trading_status)
+    
+    # Update connection status
+    if enhanced_ws_manager and hasattr(enhanced_ws_manager, 'connection_state'):
+        if enhanced_ws_manager.connection_state == 'authenticated':
+            bot_status['connection_status'] = 'authenticated'
+        elif enhanced_ws_manager.connection_state == 'connected':
+            bot_status['connection_status'] = 'connected'
+        else:
+            bot_status['connection_status'] = 'disconnected'
+    
     return bot_status
 
 @app.post("/connect")
@@ -458,44 +651,98 @@ async def disconnect_from_deriv():
 @app.post("/start")
 async def start_bot():
     """Start the trading bot"""
-    global ws_manager, bot_status
+    global ws_manager, enhanced_ws_manager, trading_engine, bot_status
     
-    if not ws_manager:
-        raise HTTPException(status_code=500, detail="WebSocket manager not initialized")
+    if not enhanced_ws_manager or not trading_engine:
+        raise HTTPException(status_code=500, detail="Trading engine not initialized")
     
     try:
-        # Connect if not connected
-        if ws_manager.state == ConnectionState.DISCONNECTED:
-            success = await ws_manager.connect()
-            if not success:
-                raise HTTPException(status_code=500, detail="Failed to connect to Deriv API")
+        # Check if already running
+        if trading_engine.is_running:
+            return {"status": "running", "message": "Bot já está rodando"}
         
-        # Wait for authentication
-        max_wait = 10  # seconds
-        wait_time = 0
-        logger.info(f"Waiting for authentication... Current state: {ws_manager.state.value}")
+        # Update trading engine settings
+        trading_engine.settings = bot_settings.copy()
         
-        while ws_manager.state != ConnectionState.AUTHENTICATED and wait_time < max_wait:
-            await asyncio.sleep(0.5)
-            wait_time += 0.5
-            if wait_time % 2 == 0:  # Log every 2 seconds
-                logger.info(f"Still waiting for auth... State: {ws_manager.state.value}, Wait time: {wait_time}s")
+        # Start the trading engine
+        trading_engine.start()
         
-        logger.info(f"Final authentication state: {ws_manager.state.value}")
+        # Setup tick handlers to feed data to trading engine
+        if enhanced_ws_manager:
+            async def handle_tick(tick_data):
+                """Handle incoming market ticks"""
+                try:
+                    tick = MarketTick(
+                        symbol=tick_data.get('symbol', 'R_75'),
+                        price=float(tick_data.get('quote', tick_data.get('price', 0))),
+                        timestamp=float(tick_data.get('epoch', time.time()))
+                    )
+                    
+                    # Feed tick to trading engine
+                    trading_engine.add_market_tick(tick)
+                    
+                    # Analyze and potentially trade
+                    signal = await trading_engine.analyze_and_trade(tick.symbol)
+                    
+                    # Update bot status with latest tick
+                    bot_status["last_tick"] = {
+                        "symbol": tick.symbol,
+                        "price": tick.price,
+                        "timestamp": tick.timestamp
+                    }
+                    
+                except Exception as e:
+                    logger.error(f"Error processing tick: {e}")
+            
+            # Set the tick handler
+            enhanced_ws_manager.set_tick_handler(handle_tick)
         
-        if ws_manager.state != ConnectionState.AUTHENTICATED:
-            if ws_manager.state == ConnectionState.ERROR:
-                raise HTTPException(status_code=401, detail="Authentication failed - Invalid API token or connection error")
-            else:
-                raise HTTPException(status_code=408, detail=f"Authentication timeout - Current state: {ws_manager.state.value}")
+        # Subscribe to configured assets
+        enabled_assets = [
+            asset for asset, enabled in bot_settings.get('selected_assets', {}).items() 
+            if enabled
+        ]
         
-        # Subscribe to tick data
-        await ws_manager.subscribe_to_ticks("R_75")  # Volatility 75 Index
+        # Map asset names to symbols
+        asset_symbol_map = {
+            'volatility75': 'R_75',
+            'volatility100': 'R_100',
+            'volatility25': 'R_25',
+            'volatility50': 'R_50',
+            'jump25': 'JD25',
+            'jump50': 'JD50', 
+            'jump75': 'JD75',
+            'jump100': 'JD100',
+            'boom1000': 'RDBULL',
+            'crash1000': 'RDBEAR'
+        }
+        
+        # Subscribe to enabled asset ticks
+        for asset in enabled_assets:
+            symbol = asset_symbol_map.get(asset, 'R_75')
+            if enhanced_ws_manager:
+                await enhanced_ws_manager.subscribe_to_ticks(symbol)
+                logger.info(f"Subscribed to {symbol} ({asset})")
+        
+        # If no assets selected, default to R_75
+        if not enabled_assets and enhanced_ws_manager:
+            await enhanced_ws_manager.subscribe_to_ticks('R_75')
+            logger.info("No assets selected, defaulting to R_75")
         
         bot_status["is_running"] = True
-        logger.info("Bot iniciado com sucesso")
+        logger.info("Trading bot iniciado com sucesso")
         
-        return {"status": "running", "message": "Bot iniciado com sucesso"}
+        return {
+            "status": "running", 
+            "message": "Trading bot iniciado com sucesso",
+            "subscribed_assets": enabled_assets or ['volatility75'],
+            "settings_applied": {
+                "stop_loss": bot_settings.get('stop_loss'),
+                "take_profit": bot_settings.get('take_profit'),
+                "stake_amount": bot_settings.get('stake_amount'),
+                "aggressiveness": bot_settings.get('aggressiveness')
+            }
+        }
         
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
@@ -504,12 +751,25 @@ async def start_bot():
 @app.post("/stop")
 async def stop_bot():
     """Stop the trading bot"""
-    global bot_status
+    global bot_status, trading_engine
     
-    bot_status["is_running"] = False
-    logger.info("Bot parado")
-    
-    return {"status": "stopped", "message": "Bot parado com sucesso"}
+    try:
+        if trading_engine:
+            trading_engine.stop()
+        
+        bot_status["is_running"] = False
+        logger.info("Trading bot parado")
+        
+        return {
+            "status": "stopped", 
+            "message": "Trading bot parado com sucesso",
+            "final_session_pnl": trading_engine.session_pnl if trading_engine else 0.0,
+            "total_trades": trading_engine.trades_count if trading_engine else 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error stopping bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/buy")
 async def buy_contract(contract_type: str, amount: float = None, duration: int = 5, symbol: str = "R_75"):
