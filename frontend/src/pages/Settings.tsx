@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,18 @@ import {
   AlertTriangle,
   Target,
   BarChart3,
-  Save
+  Save,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { apiService } from '@/services/api';
 
 export default function Settings() {
   const { toast } = useToast();
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Risk Management Settings
   const [stopLoss, setStopLoss] = useState('50');
@@ -46,6 +52,43 @@ export default function Settings() {
     crash1000: false
   });
 
+  // Load settings from backend on mount
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiService.getSettings();
+      const settings = response.settings;
+      
+      // Update state with loaded settings
+      setStopLoss(settings.stop_loss.toString());
+      setTakeProfit(settings.take_profit.toString());
+      setStakeAmount(settings.stake_amount.toString());
+      setAggressiveness(settings.aggressiveness);
+      
+      // Update indicators
+      setUseRSI(settings.indicators.use_rsi);
+      setUseMovingAverages(settings.indicators.use_moving_averages);
+      setUseBollinger(settings.indicators.use_bollinger);
+      
+      // Update selected assets
+      setSelectedAssets(settings.selected_assets);
+      
+    } catch (error: any) {
+      console.error('Failed to load settings:', error);
+      toast({
+        title: "Erro ao carregar configurações",
+        description: "Usando configurações padrão. Verifique a conexão com o servidor.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAssetToggle = (asset: keyof typeof selectedAssets) => {
     setSelectedAssets(prev => ({
       ...prev,
@@ -53,7 +96,9 @@ export default function Settings() {
     }));
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
+    if (isSaving) return;
+    
     // Validate settings
     const stopLossValue = parseFloat(stopLoss);
     const takeProfitValue = parseFloat(takeProfit);
@@ -87,11 +132,39 @@ export default function Settings() {
       return;
     }
 
-    // Save settings (in a real app, this would save to backend/localStorage)
-    toast({
-      title: "Configurações Salvas",
-      description: "Suas configurações foram aplicadas com sucesso.",
-    });
+    try {
+      setIsSaving(true);
+      
+      const settingsData = {
+        stop_loss: stopLossValue,
+        take_profit: takeProfitValue,
+        stake_amount: stakeValue,
+        aggressiveness,
+        indicators: {
+          use_rsi: useRSI,
+          use_moving_averages: useMovingAverages,
+          use_bollinger: useBollinger
+        },
+        selected_assets: selectedAssets
+      };
+
+      const response = await apiService.updateSettings(settingsData);
+      
+      toast({
+        title: "✅ Configurações Salvas",
+        description: response.message || "Suas configurações foram aplicadas com sucesso.",
+      });
+      
+    } catch (error: any) {
+      console.error('Failed to save settings:', error);
+      toast({
+        title: "❌ Erro ao salvar",
+        description: error.message || "Não foi possível salvar as configurações. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const assets = [
@@ -104,6 +177,19 @@ export default function Settings() {
     { id: 'boom1000', name: 'Boom 1000 Index', description: 'Mercado com picos de alta' },
     { id: 'crash1000', name: 'Crash 1000 Index', description: 'Mercado com quedas abruptas' },
   ];
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Carregando configurações...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -302,10 +388,20 @@ export default function Settings() {
         <div className="flex justify-end">
           <Button 
             onClick={handleSaveSettings}
-            className="success-gradient hover:opacity-90"
+            disabled={isSaving || isLoading}
+            className="success-gradient hover:opacity-90 disabled:opacity-50"
           >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar Configurações
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Configurações
+              </>
+            )}
           </Button>
         </div>
       </div>

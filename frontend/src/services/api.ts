@@ -196,6 +196,39 @@ class ApiService {
     return this.post('/validate-token', { api_token: apiToken });
   }
 
+  // Settings management
+  async getSettings(): Promise<{
+    settings: {
+      stop_loss: number;
+      take_profit: number;
+      stake_amount: number;
+      aggressiveness: string;
+      indicators: {
+        use_rsi: boolean;
+        use_moving_averages: boolean;
+        use_bollinger: boolean;
+      };
+      selected_assets: Record<string, boolean>;
+    }
+  }> {
+    return this.get('/settings');
+  }
+
+  async updateSettings(settings: {
+    stop_loss: number;
+    take_profit: number;
+    stake_amount: number;
+    aggressiveness: string;
+    indicators: Record<string, boolean>;
+    selected_assets: Record<string, boolean>;
+  }): Promise<{
+    status: string;
+    message: string;
+    settings: any;
+  }> {
+    return this.post('/settings', settings);
+  }
+
   // Utility method to check if API is available
   async isAvailable(): Promise<boolean> {
     try {

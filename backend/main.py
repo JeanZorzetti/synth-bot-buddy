@@ -22,9 +22,40 @@ class ConnectRequest(BaseModel):
 class ValidateTokenRequest(BaseModel):
     api_token: str
 
+class SettingsRequest(BaseModel):
+    stop_loss: float
+    take_profit: float
+    stake_amount: float
+    aggressiveness: str
+    indicators: dict
+    selected_assets: dict
+
 # Global instances
 ws_manager: DerivWebSocketManager = None
 capital_manager: CapitalManager = None
+
+# Bot settings
+bot_settings = {
+    "stop_loss": 50.0,
+    "take_profit": 100.0,
+    "stake_amount": 10.0,
+    "aggressiveness": "moderate",
+    "indicators": {
+        "use_rsi": True,
+        "use_moving_averages": True,
+        "use_bollinger": False
+    },
+    "selected_assets": {
+        "volatility75": True,
+        "volatility100": True,
+        "jump25": False,
+        "jump50": False,
+        "jump75": False,
+        "jump100": False,
+        "boom1000": False,
+        "crash1000": False
+    }
+}
 
 bot_status = {
     "is_running": False,
@@ -220,6 +251,55 @@ async def list_routes():
                 "name": getattr(route, 'name', '')
             })
     return {"routes": routes, "total": len(routes)}
+
+@app.get("/settings")
+async def get_settings():
+    """Get current bot settings"""
+    return {"settings": bot_settings}
+
+@app.post("/settings")
+async def update_settings(settings: SettingsRequest):
+    """Update bot settings"""
+    global bot_settings
+    
+    try:
+        # Validate settings
+        if settings.stop_loss <= 0 or settings.take_profit <= 0 or settings.stake_amount <= 0:
+            raise HTTPException(status_code=400, detail="All monetary values must be positive")
+        
+        if settings.stop_loss >= settings.take_profit:
+            raise HTTPException(status_code=400, detail="Take profit must be greater than stop loss")
+        
+        if settings.aggressiveness not in ["conservative", "moderate", "aggressive"]:
+            raise HTTPException(status_code=400, detail="Invalid aggressiveness level")
+        
+        # Check if at least one asset is selected
+        if not any(settings.selected_assets.values()):
+            raise HTTPException(status_code=400, detail="At least one asset must be selected")
+        
+        # Update settings
+        bot_settings.update({
+            "stop_loss": settings.stop_loss,
+            "take_profit": settings.take_profit,
+            "stake_amount": settings.stake_amount,
+            "aggressiveness": settings.aggressiveness,
+            "indicators": settings.indicators,
+            "selected_assets": settings.selected_assets
+        })
+        
+        logger.info(f"Settings updated: Stop Loss ${settings.stop_loss}, Take Profit ${settings.take_profit}")
+        
+        return {
+            "status": "success",
+            "message": "Settings updated successfully",
+            "settings": bot_settings
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/config")
 async def get_configuration():
