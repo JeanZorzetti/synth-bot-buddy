@@ -216,7 +216,7 @@ async def validate_token(request: ValidateTokenRequest):
     """Test token validity without affecting the main WebSocket connection"""
     try:
         # Create a temporary WebSocket manager for testing
-        app_id = os.getenv("DERIV_APP_ID", "1089")
+        app_id = os.getenv("DERIV_APP_ID", "99188")
         test_ws_manager = DerivWebSocketManager(app_id=app_id, api_token=request.api_token)
         
         logger.info(f"Testing token: {request.api_token[:10]}...")
@@ -276,7 +276,7 @@ async def connect_to_deriv(request: ConnectRequest):
     
     try:
         # Create new WebSocket manager with provided token
-        app_id = os.getenv("DERIV_APP_ID", "1089")
+        app_id = os.getenv("DERIV_APP_ID", "99188")
         ws_manager = DerivWebSocketManager(app_id=app_id, api_token=request.api_token)
         
         # Set up event handlers

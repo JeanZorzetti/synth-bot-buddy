@@ -17,7 +17,7 @@ class ConnectionState(Enum):
     ERROR = "error"
 
 class DerivWebSocketManager:
-    def __init__(self, app_id: str = "1089", api_token: Optional[str] = None):
+    def __init__(self, app_id: str = "99188", api_token: Optional[str] = None):
         self.app_id = app_id
         self.api_token = api_token
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
