@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
+import Performance from "./pages/Performance";
 import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,11 @@ const App = () => (
           <Route path="/history" element={
             <ProtectedRoute>
               <History />
+            </ProtectedRoute>
+          } />
+          <Route path="/performance" element={
+            <ProtectedRoute>
+              <Performance />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

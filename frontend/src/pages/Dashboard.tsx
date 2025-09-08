@@ -421,11 +421,19 @@ export default function Dashboard() {
                 <Settings className="h-4 w-4 mr-2" />
                 Configurar Estratégia
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/history'}
+              >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Ver Histórico
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/performance'}
+              >
                 <Activity className="h-4 w-4 mr-2" />
                 Relatório de Performance
               </Button>

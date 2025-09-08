@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,120 +12,167 @@ import {
   Filter,
   Download,
   Search,
-  Calendar
+  Calendar,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiService } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Trade {
-  id: string;
-  asset: string;
-  timestamp: string;
-  type: 'CALL' | 'PUT';
-  stake: number;
-  entryPrice: number;
-  exitPrice: number;
-  pnl: number;
-  duration: string;
-  outcome: 'win' | 'loss';
+  trade_id: string;
+  symbol: string;
+  contract_type: 'CALL' | 'PUT';
+  amount: number;
+  entry_price: number;
+  exit_price: number | null;
+  entry_time: number;
+  exit_time: number | null;
+  duration: number;
+  status: 'won' | 'lost' | 'active' | 'cancelled';
+  pnl: number | null;
+  contract_id: string | null;
+}
+
+interface HistoryResponse {
+  trades: Trade[];
+  total_trades: number;
+  summary: {
+    total_pnl: number;
+    wins: number;
+    losses: number;
+    win_rate: number;
+  };
 }
 
 export default function History() {
+  const { toast } = useToast();
   const [filterAsset, setFilterAsset] = useState<string>('all');
   const [filterOutcome, setFilterOutcome] = useState<string>('all');
   const [searchDate, setSearchDate] = useState('');
+  const [historyData, setHistoryData] = useState<HistoryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mock trade data
-  const [trades] = useState<Trade[]>([
-    {
-      id: '1',
-      asset: 'Volatility 75 Index',
-      timestamp: '2024-01-31 14:35:22',
-      type: 'CALL',
-      stake: 10.00,
-      entryPrice: 1234.56,
-      exitPrice: 1245.78,
-      pnl: 8.50,
-      duration: '5 min',
-      outcome: 'win'
-    },
-    {
-      id: '2', 
-      asset: 'Volatility 100 Index',
-      timestamp: '2024-01-31 14:28:15',
-      type: 'PUT',
-      stake: 10.00,
-      entryPrice: 2345.67,
-      exitPrice: 2320.45,
-      pnl: 7.80,
-      duration: '3 min',
-      outcome: 'win'
-    },
-    {
-      id: '3',
-      asset: 'Jump 25 Index',
-      timestamp: '2024-01-31 14:22:08',
-      type: 'CALL',
-      stake: 10.00,
-      entryPrice: 987.65,
-      exitPrice: 982.34,
-      pnl: -10.00,
-      duration: '2 min',
-      outcome: 'loss'
-    },
-    {
-      id: '4',
-      asset: 'Volatility 75 Index',
-      timestamp: '2024-01-31 14:15:33',
-      type: 'PUT',
-      stake: 10.00,
-      entryPrice: 1245.78,
-      exitPrice: 1256.89,
-      pnl: 9.20,
-      duration: '4 min',
-      outcome: 'win'
-    },
-    {
-      id: '5',
-      asset: 'Volatility 100 Index',
-      timestamp: '2024-01-31 14:08:45',
-      type: 'CALL',
-      stake: 10.00,
-      entryPrice: 2320.45,
-      exitPrice: 2315.67,
-      pnl: -10.00,
-      duration: '5 min',
-      outcome: 'loss'
+  const loadTradeHistory = async () => {
+    try {
+      const data = await apiService.get<HistoryResponse>('/trading/history?limit=100');
+      setHistoryData(data);
+    } catch (error: any) {
+      console.error('Failed to load trade history:', error);
+      toast({
+        title: "Erro ao carregar histórico",
+        description: "Não foi possível carregar o histórico de trades. Verifique se o backend está rodando.",
+        variant: "destructive",
+      });
+      // Set empty data on error
+      setHistoryData({
+        trades: [],
+        total_trades: 0,
+        summary: { total_pnl: 0, wins: 0, losses: 0, win_rate: 0 }
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-  ]);
+  };
 
-  // Filter trades
-  const filteredTrades = trades.filter(trade => {
-    const matchesAsset = filterAsset === 'all' || trade.asset === filterAsset;
-    const matchesOutcome = filterOutcome === 'all' || trade.outcome === filterOutcome;
-    const matchesDate = !searchDate || trade.timestamp.includes(searchDate);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadTradeHistory();
+  };
+
+  useEffect(() => {
+    loadTradeHistory();
+  }, []);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Carregando histórico de trades...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!historyData) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Erro ao carregar dados</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Convert symbol to readable asset name
+  const getAssetName = (symbol: string) => {
+    const symbolMap: Record<string, string> = {
+      'R_10': 'Volatility 10 Index',
+      'R_25': 'Volatility 25 Index',
+      'R_50': 'Volatility 50 Index',
+      'R_75': 'Volatility 75 Index',
+      'R_100': 'Volatility 100 Index',
+      'JD25': 'Jump 25 Index',
+      'JD50': 'Jump 50 Index',
+      'JD75': 'Jump 75 Index',
+      'JD100': 'Jump 100 Index',
+      'RDBULL': 'Boom 1000 Index',
+      'RDBEAR': 'Crash 1000 Index'
+    };
+    return symbolMap[symbol] || symbol;
+  };
+
+  // Filter trades based on current filters
+  const filteredTrades = historyData.trades.filter(trade => {
+    const assetName = getAssetName(trade.symbol);
+    const matchesAsset = filterAsset === 'all' || assetName === filterAsset;
+    const matchesOutcome = filterOutcome === 'all' || trade.status === filterOutcome;
+    
+    let matchesDate = true;
+    if (searchDate) {
+      const tradeDate = new Date(trade.entry_time * 1000).toISOString().split('T')[0];
+      matchesDate = tradeDate === searchDate;
+    }
     
     return matchesAsset && matchesOutcome && matchesDate;
   });
 
-  // Calculate statistics
-  const totalTrades = filteredTrades.length;
-  const winningTrades = filteredTrades.filter(t => t.outcome === 'win').length;
-  const totalPnL = filteredTrades.reduce((sum, t) => sum + t.pnl, 0);
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
-  const largestWin = Math.max(...filteredTrades.filter(t => t.pnl > 0).map(t => t.pnl), 0);
-  const largestLoss = Math.min(...filteredTrades.filter(t => t.pnl < 0).map(t => t.pnl), 0);
+  // Get unique assets for filter
+  const uniqueAssets = [...new Set(historyData.trades.map(t => getAssetName(t.symbol)))];
 
-  const uniqueAssets = [...new Set(trades.map(t => t.asset))];
+  // Calculate statistics for filtered trades
+  const totalTrades = filteredTrades.length;
+  const winningTrades = filteredTrades.filter(t => t.status === 'won').length;
+  const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+  const largestWin = Math.max(...filteredTrades.filter(t => (t.pnl || 0) > 0).map(t => t.pnl || 0), 0);
+  const largestLoss = Math.min(...filteredTrades.filter(t => (t.pnl || 0) < 0).map(t => t.pnl || 0), 0);
+
 
   return (
     <Layout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Histórico de Operações</h1>
-          <p className="text-muted-foreground">
-            Analise todas as operações realizadas pelo bot
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Histórico de Operações</h1>
+            <p className="text-muted-foreground">
+              Analise todas as operações realizadas pelo bot ({historyData.total_trades} trades)
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -219,8 +266,9 @@ export default function History() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="win">Apenas Vitórias</SelectItem>
-                    <SelectItem value="loss">Apenas Perdas</SelectItem>
+                    <SelectItem value="won">Apenas Vitórias</SelectItem>
+                    <SelectItem value="lost">Apenas Perdas</SelectItem>
+                    <SelectItem value="active">Trades Ativos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,45 +316,51 @@ export default function History() {
                 </thead>
                 <tbody>
                   {filteredTrades.map((trade) => (
-                    <tr key={trade.id} className="border-b border-border/50 hover:bg-muted/30">
+                    <tr key={trade.trade_id} className="border-b border-border/50 hover:bg-muted/30">
                       <td className="p-4">
-                        <div className="font-medium">{trade.asset}</div>
+                        <div className="font-medium">{getAssetName(trade.symbol)}</div>
                       </td>
                       <td className="p-4">
                         <div className="text-sm">
-                          {new Date(trade.timestamp).toLocaleString('pt-BR')}
+                          {new Date(trade.entry_time * 1000).toLocaleString('pt-BR')}
                         </div>
                       </td>
                       <td className="p-4">
                         <Badge 
-                          variant={trade.type === 'CALL' ? 'default' : 'secondary'}
+                          variant={trade.contract_type === 'CALL' ? 'default' : 'secondary'}
                           className={cn(
-                            trade.type === 'CALL' 
+                            trade.contract_type === 'CALL' 
                               ? 'bg-success text-success-foreground' 
                               : 'bg-danger text-danger-foreground'
                           )}
                         >
-                          {trade.type}
+                          {trade.contract_type}
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <div className="font-medium">${trade.stake.toFixed(2)}</div>
+                        <div className="font-medium">${trade.amount.toFixed(2)}</div>
                       </td>
                       <td className="p-4">
-                        <div className="font-mono text-sm">{trade.entryPrice.toFixed(2)}</div>
+                        <div className="font-mono text-sm">{trade.entry_price.toFixed(2)}</div>
                       </td>
                       <td className="p-4">
-                        <div className="font-mono text-sm">{trade.exitPrice.toFixed(2)}</div>
+                        <div className="font-mono text-sm">
+                          {trade.exit_price ? trade.exit_price.toFixed(2) : '-'}
+                        </div>
                       </td>
                       <td className="p-4">
-                        <div className="text-sm">{trade.duration}</div>
+                        <div className="text-sm">{trade.duration} ticks</div>
                       </td>
                       <td className="p-4">
                         <div className={cn(
                           "font-bold",
-                          trade.pnl >= 0 ? "text-success" : "text-danger"
+                          (trade.pnl || 0) >= 0 ? "text-success" : "text-danger"
                         )}>
-                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                          {trade.pnl !== null ? (
+                            `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}`
+                          ) : (
+                            trade.status === 'active' ? 'Ativo' : '-'
+                          )}
                         </div>
                       </td>
                     </tr>
