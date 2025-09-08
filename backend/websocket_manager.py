@@ -221,8 +221,13 @@ class DerivWebSocketManager:
     
     async def _send_request(self, request: Dict[str, Any]) -> bool:
         """Send request via WebSocket"""
-        if not self.websocket or self.websocket.closed:
+        if not self.websocket:
             logger.error("WebSocket is not connected")
+            return False
+        
+        # Check if connection is still open using state
+        if self.state == ConnectionState.DISCONNECTED or self.state == ConnectionState.ERROR:
+            logger.error("WebSocket connection is not available")
             return False
         
         try:
@@ -246,10 +251,10 @@ class DerivWebSocketManager:
     
     async def _heartbeat(self):
         """Send periodic ping to keep connection alive"""
-        while self.websocket and not self.websocket.closed:
+        while self.websocket and self.state in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
             try:
                 await asyncio.sleep(self.heartbeat_interval)
-                if self.websocket and not self.websocket.closed:
+                if self.websocket and self.state in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
                     ping_request = {
                         "ping": 1,
                         "req_id": self._get_request_id()
@@ -264,7 +269,7 @@ class DerivWebSocketManager:
         """Gracefully disconnect from WebSocket"""
         self.is_running = False
         
-        if self.websocket and not self.websocket.closed:
+        if self.websocket:
             try:
                 await self.websocket.close()
                 logger.info("WebSocket disconnected")
