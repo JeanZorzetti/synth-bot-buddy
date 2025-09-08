@@ -50,8 +50,18 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
     
-    # Initialize Capital Manager
+    # Log current configuration
+    app_id = os.getenv("DERIV_APP_ID", "99188")
     initial_capital = float(os.getenv("INITIAL_CAPITAL", "10.0"))
+    environment = os.getenv("ENVIRONMENT", "development")
+    
+    logger.info(f"Configuration loaded:")
+    logger.info(f"  - App ID: {app_id}")
+    logger.info(f"  - Environment: {environment}")
+    logger.info(f"  - Initial Capital: ${initial_capital}")
+    logger.info(f"  - WebSocket URL: wss://ws.derivws.com/websockets/v3?app_id={app_id}")
+    
+    # Initialize Capital Manager
     capital_manager = CapitalManager(
         initial_capital=initial_capital,
         reinvestment_rate=0.20,  # 20% reinvestment
@@ -210,6 +220,19 @@ async def list_routes():
                 "name": getattr(route, 'name', '')
             })
     return {"routes": routes, "total": len(routes)}
+
+@app.get("/config")
+async def get_configuration():
+    """Get current configuration for debugging."""
+    return {
+        "app_id": os.getenv("DERIV_APP_ID", "99188"),
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "initial_capital": os.getenv("INITIAL_CAPITAL", "10.0"),
+        "websocket_url": f"wss://ws.derivws.com/websockets/v3?app_id={os.getenv('DERIV_APP_ID', '99188')}",
+        "has_token_env": bool(os.getenv("DERIV_API_TOKEN")),
+        "git_commit": "f631734",  # Latest commit
+        "timestamp": time.time()
+    }
 
 @app.post("/validate-token")
 async def validate_token(request: ValidateTokenRequest):
