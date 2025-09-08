@@ -413,7 +413,11 @@ export default function Dashboard() {
               <CardTitle>Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/settings'}
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 Configurar Estratégia
               </Button>
