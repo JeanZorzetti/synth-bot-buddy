@@ -96,9 +96,9 @@ export const useAuth = () => {
         throw new Error('Token muito curto. Use um token válido da sua conta Deriv.');
       }
       
-      // Basic alphanumeric validation
-      if (!/^[A-Za-z0-9]+$/.test(apiKey)) {
-        throw new Error('Token inválido. Deve conter apenas letras e números.');
+      // Validate OAuth tokens format (supports hyphens and underscores)
+      if (!/^[A-Za-z0-9\-_]+$/.test(apiKey)) {
+        throw new Error('Token inválido. Use um token válido da Deriv.');
       }
 
       // Check if backend is available
