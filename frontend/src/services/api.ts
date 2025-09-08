@@ -59,6 +59,62 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
+// OAuth interfaces
+export interface OAuthStartResponse {
+  status: string;
+  authorization_url: string;
+  state: string;
+  scopes: string[];
+  redirect_uri: string;
+  message: string;
+}
+
+export interface OAuthCallbackResponse {
+  status: string;
+  message: string;
+  token_info: {
+    token_type: string;
+    expires_in: number;
+    scope: string;
+    created_at: string;
+  };
+  user_info: {
+    email?: string;
+    user_id?: string;
+    account_id?: string;
+    [key: string]: any;
+  };
+  encrypted_token: string;
+}
+
+export interface OAuthTokenValidation {
+  valid: boolean;
+  status: string;
+  message: string;
+  user_info?: {
+    email?: string;
+    user_id?: string;
+    account_id?: string;
+    [key: string]: any;
+  };
+  token_info?: {
+    valid: boolean;
+    account_info: any;
+    scopes: string[];
+    expires_at: string;
+    token_type: string;
+  };
+  error_type?: string;
+}
+
+export interface OAuthScopes {
+  available_scopes: string[];
+  default_scopes: string[];
+  scope_descriptions: Record<string, string>;
+  recommended_scopes: string[];
+  minimal_scopes: string[];
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -236,6 +292,155 @@ class ApiService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // --- OAuth 2.0 Methods ---
+
+  // Start OAuth flow
+  async startOAuthFlow(scopes?: string[], redirectUri?: string): Promise<OAuthStartResponse> {
+    const requestBody: any = {};
+    if (scopes) requestBody.scopes = scopes;
+    if (redirectUri) requestBody.redirect_uri = redirectUri;
+    
+    return this.post('/oauth/start', requestBody);
+  }
+
+  // Handle OAuth callback
+  async handleOAuthCallback(code: string, state: string): Promise<OAuthCallbackResponse> {
+    return this.post('/oauth/callback', { code, state });
+  }
+
+  // Refresh OAuth token
+  async refreshOAuthToken(refreshToken: string): Promise<{
+    status: string;
+    message: string;
+    token_info: {
+      token_type: string;
+      expires_in: number;
+      scope: string;
+      created_at: string;
+    };
+    encrypted_token: string;
+  }> {
+    return this.post('/oauth/refresh', { refresh_token: refreshToken });
+  }
+
+  // Validate OAuth token (enhanced)
+  async validateOAuthToken(accessToken: string): Promise<OAuthTokenValidation> {
+    return this.post('/oauth/validate', { api_token: accessToken });
+  }
+
+  // Revoke OAuth token
+  async revokeOAuthToken(accessToken: string): Promise<ApiResponse> {
+    return this.post('/oauth/revoke', { api_token: accessToken });
+  }
+
+  // Get available OAuth scopes
+  async getOAuthScopes(): Promise<OAuthScopes> {
+    return this.get('/oauth/scopes');
+  }
+
+  // Get OAuth configuration
+  async getOAuthConfig(): Promise<{
+    oauth_endpoints: {
+      authorize_url: string;
+      token_url: string;
+      user_info_url: string;
+    };
+    client_configuration: {
+      client_id: string;
+      has_client_secret: boolean;
+      default_redirect_uri: string;
+    };
+    security_features: {
+      pkce_enabled: boolean;
+      state_parameter: boolean;
+      token_encryption: boolean;
+    };
+    active_states_count: number;
+  }> {
+    return this.get('/oauth/config');
+  }
+
+  // Connect using OAuth encrypted token
+  async connectWithOAuth(encryptedToken: string): Promise<{
+    status: string;
+    message: string;
+    auth_method: string;
+    scopes: string;
+    token_expires_at: string;
+  }> {
+    return this.post('/connect/oauth', { encrypted_token: encryptedToken });
+  }
+
+  // --- OAuth Utility Methods ---
+
+  // Generate OAuth authorization URL (convenience method)
+  async getOAuthAuthorizationUrl(options?: {
+    scopes?: string[];
+    redirectUri?: string;
+  }): Promise<string> {
+    const response = await this.startOAuthFlow(options?.scopes, options?.redirectUri);
+    return response.authorization_url;
+  }
+
+  // Check if user has valid OAuth session
+  async hasValidOAuthSession(): Promise<boolean> {
+    try {
+      const encryptedToken = localStorage.getItem('deriv_oauth_token');
+      if (!encryptedToken) return false;
+
+      // Note: We can't validate encrypted token directly from frontend
+      // This would need to be done by trying to connect with it
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Store OAuth token securely in localStorage
+  storeOAuthToken(encryptedToken: string, tokenInfo: any, userInfo: any): void {
+    localStorage.setItem('deriv_oauth_token', encryptedToken);
+    localStorage.setItem('deriv_token_info', JSON.stringify(tokenInfo));
+    localStorage.setItem('deriv_user_info', JSON.stringify(userInfo));
+  }
+
+  // Retrieve stored OAuth data
+  getStoredOAuthData(): {
+    encryptedToken: string | null;
+    tokenInfo: any | null;
+    userInfo: any | null;
+  } {
+    return {
+      encryptedToken: localStorage.getItem('deriv_oauth_token'),
+      tokenInfo: JSON.parse(localStorage.getItem('deriv_token_info') || 'null'),
+      userInfo: JSON.parse(localStorage.getItem('deriv_user_info') || 'null')
+    };
+  }
+
+  // Clear OAuth session
+  clearOAuthSession(): void {
+    localStorage.removeItem('deriv_oauth_token');
+    localStorage.removeItem('deriv_token_info');
+    localStorage.removeItem('deriv_user_info');
+  }
+
+  // Check if OAuth token is expired
+  isOAuthTokenExpired(): boolean {
+    try {
+      const tokenInfo = JSON.parse(localStorage.getItem('deriv_token_info') || '{}');
+      if (!tokenInfo.created_at || !tokenInfo.expires_in) return true;
+
+      const createdAt = new Date(tokenInfo.created_at);
+      const expiresAt = new Date(createdAt.getTime() + (tokenInfo.expires_in * 1000));
+      const now = new Date();
+
+      // Add 5 minute buffer
+      const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+      return now.getTime() > (expiresAt.getTime() - bufferTime);
+    } catch {
+      return true;
     }
   }
 }

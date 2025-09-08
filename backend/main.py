@@ -9,7 +9,9 @@ import time
 from typing import Dict, Any, Optional, List
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
+from enhanced_websocket_manager import EnhancedDerivWebSocket, ErrorType
 from capital_manager import CapitalManager, TradeResult
+from oauth_manager import oauth_manager, TokenData
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,8 +32,21 @@ class SettingsRequest(BaseModel):
     indicators: dict
     selected_assets: dict
 
+# OAuth request models
+class OAuthStartRequest(BaseModel):
+    scopes: Optional[List[str]] = None
+    redirect_uri: Optional[str] = None
+
+class OAuthCallbackRequest(BaseModel):
+    code: str
+    state: str
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str
+
 # Global instances
 ws_manager: DerivWebSocketManager = None
+enhanced_ws_manager: EnhancedDerivWebSocket = None
 capital_manager: CapitalManager = None
 
 # Bot settings
@@ -201,6 +216,30 @@ async def handle_connection_status(status: ConnectionState):
     global bot_status
     bot_status["connection_status"] = status.value
     logger.info(f"Connection status: {status.value}")
+
+async def handle_websocket_error(error_type: ErrorType, error_message: str, error_code: str = None):
+    """Handle WebSocket errors with enhanced error information"""
+    global bot_status
+    
+    logger.error(f"WebSocket Error [{error_type.value}]: {error_message} (Code: {error_code})")
+    
+    # Update bot status with error information
+    bot_status["last_error"] = {
+        "type": error_type.value,
+        "message": error_message,
+        "code": error_code,
+        "timestamp": time.time()
+    }
+    
+    # Handle specific error types
+    if error_type == ErrorType.AUTHENTICATION_ERROR:
+        bot_status["connection_status"] = "authentication_failed"
+        logger.warning("🔐 Authentication failed - may need to refresh OAuth token")
+    elif error_type == ErrorType.NETWORK_ERROR:
+        bot_status["connection_status"] = "network_error"
+        logger.warning("🌐 Network error - attempting automatic reconnection")
+    elif error_type == ErrorType.RATE_LIMIT_ERROR:
+        logger.warning("⏱️ Rate limit exceeded - throttling requests")
 
 # --- API Endpoints ---
 
@@ -629,3 +668,525 @@ async def get_trade_history():
         "total_trades": len(capital_manager.trade_history),
         "current_stats": capital_manager.get_stats()
     }
+
+# --- OAuth 2.0 Endpoints ---
+
+@app.post("/oauth/start")
+async def start_oauth_flow(request: OAuthStartRequest):
+    """
+    Start OAuth 2.0 authorization flow
+    Returns authorization URL for user to visit
+    """
+    try:
+        # Clean up expired states
+        oauth_manager.cleanup_expired_states()
+        
+        # Get authorization URL
+        auth_data = await oauth_manager.get_authorization_url(
+            scopes=request.scopes,
+            redirect_uri=request.redirect_uri
+        )
+        
+        logger.info(f"OAuth flow started for scopes: {auth_data['scopes']}")
+        
+        return {
+            "status": "success",
+            "authorization_url": auth_data["authorization_url"],
+            "state": auth_data["state"],
+            "scopes": auth_data["scopes"],
+            "redirect_uri": auth_data["redirect_uri"],
+            "message": "Visit the authorization URL to complete OAuth flow"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting OAuth flow: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/oauth/callback")
+async def handle_oauth_callback(request: OAuthCallbackRequest):
+    """
+    Handle OAuth callback with authorization code
+    Exchange code for access token
+    """
+    try:
+        # Exchange code for token
+        token_data = await oauth_manager.exchange_code_for_token(
+            authorization_code=request.code,
+            state=request.state
+        )
+        
+        # Validate the token
+        user_info = await oauth_manager.validate_token(token_data.access_token)
+        
+        logger.info(f"OAuth flow completed for user: {user_info.get('email', 'unknown')}")
+        
+        return {
+            "status": "success",
+            "message": "OAuth authentication successful",
+            "token_info": {
+                "token_type": token_data.token_type,
+                "expires_in": token_data.expires_in,
+                "scope": token_data.scope,
+                "created_at": token_data.created_at.isoformat()
+            },
+            "user_info": user_info,
+            "encrypted_token": oauth_manager.encrypt_token(token_data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error handling OAuth callback: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/oauth/refresh")
+async def refresh_oauth_token(request: TokenRefreshRequest):
+    """
+    Refresh OAuth access token using refresh token
+    """
+    try:
+        # Refresh the token
+        new_token_data = await oauth_manager.refresh_access_token(request.refresh_token)
+        
+        logger.info("OAuth token refreshed successfully")
+        
+        return {
+            "status": "success",
+            "message": "Token refreshed successfully",
+            "token_info": {
+                "token_type": new_token_data.token_type,
+                "expires_in": new_token_data.expires_in,
+                "scope": new_token_data.scope,
+                "created_at": new_token_data.created_at.isoformat()
+            },
+            "encrypted_token": oauth_manager.encrypt_token(new_token_data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error refreshing OAuth token: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/oauth/validate")
+async def validate_oauth_token(request: ValidateTokenRequest):
+    """
+    Validate OAuth access token and get user information
+    Enhanced version with detailed token information
+    """
+    try:
+        # Get user information
+        user_info = await oauth_manager.validate_token(request.api_token)
+        
+        # Get detailed token information
+        token_info = await oauth_manager.get_token_info(request.api_token)
+        
+        logger.info(f"OAuth token validated for user: {user_info.get('email', 'unknown')}")
+        
+        return {
+            "valid": True,
+            "status": "success",
+            "message": "Token is valid",
+            "user_info": user_info,
+            "token_info": token_info
+        }
+        
+    except Exception as e:
+        logger.error(f"OAuth token validation failed: {e}")
+        return {
+            "valid": False,
+            "status": "error",
+            "message": str(e),
+            "error_type": type(e).__name__
+        }
+
+@app.post("/oauth/revoke")
+async def revoke_oauth_token(request: ValidateTokenRequest):
+    """
+    Revoke OAuth access token (logout)
+    """
+    try:
+        success = await oauth_manager.revoke_token(request.api_token)
+        
+        if success:
+            logger.info("OAuth token revoked successfully")
+            return {
+                "status": "success",
+                "message": "Token revoked successfully"
+            }
+        else:
+            return {
+                "status": "warning",
+                "message": "Token revocation completed (status unclear)"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error revoking OAuth token: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/oauth/scopes")
+async def get_available_scopes():
+    """
+    Get list of available OAuth scopes
+    """
+    return {
+        "available_scopes": oauth_manager.available_scopes,
+        "default_scopes": oauth_manager.default_scopes,
+        "scope_descriptions": {
+            "read": "Read account information, balance, and trading history",
+            "trade": "Execute trading operations (buy/sell contracts)",
+            "payments": "Handle payments and withdrawals (use with caution)",
+            "admin": "Administrative access (use with extreme caution)"
+        },
+        "recommended_scopes": ["read", "trade"],
+        "minimal_scopes": ["read"]
+    }
+
+@app.get("/oauth/config")
+async def get_oauth_config():
+    """
+    Get OAuth configuration for debugging
+    """
+    return {
+        "oauth_endpoints": {
+            "authorize_url": oauth_manager.authorize_url,
+            "token_url": oauth_manager.token_url,
+            "user_info_url": oauth_manager.user_info_url
+        },
+        "client_configuration": {
+            "client_id": oauth_manager.client_id,
+            "has_client_secret": bool(oauth_manager.client_secret),
+            "default_redirect_uri": oauth_manager.redirect_uri
+        },
+        "security_features": {
+            "pkce_enabled": True,
+            "state_parameter": True,
+            "token_encryption": True
+        },
+        "active_states_count": len(oauth_manager.active_states)
+    }
+
+# --- Enhanced connection endpoint with OAuth support ---
+
+@app.post("/connect/oauth")
+async def connect_with_oauth_token(encrypted_token: str):
+    """
+    Connect to Deriv WebSocket using OAuth encrypted token
+    """
+    global ws_manager
+    
+    try:
+        # Decrypt the token
+        token_data = oauth_manager.decrypt_token(encrypted_token)
+        
+        # Check if token is expired
+        if token_data.is_expired:
+            # Try to refresh if we have a refresh token
+            if token_data.refresh_token:
+                try:
+                    token_data = await oauth_manager.refresh_access_token(token_data.refresh_token)
+                    logger.info("Token refreshed automatically during connection")
+                except Exception as refresh_error:
+                    logger.error(f"Failed to refresh token: {refresh_error}")
+                    raise HTTPException(status_code=401, detail="Token expired and refresh failed")
+            else:
+                raise HTTPException(status_code=401, detail="Token expired and no refresh token available")
+        
+        # Create Enhanced WebSocket manager with OAuth token
+        app_id = os.getenv("DERIV_APP_ID", "99188")
+        enhanced_ws_manager = EnhancedDerivWebSocket(app_id=app_id, api_token=token_data.access_token)
+        
+        # Set up event handlers
+        enhanced_ws_manager.set_tick_handler(handle_tick_data)
+        enhanced_ws_manager.set_balance_handler(handle_balance_update)
+        enhanced_ws_manager.set_trade_handler(handle_trade_result)
+        enhanced_ws_manager.set_connection_handler(handle_connection_status)
+        enhanced_ws_manager.set_error_handler(handle_websocket_error)
+        
+        # Connect
+        logger.info(f"Connecting with OAuth token (scopes: {token_data.scope})")
+        success = await enhanced_ws_manager.connect()
+        
+        if success:
+            logger.info(f"Enhanced WebSocket connected with OAuth. State: {enhanced_ws_manager.state.value}")
+            return {
+                "status": "connecting",
+                "message": "Enhanced connection initiated with OAuth token",
+                "auth_method": "OAuth 2.0",
+                "scopes": token_data.scope,
+                "token_expires_at": (token_data.created_at + timedelta(seconds=token_data.expires_in)).isoformat(),
+                "enhanced_features": {
+                    "subscription_manager": True,
+                    "message_queue": True,
+                    "error_classification": True,
+                    "auto_reconnection": True
+                }
+            }
+        else:
+            logger.error(f"OAuth connection failed. Final state: {enhanced_ws_manager.state.value}")
+            raise HTTPException(status_code=500, detail="Failed to connect to Deriv API with OAuth token")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"OAuth connection error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- Enhanced WebSocket Endpoints ---
+
+@app.get("/websocket/stats")
+async def get_websocket_stats():
+    """Get comprehensive WebSocket connection statistics"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        return {
+            "status": "no_connection",
+            "message": "Enhanced WebSocket manager not initialized"
+        }
+    
+    try:
+        stats = enhanced_ws_manager.get_connection_stats()
+        return {
+            "status": "success",
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Error getting WebSocket stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/websocket/subscribe/ticks")
+async def subscribe_to_ticks(symbol: str):
+    """Subscribe to tick data for a symbol using enhanced WebSocket"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager or enhanced_ws_manager.state != ConnectionState.AUTHENTICATED:
+        raise HTTPException(status_code=400, detail="Enhanced WebSocket not connected or authenticated")
+    
+    try:
+        subscription_id = await enhanced_ws_manager.subscribe_to_ticks(symbol)
+        
+        logger.info(f"Subscribed to ticks for {symbol}: {subscription_id}")
+        
+        return {
+            "status": "success",
+            "message": f"Subscribed to tick data for {symbol}",
+            "subscription_id": subscription_id,
+            "symbol": symbol,
+            "subscription_type": "ticks"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error subscribing to ticks for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/websocket/subscribe/candles")
+async def subscribe_to_candles(symbol: str, granularity: int = 60):
+    """Subscribe to candle data for a symbol using enhanced WebSocket"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager or enhanced_ws_manager.state != ConnectionState.AUTHENTICATED:
+        raise HTTPException(status_code=400, detail="Enhanced WebSocket not connected or authenticated")
+    
+    try:
+        subscription_id = await enhanced_ws_manager.subscribe_to_candles(symbol, granularity)
+        
+        logger.info(f"Subscribed to candles for {symbol} ({granularity}s): {subscription_id}")
+        
+        return {
+            "status": "success",
+            "message": f"Subscribed to candle data for {symbol}",
+            "subscription_id": subscription_id,
+            "symbol": symbol,
+            "subscription_type": "candles",
+            "granularity": granularity
+        }
+        
+    except Exception as e:
+        logger.error(f"Error subscribing to candles for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/websocket/subscription/{subscription_id}")
+async def unsubscribe_from_data(subscription_id: str):
+    """Unsubscribe from a WebSocket subscription"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        raise HTTPException(status_code=400, detail="Enhanced WebSocket not connected")
+    
+    try:
+        success = await enhanced_ws_manager.unsubscribe(subscription_id)
+        
+        if success:
+            logger.info(f"Unsubscribed from {subscription_id}")
+            return {
+                "status": "success",
+                "message": f"Successfully unsubscribed from {subscription_id}"
+            }
+        else:
+            return {
+                "status": "not_found",
+                "message": f"Subscription {subscription_id} not found"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error unsubscribing from {subscription_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/websocket/subscriptions")
+async def list_active_subscriptions():
+    """List all active WebSocket subscriptions"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        return {
+            "status": "no_connection",
+            "subscriptions": []
+        }
+    
+    try:
+        subscriptions = enhanced_ws_manager.subscription_manager.get_active_subscriptions()
+        
+        return {
+            "status": "success",
+            "subscriptions": subscriptions,
+            "total_subscriptions": len(subscriptions),
+            "active_symbols": list(enhanced_ws_manager.subscription_manager.active_symbols)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing subscriptions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/websocket/reconnect")
+async def force_websocket_reconnection():
+    """Force WebSocket reconnection (useful for testing recovery)"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        raise HTTPException(status_code=400, detail="Enhanced WebSocket manager not initialized")
+    
+    try:
+        logger.info("Manual WebSocket reconnection requested")
+        success = await enhanced_ws_manager.reconnect()
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "WebSocket reconnection successful",
+                "new_state": enhanced_ws_manager.state.value
+            }
+        else:
+            return {
+                "status": "failed",
+                "message": "WebSocket reconnection failed",
+                "current_state": enhanced_ws_manager.state.value
+            }
+        
+    except Exception as e:
+        logger.error(f"Error during manual reconnection: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/websocket/health")
+async def websocket_health_check():
+    """Comprehensive WebSocket health check"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        return {
+            "status": "unhealthy",
+            "reason": "Enhanced WebSocket manager not initialized",
+            "checks": {
+                "manager_initialized": False,
+                "connection_active": False,
+                "authenticated": False,
+                "subscriptions_active": False,
+                "error_rate_acceptable": True
+            }
+        }
+    
+    try:
+        stats = enhanced_ws_manager.get_connection_stats()
+        
+        # Health checks
+        checks = {
+            "manager_initialized": True,
+            "connection_active": enhanced_ws_manager.state in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED],
+            "authenticated": enhanced_ws_manager.state == ConnectionState.AUTHENTICATED,
+            "subscriptions_active": len(stats['subscriptions']) > 0,
+            "error_rate_acceptable": stats['stats']['errors_handled'] < 10,  # Less than 10 errors acceptable
+            "uptime_good": stats['uptime'] is not None
+        }
+        
+        # Overall health
+        is_healthy = all([
+            checks["manager_initialized"],
+            checks["connection_active"],
+            checks["authenticated"]
+        ])
+        
+        return {
+            "status": "healthy" if is_healthy else "degraded",
+            "checks": checks,
+            "stats": stats,
+            "recommendations": _get_health_recommendations(checks, stats)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during health check: {e}")
+        return {
+            "status": "error",
+            "reason": str(e),
+            "checks": {
+                "manager_initialized": enhanced_ws_manager is not None,
+                "connection_active": False,
+                "authenticated": False,
+                "subscriptions_active": False,
+                "error_rate_acceptable": False
+            }
+        }
+
+def _get_health_recommendations(checks: Dict[str, bool], stats: Dict[str, Any]) -> List[str]:
+    """Generate health recommendations based on checks"""
+    recommendations = []
+    
+    if not checks["connection_active"]:
+        recommendations.append("Connection is not active - consider reconnecting")
+    
+    if not checks["authenticated"]:
+        recommendations.append("Not authenticated - check OAuth token validity")
+    
+    if not checks["subscriptions_active"]:
+        recommendations.append("No active subscriptions - consider subscribing to market data")
+    
+    if not checks["error_rate_acceptable"]:
+        recommendations.append("High error rate detected - investigate connection issues")
+    
+    if stats.get('stats', {}).get('reconnections', 0) > 5:
+        recommendations.append("Multiple reconnections detected - check network stability")
+    
+    if not recommendations:
+        recommendations.append("All systems operating normally")
+    
+    return recommendations
+
+@app.get("/websocket/message-queue")
+async def get_message_queue_status():
+    """Get message queue statistics"""
+    global enhanced_ws_manager
+    
+    if not enhanced_ws_manager:
+        raise HTTPException(status_code=400, detail="Enhanced WebSocket manager not initialized")
+    
+    try:
+        queue_stats = enhanced_ws_manager.message_queue.get_stats()
+        
+        return {
+            "status": "success",
+            "queue_stats": queue_stats,
+            "is_healthy": queue_stats["queue_size"] < 100,  # Queue size under 100 is healthy
+            "recommendations": [
+                "Queue is healthy" if queue_stats["queue_size"] < 100 
+                else "Queue size is high - may indicate processing delays"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting message queue status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
