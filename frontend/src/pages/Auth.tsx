@@ -1,34 +1,51 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   TrendingUp,
-  Key,
   Shield,
   AlertTriangle,
   CheckCircle2,
-  HelpCircle,
-  Eye,
-  EyeOff,
   Wifi,
   WifiOff,
-  Loader2
+  Loader2,
+  LogIn,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Key,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 
+interface DerivAccount {
+  loginid: string;
+  currency: string;
+  account_type: string;
+  is_virtual: number;
+  token: string;
+}
+
 export default function Auth() {
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [accounts, setAccounts] = useState<DerivAccount[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
+  const [showManualLogin, setShowManualLogin] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   
   const { login, isValidating, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Check backend status on mount
   useEffect(() => {
@@ -47,6 +64,46 @@ export default function Auth() {
     return () => clearInterval(interval);
   }, []);
 
+  // Process OAuth callback parameters on mount
+  useEffect(() => {
+    const processOAuthCallback = async () => {
+      // Check if we have OAuth callback parameters
+      const oAuthAccounts: DerivAccount[] = [];
+      let accountIndex = 1;
+      
+      while (searchParams.has(`acct${accountIndex}`)) {
+        const loginid = searchParams.get(`acct${accountIndex}`);
+        const token = searchParams.get(`token${accountIndex}`);
+        const currency = searchParams.get(`cur${accountIndex}`) || 'USD';
+        
+        if (loginid && token) {
+          // Determine account type and if it's virtual
+          const isVirtual = loginid.toLowerCase().includes('vrt') || loginid.toLowerCase().includes('virtual') ? 1 : 0;
+          const accountType = loginid.toLowerCase().includes('cr') ? 'trading' : 'wallet';
+          
+          oAuthAccounts.push({
+            loginid,
+            token,
+            currency: currency.toUpperCase(),
+            account_type: accountType,
+            is_virtual: isVirtual
+          });
+        }
+        accountIndex++;
+      }
+      
+      if (oAuthAccounts.length > 0) {
+        setAccounts(oAuthAccounts);
+        setIsProcessingOAuth(true);
+        
+        // Clean the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+    
+    processOAuthCallback();
+  }, [searchParams]);
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -54,10 +111,26 @@ export default function Auth() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleValidateKey = async () => {
-    if (!apiKey.trim()) {
-      return;
+  const handleOAuthLogin = () => {
+    const APP_ID = import.meta.env.VITE_DERIV_APP_ID || '99188';
+    const oAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}`;
+    window.location.href = oAuthUrl;
+  };
+
+  const handleAccountSelect = async () => {
+    if (!selectedAccount) return;
+    
+    const account = accounts.find(acc => acc.loginid === selectedAccount);
+    if (!account) return;
+
+    const success = await login(account.token);
+    if (success) {
+      navigate('/dashboard');
     }
+  };
+
+  const handleManualLogin = async () => {
+    if (!apiKey.trim()) return;
 
     const success = await login(apiKey);
     if (success) {
@@ -67,7 +140,7 @@ export default function Auth() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isValidating) {
-      handleValidateKey();
+      handleManualLogin();
     }
   };
 
@@ -85,51 +158,92 @@ export default function Auth() {
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
 
-  const ApiGuideContent = () => (
-    <div className="space-y-4 max-h-96 overflow-y-auto">
-      <div className="space-y-3">
-        <h4 className="font-semibold">Passo 1: Acesse sua conta Deriv</h4>
-        <p className="text-sm text-muted-foreground">
-          Faça login em sua conta na plataforma Deriv (app.deriv.com)
-        </p>
-      </div>
+  // If we have accounts from OAuth, show account selection
+  if (accounts.length > 0 && isProcessingOAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          {/* Logo and Title */}
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center space-x-2">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold">BotDeriv</span>
+            </div>
+            <p className="text-muted-foreground">
+              Selecione a conta para trading
+            </p>
+          </div>
 
-      <div className="space-y-3">
-        <h4 className="font-semibold">Passo 2: Navegue para API Token</h4>
-        <p className="text-sm text-muted-foreground">
-          Vá para "Settings" → "API Token" no menu da sua conta
-        </p>
-      </div>
+          {/* Account Selection Card */}
+          <Card className="trading-card">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2 text-primary" />
+                Suas Contas Deriv
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                {accounts.map((account) => (
+                  <div 
+                    key={account.loginid} 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedAccount === account.loginid 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:bg-muted/30'
+                    }`}
+                    onClick={() => setSelectedAccount(account.loginid)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">{account.loginid}</span>
+                          <Badge variant={account.is_virtual ? "secondary" : "default"}>
+                            {account.is_virtual ? "Demo" : "Real"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {account.currency} • {account.account_type === 'trading' ? 'Conta de Trading' : 'Carteira'}
+                        </p>
+                      </div>
+                      {selectedAccount === account.loginid && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-      <div className="space-y-3">
-        <h4 className="font-semibold">Passo 3: Crie um novo token</h4>
-        <p className="text-sm text-muted-foreground">
-          Clique em "Create" e configure os escopos necessários:
-        </p>
-        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-          <li>• <strong>Read:</strong> Para consultar informações da conta</li>
-          <li>• <strong>Trade:</strong> Para executar operações</li>
-          <li>• <strong>Payments:</strong> Para acessar histórico financeiro</li>
-          <li>• <strong>Trading Information:</strong> Para dados de mercado</li>
-        </ul>
-      </div>
+              <Button 
+                onClick={handleAccountSelect}
+                disabled={!selectedAccount || isValidating}
+                className="w-full success-gradient hover:opacity-90"
+              >
+                {isValidating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Conectar com {selectedAccount}
+                  </>
+                )}
+              </Button>
 
-      <div className="space-y-3">
-        <h4 className="font-semibold">Passo 4: Copie o token</h4>
-        <p className="text-sm text-muted-foreground">
-          Após criar, copie o token gerado e cole no campo acima
-        </p>
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>OAuth Seguro:</strong> Autenticação segura através da Deriv, sem exposição de tokens permanentes.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          <strong>Importante:</strong> Nunca compartilhe seu token de API com terceiros. 
-          Este aplicativo armazena o token de forma segura apenas no seu dispositivo.
-        </AlertDescription>
-      </Alert>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -153,80 +267,38 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* Authentication Card */}
+        {/* OAuth Authentication Card */}
         <Card className="trading-card">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Key className="h-5 w-5 mr-2 text-primary" />
-              Conectar à Deriv
+              <LogIn className="h-5 w-5 mr-2 text-primary" />
+              Login Seguro via Deriv
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">Chave de API da Deriv</Label>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Cole seu token aqui... (ex: m33T9o2uzJv0M9W)"
-                  className="pr-10"
-                  disabled={isValidating}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="link" size="sm" className="p-0 h-auto">
-                      <HelpCircle className="h-4 w-4 mr-1" />
-                      Como obter minha chave de API?
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>Como obter sua chave de API da Deriv</DialogTitle>
-                    </DialogHeader>
-                    <ApiGuideContent />
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Faça login de forma segura usando sua conta Deriv oficial. 
+                Não é necessário gerar tokens manualmente.
+              </p>
 
-            <Button 
-              onClick={handleValidateKey}
-              disabled={isValidating || !apiKey.trim()}
-              className="w-full success-gradient hover:opacity-90"
-            >
-              {isValidating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Validando token...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  {backendStatus === 'offline' ? 'Salvar Token (Servidor Offline)' : 'Validar e Conectar'}
-                </>
-              )}
-            </Button>
+              <Button 
+                onClick={handleOAuthLogin}
+                disabled={backendStatus === 'offline'}
+                className="w-full success-gradient hover:opacity-90"
+                size="lg"
+              >
+                <LogIn className="h-5 w-5 mr-2" />
+                Fazer Login com Deriv
+              </Button>
+            </div>
 
             {/* Status Information */}
             {backendStatus === 'offline' && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>Servidor offline:</strong> O token será salvo localmente e validado 
-                  quando o servidor estiver disponível.
+                  <strong>Servidor offline:</strong> Aguarde o servidor ficar online para fazer login.
                 </AlertDescription>
               </Alert>
             )}
@@ -235,53 +307,117 @@ export default function Auth() {
             <Alert>
               <Shield className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>Segurança Garantida:</strong> Sua chave de API é armazenada de forma 
-                criptografada apenas no seu dispositivo e nunca é compartilhada com terceiros.
+                <strong>OAuth Seguro:</strong> Login oficial da Deriv usando protocolo OAuth. 
+                Seus dados permanecem seguros e privados.
               </AlertDescription>
             </Alert>
 
-            {/* How to Get Token */}
+            {/* OAuth Process Explanation */}
             <div className="pt-4 border-t border-border">
-              <h4 className="text-sm font-medium mb-3">🔑 Como obter seu token da API:</h4>
+              <h4 className="text-sm font-medium mb-3">🔐 Como funciona o login OAuth:</h4>
               <div className="text-sm text-muted-foreground space-y-2 mb-4">
                 <div className="flex items-start space-x-2">
                   <span className="text-primary font-medium">1.</span>
-                  <span>Acesse <strong>app.deriv.com</strong></span>
+                  <span>Você será redirecionado para a Deriv oficial</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <span className="text-primary font-medium">2.</span>
-                  <span>Settings → API Token</span>
+                  <span>Faça login com suas credenciais da Deriv</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <span className="text-primary font-medium">3.</span>
-                  <span>Crie token com escopos: <strong>Read, Trade, Payments</strong></span>
+                  <span>Autorize o acesso às suas contas</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <span className="text-primary font-medium">4.</span>
-                  <span>Copie o token (ex: <code className="bg-muted px-1 rounded">m33T9o2uzJv0M9W</code>)</span>
+                  <span>Retorne automaticamente e selecione sua conta</span>
                 </div>
               </div>
               
-              <h4 className="text-sm font-medium mb-3">Funcionalidades do Sistema:</h4>
+              <h4 className="text-sm font-medium mb-3">Vantagens do OAuth:</h4>
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Gestão inteligente de capital
+                  Maior segurança (sem tokens permanentes)
                 </li>
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Reinvestimento progressivo (20%)
+                  Processo automatizado
                 </li>
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Martingale controlado (1.25x)
+                  Suporte a múltiplas contas
                 </li>
                 <li className="flex items-center">
                   <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Monitoramento em tempo real
+                  Recomendado oficialmente pela Deriv
                 </li>
               </ul>
             </div>
+
+            {/* Manual Login Option (Collapsible) */}
+            <Collapsible open={showManualLogin} onOpenChange={setShowManualLogin}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between" size="sm">
+                  <span className="flex items-center">
+                    <Key className="h-4 w-4 mr-2" />
+                    Login Manual (Avançado)
+                  </span>
+                  {showManualLogin ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    <strong>Método Legacy:</strong> Use apenas se tiver problemas com OAuth. 
+                    O método OAuth é mais seguro e recomendado.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">Token de API da Deriv</Label>
+                  <div className="relative">
+                    <Input
+                      id="apiKey"
+                      type={showKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Cole seu token aqui..."
+                      className="pr-10"
+                      disabled={isValidating}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleManualLogin}
+                  disabled={isValidating || !apiKey.trim()}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {isValidating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Validando...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-4 w-4 mr-2" />
+                      Login com Token Manual
+                    </>
+                  )}
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
 
