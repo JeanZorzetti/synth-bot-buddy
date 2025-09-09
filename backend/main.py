@@ -517,6 +517,26 @@ async def reset_trading_session():
         logger.error(f"Error resetting trading session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/trading/health")
+async def trading_health_check():
+    """Check trading engine health and available endpoints"""
+    global trading_engine
+    
+    return {
+        "status": "ok",
+        "trading_engine_available": trading_engine is not None,
+        "trading_engine_running": trading_engine.is_running if trading_engine else False,
+        "available_endpoints": [
+            "/trading/signals/{symbol}",
+            "/trading/performance", 
+            "/trading/history",
+            "/trading/reset-session",
+            "/trading/health"
+        ],
+        "total_trades": len(trading_engine.trade_history) if trading_engine else 0,
+        "active_trades": len(trading_engine.active_trades) if trading_engine else 0
+    }
+
 @app.get("/config")
 async def get_configuration():
     """Get current configuration for debugging."""

@@ -57,15 +57,38 @@ export default function History() {
 
   const loadTradeHistory = async () => {
     try {
+      // First check if trading endpoints are available
+      try {
+        await apiService.get('/trading/health');
+      } catch (healthError) {
+        // Trading endpoints not available, show demo data
+        console.log('Trading endpoints not available, showing demo data');
+        setHistoryData({
+          trades: [],
+          total_trades: 0,
+          summary: { total_pnl: 0, wins: 0, losses: 0, win_rate: 0 }
+        });
+        return;
+      }
+
       const data = await apiService.get<HistoryResponse>('/trading/history?limit=100');
       setHistoryData(data);
     } catch (error: any) {
       console.error('Failed to load trade history:', error);
+      
+      let errorMessage = "Não foi possível carregar o histórico de trades.";
+      if (error.message.includes('Not Found') || error.message.includes('404')) {
+        errorMessage = "Endpoints de trading ainda não estão disponíveis no servidor. Aguarde o deploy completo.";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Não foi possível conectar ao backend. Verifique se está rodando.";
+      }
+      
       toast({
-        title: "Erro ao carregar histórico",
-        description: "Não foi possível carregar o histórico de trades. Verifique se o backend está rodando.",
+        title: "Histórico Indisponível",
+        description: errorMessage,
         variant: "destructive",
       });
+      
       // Set empty data on error
       setHistoryData({
         trades: [],
@@ -371,7 +394,17 @@ export default function History() {
               {filteredTrades.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <HistoryIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma operação encontrada com os filtros selecionados.</p>
+                  <p className="mb-2">
+                    {historyData.total_trades === 0 
+                      ? "Nenhuma operação realizada ainda." 
+                      : "Nenhuma operação encontrada com os filtros selecionados."
+                    }
+                  </p>
+                  {historyData.total_trades === 0 && (
+                    <p className="text-sm">
+                      Execute algumas operações no Dashboard para ver o histórico aqui.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

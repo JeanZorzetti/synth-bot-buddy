@@ -53,14 +53,39 @@ export default function Performance() {
 
   const loadPerformanceData = async () => {
     try {
+      // First check if trading endpoints are available
+      try {
+        await apiService.get('/trading/health');
+      } catch (healthError) {
+        // Trading endpoints not available
+        console.log('Trading endpoints not available');
+        toast({
+          title: "Trading Engine Indisponível",
+          description: "Os endpoints de trading ainda não estão disponíveis no servidor. Aguarde o deploy completo.",
+          variant: "destructive",
+        });
+        setPerformanceData(null);
+        return;
+      }
+
       const data = await apiService.get<PerformanceData>('/trading/performance');
       setPerformanceData(data);
       setLastUpdated(new Date());
     } catch (error: any) {
       console.error('Failed to load performance data:', error);
+      
+      let errorMessage = "Não foi possível carregar os dados de performance.";
+      if (error.message.includes('Not Found') || error.message.includes('404')) {
+        errorMessage = "Endpoints de trading ainda não estão disponíveis no servidor. Aguarde o deploy completo.";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Não foi possível conectar ao backend.";
+      } else {
+        errorMessage = "Verifique se o trading engine está ativo.";
+      }
+      
       toast({
         title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os dados de performance. Verifique se o trading engine está ativo.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -116,11 +141,16 @@ export default function Performance() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 text-center max-w-md">
             <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">Dados de performance não disponíveis</p>
-            <Button onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <h3 className="text-lg font-semibold">Trading Engine Indisponível</h3>
+            <p className="text-muted-foreground">
+              Os dados de performance não estão disponíveis no momento. 
+              Isso pode ocorrer se o trading engine ainda não foi inicializado 
+              ou se os endpoints ainda não foram deployados.
+            </p>
+            <Button onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
               Tentar Novamente
             </Button>
           </div>
