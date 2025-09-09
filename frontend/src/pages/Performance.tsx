@@ -53,41 +53,40 @@ export default function Performance() {
 
   const loadPerformanceData = async () => {
     try {
-      // First check if trading endpoints are available
-      try {
-        await apiService.get('/trading/health');
-      } catch (healthError) {
-        // Trading endpoints not available
-        console.log('Trading endpoints not available');
-        toast({
-          title: "Trading Engine Indisponível",
-          description: "Os endpoints de trading ainda não estão disponíveis no servidor. Aguarde o deploy completo.",
-          variant: "destructive",
-        });
-        setPerformanceData(null);
-        return;
-      }
-
+      // Try to load performance data directly
       const data = await apiService.get<PerformanceData>('/trading/performance');
       setPerformanceData(data);
       setLastUpdated(new Date());
     } catch (error: any) {
       console.error('Failed to load performance data:', error);
       
-      let errorMessage = "Não foi possível carregar os dados de performance.";
       if (error.message.includes('Not Found') || error.message.includes('404')) {
-        errorMessage = "Endpoints de trading ainda não estão disponíveis no servidor. Aguarde o deploy completo.";
-      } else if (error.message.includes('Failed to fetch')) {
-        errorMessage = "Não foi possível conectar ao backend.";
+        // Trading endpoints not deployed yet - expected during gradual deployment
+        console.log('Trading endpoints not available');
+        setPerformanceData(null);
+        
+        // Only show toast on manual refresh, not initial load
+        if (isRefreshing) {
+          toast({
+            title: "Funcionalidade em Desenvolvimento",
+            description: "Os relatórios de performance estão sendo implementados. Em breve você terá acesso completo às métricas.",
+            variant: "default",
+          });
+        }
       } else {
-        errorMessage = "Verifique se o trading engine está ativo.";
+        // Other errors (network, server, etc.)
+        let errorMessage = "Não foi possível carregar os dados de performance.";
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = "Não foi possível conectar ao backend. Verifique sua conexão.";
+        }
+        
+        toast({
+          title: "Erro ao Carregar Performance",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setPerformanceData(null);
       }
-      
-      toast({
-        title: "Erro ao carregar dados",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -140,20 +139,55 @@ export default function Performance() {
   if (!performanceData) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center space-y-4 text-center max-w-md">
-            <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-            <h3 className="text-lg font-semibold">Trading Engine Indisponível</h3>
-            <p className="text-muted-foreground">
-              Os dados de performance não estão disponíveis no momento. 
-              Isso pode ocorrer se o trading engine ainda não foi inicializado 
-              ou se os endpoints ainda não foram deployados.
-            </p>
-            <Button onClick={handleRefresh} disabled={isRefreshing}>
+        <div className="space-y-6">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Relatório de Performance</h1>
+              <p className="text-muted-foreground">
+                Análise detalhada do desempenho do trading automatizado
+              </p>
+            </div>
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
-              Tentar Novamente
+              Verificar Novamente
             </Button>
           </div>
+
+          {/* Info Card */}
+          <Card className="trading-card">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center space-y-4 text-center max-w-2xl mx-auto">
+                <Activity className="h-16 w-16 text-primary opacity-50" />
+                <h3 className="text-xl font-semibold">Relatórios de Performance em Desenvolvimento</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Os relatórios detalhados de performance e métricas de trading estão sendo implementados. 
+                  Esta funcionalidade estará disponível em breve com análises completas de:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-left w-full max-w-lg">
+                  <div className="flex items-center space-x-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Taxa de vitórias e P/L</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Métricas de risco</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Análise de performance</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Estatísticas financeiras</span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-4">
+                  Enquanto isso, você pode acompanhar o status básico do bot no Dashboard.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
