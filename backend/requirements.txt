@@ -6,6 +6,11 @@ pydantic==2.5.0
 python-dotenv==1.0.0
 requests==2.31.0
 
+# Trading engine dependencies
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
 # OAuth 2.0 and security dependencies
 aiohttp>=3.8.0
 PyJWT>=2.8.0

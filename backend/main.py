@@ -446,43 +446,96 @@ async def get_trade_history(limit: int = 50):
     """Get recent trade history"""
     global trading_engine
     
+    # Always return a valid response, even if trading engine is not available
     if not trading_engine:
-        raise HTTPException(status_code=503, detail="Trading engine not available")
+        return {
+            "trades": [],
+            "total_trades": 0,
+            "summary": {
+                "total_pnl": 0.0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 0.0
+            },
+            "status": "trading_engine_not_available"
+        }
     
     try:
-        trades = trading_engine.trade_history[-limit:]  # Get last N trades
+        # Safely get trade history
+        trade_history = getattr(trading_engine, 'trade_history', [])
+        trades = trade_history[-limit:] if trade_history else []
         
         formatted_trades = []
         for trade in trades:
-            formatted_trades.append({
-                "trade_id": trade.trade_id,
-                "symbol": trade.symbol,
-                "contract_type": trade.contract_type,
-                "amount": trade.amount,
-                "entry_price": trade.entry_price,
-                "exit_price": trade.exit_price,
-                "entry_time": trade.entry_time,
-                "exit_time": trade.exit_time,
-                "duration": trade.duration,
-                "status": trade.status.value,
-                "pnl": trade.pnl,
-                "contract_id": trade.contract_id
-            })
+            try:
+                formatted_trades.append({
+                    "trade_id": getattr(trade, 'trade_id', ''),
+                    "symbol": getattr(trade, 'symbol', ''),
+                    "contract_type": getattr(trade, 'contract_type', ''),
+                    "amount": getattr(trade, 'amount', 0.0),
+                    "entry_price": getattr(trade, 'entry_price', 0.0),
+                    "exit_price": getattr(trade, 'exit_price', 0.0),
+                    "entry_time": getattr(trade, 'entry_time', ''),
+                    "exit_time": getattr(trade, 'exit_time', ''),
+                    "duration": getattr(trade, 'duration', 0),
+                    "status": getattr(getattr(trade, 'status', None), 'value', 'unknown'),
+                    "pnl": getattr(trade, 'pnl', 0.0),
+                    "contract_id": getattr(trade, 'contract_id', '')
+                })
+            except Exception as trade_error:
+                logger.warning(f"Error formatting trade: {trade_error}")
+                continue
+        
+        # Safe calculations
+        total_trades = len(trade_history) if trade_history else 0
+        won_trades = []
+        lost_trades = []
+        total_pnl = 0.0
+        
+        if trade_history:
+            for trade in trade_history:
+                try:
+                    status = getattr(getattr(trade, 'status', None), 'value', '')
+                    pnl = getattr(trade, 'pnl', 0.0)
+                    
+                    if status == 'won':
+                        won_trades.append(trade)
+                    elif status == 'lost':
+                        lost_trades.append(trade)
+                    
+                    if pnl:
+                        total_pnl += pnl
+                except Exception:
+                    continue
+        
+        win_rate = (len(won_trades) / max(1, total_trades)) * 100 if total_trades > 0 else 0.0
         
         return {
             "trades": formatted_trades,
-            "total_trades": len(trading_engine.trade_history),
+            "total_trades": total_trades,
             "summary": {
-                "total_pnl": sum(t.pnl for t in trading_engine.trade_history if t.pnl),
-                "wins": len([t for t in trading_engine.trade_history if t.status.value == 'won']),
-                "losses": len([t for t in trading_engine.trade_history if t.status.value == 'lost']),
-                "win_rate": (len([t for t in trading_engine.trade_history if t.status.value == 'won']) / 
-                           max(1, len(trading_engine.trade_history))) * 100
-            }
+                "total_pnl": total_pnl,
+                "wins": len(won_trades),
+                "losses": len(lost_trades),
+                "win_rate": win_rate
+            },
+            "status": "success"
         }
+        
     except Exception as e:
         logger.error(f"Error getting trade history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return empty but valid response instead of 500 error
+        return {
+            "trades": [],
+            "total_trades": 0,
+            "summary": {
+                "total_pnl": 0.0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 0.0
+            },
+            "status": f"error: {str(e)}"
+        }
 
 @app.post("/trading/reset-session")
 async def reset_trading_session():
