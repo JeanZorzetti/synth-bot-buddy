@@ -138,10 +138,7 @@ async def lifespan(app: FastAPI):
     # Initialize Enhanced WebSocket Manager
     enhanced_ws_manager = EnhancedDerivWebSocket(
         app_id=app_id,
-        api_token="",  # Will be set when connecting
-        auto_reconnect=True,
-        max_reconnect_attempts=5,
-        reconnect_delay=5.0
+        api_token=""  # Will be set when connecting
     )
     
     # Initialize Trading Engine

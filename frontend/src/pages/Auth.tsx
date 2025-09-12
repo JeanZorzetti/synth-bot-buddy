@@ -421,6 +421,41 @@ export default function Auth() {
           </CardContent>
         </Card>
 
+        {/* Token Help */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h3 className="text-lg font-semibold">🔑 Precisa de um Token da Deriv?</h3>
+              <p className="text-sm text-muted-foreground">
+                Para usar nosso bot, você precisa de um token API da Deriv com permissões de trading.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open('https://app.deriv.com/account/api-token', '_blank')}
+                  className="w-full"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Gerar Token da Deriv (Real)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open('https://app.deriv.com/account/api-token', '_blank')}
+                  className="w-full"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Criar Conta Demo Deriv
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>✅ Selecione escopo "Admin" para funcionalidade completa</p>
+                <p>✅ Use conta demo para testes seguros</p>
+                <p>⚠️ Mantenha seu token sempre seguro</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Footer */}
         <p className="text-center text-sm text-muted-foreground">
           Ao conectar, você concorda com nossos termos de uso e política de privacidade
