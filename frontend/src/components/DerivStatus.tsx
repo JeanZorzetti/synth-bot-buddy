@@ -38,15 +38,23 @@ const DerivStatus: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await apiService.derivGetStatus();
-      if (response.status === 'success') {
+      if (response.status === 'success' || response.status === 'development') {
         setStatus(response.connection_info);
       }
       setLastChecked(new Date());
-    } catch (error) {
-      setStatus({
-        is_connected: false,
-        is_authenticated: false
-      });
+    } catch (error: any) {
+      if (error.message === 'DERIV_ENDPOINTS_NOT_AVAILABLE') {
+        setStatus({
+          is_connected: false,
+          is_authenticated: false,
+          api_status: 'endpoints_not_available'
+        });
+      } else {
+        setStatus({
+          is_connected: false,
+          is_authenticated: false
+        });
+      }
       setLastChecked(new Date());
     } finally {
       setIsLoading(false);
@@ -63,6 +71,16 @@ const DerivStatus: React.FC = () => {
 
   const getStatusBadge = () => {
     if (!status) return null;
+
+    // Verificar se os endpoints estão indisponíveis
+    if (status.api_status === 'endpoints_not_available') {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Em Desenvolvimento
+        </Badge>
+      );
+    }
 
     if (status.is_authenticated) {
       return (
@@ -159,18 +177,40 @@ const DerivStatus: React.FC = () => {
             </>
           ) : (
             <div className="text-center py-4">
-              <div className="text-sm text-muted-foreground mb-3">
-                Conecte-se à API Deriv para trading real
-              </div>
-              <Button 
-                variant="default" 
-                size="sm"
-                onClick={() => window.location.href = '/trading'}
-                className="w-full"
-              >
-                <Activity className="h-3 w-3 mr-2" />
-                Conectar Deriv API
-              </Button>
+              {status?.api_status === 'endpoints_not_available' ? (
+                <>
+                  <div className="text-sm text-muted-foreground mb-3">
+                    🚧 Funcionalidade em desenvolvimento
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-3">
+                    Os endpoints da Deriv API estão sendo deployados no servidor
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/trading'}
+                    className="w-full"
+                  >
+                    <Eye className="h-3 w-3 mr-2" />
+                    Ver Interface (Preview)
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-muted-foreground mb-3">
+                    Conecte-se à API Deriv para trading real
+                  </div>
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => window.location.href = '/trading'}
+                    className="w-full"
+                  >
+                    <Activity className="h-3 w-3 mr-2" />
+                    Conectar Deriv API
+                  </Button>
+                </>
+              )}
             </div>
           )}
           

@@ -451,13 +451,56 @@ class ApiService {
   // DERIV API METHODS - 16 FUNCIONALIDADES REAIS
   // =====================================================
 
+  // Verificar se endpoints Deriv estão disponíveis
+  async checkDerivEndpointsAvailable(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/routes`);
+      if (response.ok) {
+        const routes = await response.json();
+        // Verificar se existe pelo menos um endpoint /deriv/*
+        return routes.some((route: any) => 
+          route.path && route.path.startsWith('/deriv')
+        );
+      }
+      return false;
+    } catch (error) {
+      console.warn('Could not check Deriv endpoints availability');
+      return false;
+    }
+  }
+
+  // Wrapper para métodos Deriv com fallback gracioso
+  private async derivApiCall<T>(
+    endpoint: string, 
+    method: 'GET' | 'POST' = 'GET', 
+    data?: any,
+    fallbackValue?: T
+  ): Promise<T> {
+    try {
+      if (method === 'GET') {
+        return await this.get<T>(endpoint);
+      } else {
+        return await this.post<T>(endpoint, data);
+      }
+    } catch (error: any) {
+      if (error.message?.includes('Not Found') || error.message?.includes('404')) {
+        if (fallbackValue !== undefined) {
+          return fallbackValue;
+        }
+        // Retornar um erro mais amigável para endpoints não disponíveis
+        throw new Error('DERIV_ENDPOINTS_NOT_AVAILABLE');
+      }
+      throw error;
+    }
+  }
+
   // 1. Conectar à API Deriv
   async derivConnect(apiToken: string, demo: boolean = true): Promise<{
     status: string;
     message: string;
     connection_info: any;
   }> {
-    return this.post('/deriv/connect', { 
+    return this.derivApiCall('/deriv/connect', 'POST', { 
       api_token: apiToken, 
       demo 
     });
@@ -478,7 +521,17 @@ class ApiService {
     api_status: string;
     subscribed_symbols: string[];
   }> {
-    return this.get('/deriv/status');
+    return this.derivApiCall('/deriv/status', 'GET', undefined, {
+      status: 'development',
+      connection_info: {
+        is_connected: false,
+        is_authenticated: false,
+        balance: 0,
+        api_status: 'endpoints_not_available'
+      },
+      api_status: 'endpoints_not_available',
+      subscribed_symbols: []
+    });
   }
 
   // 4. Health check da API Deriv
@@ -524,7 +577,11 @@ class ApiService {
     symbols: string[];
     count: number;
   }> {
-    return this.get('/deriv/symbols');
+    return this.derivApiCall('/deriv/symbols', 'GET', undefined, {
+      status: 'development',
+      symbols: ['R_10', 'R_25', 'R_50', 'R_75', 'R_100'],
+      count: 5
+    });
   }
 
   // 9. Obter informações de um símbolo

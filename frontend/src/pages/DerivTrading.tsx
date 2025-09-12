@@ -88,12 +88,23 @@ const DerivTrading: React.FC = () => {
   const [portfolio, setPortfolio] = useState<DerivContract[]>([]);
   const [history, setHistory] = useState<DerivTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [endpointsAvailable, setEndpointsAvailable] = useState<boolean | null>(null);
 
   // Carregar dados iniciais
   useEffect(() => {
+    checkEndpointsAvailability();
     checkConnectionStatus();
     loadSymbols();
   }, []);
+
+  const checkEndpointsAvailability = async () => {
+    try {
+      const available = await apiService.checkDerivEndpointsAvailable();
+      setEndpointsAvailable(available);
+    } catch (error) {
+      setEndpointsAvailable(false);
+    }
+  };
 
   // Atualizar tick periodicamente se conectado
   useEffect(() => {
@@ -153,7 +164,11 @@ const DerivTrading: React.FC = () => {
         }
       }
     } catch (error: any) {
-      toast.error(`Erro ao conectar: ${error.message}`);
+      if (error.message === 'DERIV_ENDPOINTS_NOT_AVAILABLE') {
+        toast.error('🚧 Endpoints da Deriv API ainda não foram deployados no servidor');
+      } else {
+        toast.error(`Erro ao conectar: ${error.message}`);
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -339,6 +354,16 @@ const DerivTrading: React.FC = () => {
                 <Label htmlFor="demo-mode">Usar conta demo</Label>
               </div>
 
+              {endpointsAvailable === false && (
+                <Alert className="mb-4 border-blue-200 bg-blue-50">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    🚧 <strong>Preview da Interface</strong> - Os endpoints da Deriv API estão sendo deployados no servidor. 
+                    Esta é uma prévia da interface que funcionará após o deploy completo.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -375,6 +400,17 @@ const DerivTrading: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Banner de desenvolvimento */}
+      {endpointsAvailable === false && (
+        <Alert className="border-blue-200 bg-blue-50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            🚧 <strong>Interface em Preview</strong> - Esta é uma demonstração da interface de trading real. 
+            Os endpoints estão sendo deployados e estarão funcionais em breve.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header com informações de conexão */}
       <div className="flex items-center justify-between">
         <div>
