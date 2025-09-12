@@ -462,6 +462,12 @@ class ApiService {
       return true;
     }
 
+    // Para produção roilabs.com.br, sempre retornar true (já sabemos que existe)
+    if (this.baseUrl.includes('roilabs.com.br')) {
+      console.log('🌐 Backend de produção detectado - Deriv endpoints ativados');
+      return true;
+    }
+
     const now = Date.now();
     
     // Usar cache se ainda válido
