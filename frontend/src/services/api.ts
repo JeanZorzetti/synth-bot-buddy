@@ -117,6 +117,9 @@ export interface OAuthScopes {
 
 class ApiService {
   private baseUrl: string;
+  private derivEndpointsAvailable: boolean | null = null;
+  private derivEndpointsCheckTime: number = 0;
+  private readonly CACHE_DURATION = 60000; // 1 minuto
 
   constructor() {
     this.baseUrl = API_BASE_URL;
@@ -451,22 +454,37 @@ class ApiService {
   // DERIV API METHODS - 16 FUNCIONALIDADES REAIS
   // =====================================================
 
-  // Verificar se endpoints Deriv estão disponíveis
+  // Verificar se endpoints Deriv estão disponíveis (com cache)
   async checkDerivEndpointsAvailable(): Promise<boolean> {
+    const now = Date.now();
+    
+    // Usar cache se ainda válido
+    if (this.derivEndpointsAvailable !== null && 
+        (now - this.derivEndpointsCheckTime) < this.CACHE_DURATION) {
+      return this.derivEndpointsAvailable;
+    }
+
     try {
       const response = await fetch(`${this.baseUrl}/routes`);
       if (response.ok) {
         const routes = await response.json();
         // Verificar se existe pelo menos um endpoint /deriv/*
-        return routes.some((route: any) => 
+        this.derivEndpointsAvailable = routes.some((route: any) => 
           route.path && route.path.startsWith('/deriv')
         );
+      } else {
+        this.derivEndpointsAvailable = false;
       }
-      return false;
     } catch (error) {
-      console.warn('Could not check Deriv endpoints availability');
-      return false;
+      // Não mostrar warning repetidamente
+      if (this.derivEndpointsAvailable === null) {
+        console.warn('Could not check Deriv endpoints availability');
+      }
+      this.derivEndpointsAvailable = false;
     }
+    
+    this.derivEndpointsCheckTime = now;
+    return this.derivEndpointsAvailable;
   }
 
   // Wrapper para métodos Deriv com fallback gracioso
@@ -476,6 +494,15 @@ class ApiService {
     data?: any,
     fallbackValue?: T
   ): Promise<T> {
+    // Verificar disponibilidade antes de fazer request
+    const isAvailable = await this.checkDerivEndpointsAvailable();
+    if (!isAvailable) {
+      if (fallbackValue !== undefined) {
+        return fallbackValue;
+      }
+      throw new Error('DERIV_ENDPOINTS_NOT_AVAILABLE');
+    }
+
     try {
       if (method === 'GET') {
         return await this.derivApiCallSilent<T>(endpoint);
@@ -484,10 +511,12 @@ class ApiService {
       }
     } catch (error: any) {
       if (error.message?.includes('Not Found') || error.message?.includes('404')) {
+        // Invalidar cache se ainda não funciona
+        this.derivEndpointsAvailable = false;
+        
         if (fallbackValue !== undefined) {
           return fallbackValue;
         }
-        // Retornar um erro mais amigável para endpoints não disponíveis
         throw new Error('DERIV_ENDPOINTS_NOT_AVAILABLE');
       }
       throw error;
