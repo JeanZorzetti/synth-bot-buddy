@@ -53,8 +53,7 @@ class DerivTradingAdapter:
                 self.is_connected = True
                 logger.info("DerivTradingAdapter conectado com sucesso")
                 
-                # Carregar símbolos ativos
-                await self._load_active_symbols()
+                # Símbolos ativos serão carregados após autenticação
             
             return success
         except Exception as e:
@@ -71,6 +70,9 @@ class DerivTradingAdapter:
             if response and 'authorize' in response:
                 self.is_authenticated = True
                 logger.info("DerivTradingAdapter autenticado com sucesso")
+                
+                # Carregar símbolos ativos após autenticação
+                await self._load_active_symbols()
                 
                 # Obter saldo inicial
                 await self._update_balance()
