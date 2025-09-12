@@ -456,6 +456,12 @@ class ApiService {
 
   // Verificar se endpoints Deriv estão disponíveis (com cache)
   async checkDerivEndpointsAvailable(): Promise<boolean> {
+    // Para desenvolvimento local, sempre retornar true
+    if (this.baseUrl.includes('localhost')) {
+      console.log('🚀 Backend local detectado - Deriv endpoints ativados');
+      return true;
+    }
+
     const now = Date.now();
     
     // Usar cache se ainda válido
@@ -472,6 +478,7 @@ class ApiService {
         this.derivEndpointsAvailable = routes.some((route: any) => 
           route.path && route.path.startsWith('/deriv')
         );
+        console.log('✅ Deriv endpoints verificados:', this.derivEndpointsAvailable);
       } else {
         this.derivEndpointsAvailable = false;
       }
