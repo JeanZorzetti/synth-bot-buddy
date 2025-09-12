@@ -478,9 +478,9 @@ class ApiService {
   ): Promise<T> {
     try {
       if (method === 'GET') {
-        return await this.get<T>(endpoint);
+        return await this.derivApiCallSilent<T>(endpoint);
       } else {
-        return await this.post<T>(endpoint, data);
+        return await this.derivApiCallSilent<T>(endpoint, data);
       }
     } catch (error: any) {
       if (error.message?.includes('Not Found') || error.message?.includes('404')) {
@@ -492,6 +492,29 @@ class ApiService {
       }
       throw error;
     }
+  }
+
+  // Request silencioso para endpoints Deriv (sem logs de erro para 404)
+  private async derivApiCallSilent<T>(endpoint: string, data?: any): Promise<T> {
+    const baseUrl = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${baseUrl}${path}`;
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: data ? 'POST' : 'GET',
+      body: data ? JSON.stringify(data) : undefined,
+    };
+
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
   }
 
   // 1. Conectar à API Deriv

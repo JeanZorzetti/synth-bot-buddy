@@ -8,7 +8,8 @@ import {
   XCircle, 
   AlertCircle, 
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import apiService from '@/services/api';
 
