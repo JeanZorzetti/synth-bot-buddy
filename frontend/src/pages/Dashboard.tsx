@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DerivStatus from '@/components/DerivStatus';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -437,6 +438,14 @@ export default function Dashboard() {
                 <Activity className="h-4 w-4 mr-2" />
                 Relatório de Performance
               </Button>
+              <Button 
+                variant="default" 
+                className="w-full justify-start bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+                onClick={() => window.location.href = '/trading'}
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Trading Real (Deriv API)
+              </Button>
               {connectionStatus === 'authenticated' && (
                 <Button 
                   variant="outline" 
@@ -450,6 +459,9 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Deriv API Status */}
+          <DerivStatus />
         </div>
       </div>
     </Layout>

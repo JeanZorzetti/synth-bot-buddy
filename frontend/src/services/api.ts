@@ -446,6 +446,163 @@ class ApiService {
       return true;
     }
   }
+
+  // =====================================================
+  // DERIV API METHODS - 16 FUNCIONALIDADES REAIS
+  // =====================================================
+
+  // 1. Conectar à API Deriv
+  async derivConnect(apiToken: string, demo: boolean = true): Promise<{
+    status: string;
+    message: string;
+    connection_info: any;
+  }> {
+    return this.post('/deriv/connect', { 
+      api_token: apiToken, 
+      demo 
+    });
+  }
+
+  // 2. Desconectar da API Deriv
+  async derivDisconnect(): Promise<{
+    status: string;
+    message: string;
+  }> {
+    return this.post('/deriv/disconnect');
+  }
+
+  // 3. Obter status da conexão Deriv
+  async derivGetStatus(): Promise<{
+    status: string;
+    connection_info: any;
+    api_status: string;
+    subscribed_symbols: string[];
+  }> {
+    return this.get('/deriv/status');
+  }
+
+  // 4. Health check da API Deriv
+  async derivHealthCheck(): Promise<{
+    status: string;
+    health: any;
+    is_healthy: boolean;
+  }> {
+    return this.get('/deriv/health');
+  }
+
+  // 5. Obter saldo da conta
+  async derivGetBalance(): Promise<{
+    status: string;
+    balance: number;
+    currency: string;
+    loginid: string;
+  }> {
+    return this.get('/deriv/balance');
+  }
+
+  // 6. Obter portfólio de contratos abertos
+  async derivGetPortfolio(): Promise<{
+    status: string;
+    contracts: any[];
+    count: number;
+  }> {
+    return this.get('/deriv/portfolio');
+  }
+
+  // 7. Obter histórico de trades
+  async derivGetHistory(limit: number = 50): Promise<{
+    status: string;
+    transactions: any[];
+    count: number;
+  }> {
+    return this.get(`/deriv/history?limit=${limit}`);
+  }
+
+  // 8. Obter símbolos disponíveis
+  async derivGetSymbols(): Promise<{
+    status: string;
+    symbols: string[];
+    count: number;
+  }> {
+    return this.get('/deriv/symbols');
+  }
+
+  // 9. Obter informações de um símbolo
+  async derivGetSymbolInfo(symbol: string): Promise<{
+    status: string;
+    symbol: string;
+    info: any;
+  }> {
+    return this.get(`/deriv/symbols/${symbol}/info`);
+  }
+
+  // 10. Subscrever a ticks de um símbolo
+  async derivSubscribeTicks(symbol: string): Promise<{
+    status: string;
+    message: string;
+    symbol: string;
+  }> {
+    return this.post(`/deriv/subscribe/ticks/${symbol}`);
+  }
+
+  // 11. Obter último tick de um símbolo
+  async derivGetLastTick(symbol: string): Promise<{
+    status: string;
+    symbol: string;
+    tick: {
+      price: number;
+      timestamp: number;
+      epoch: number;
+    };
+  }> {
+    return this.get(`/deriv/ticks/${symbol}/last`);
+  }
+
+  // 12. Comprar contrato
+  async derivBuyContract(
+    contractType: string,
+    symbol: string,
+    amount: number,
+    duration: number,
+    durationUnit: string = 'm',
+    barrier?: string
+  ): Promise<{
+    status: string;
+    message: string;
+    contract: {
+      contract_id: number;
+      buy_price: number;
+      payout: number;
+      longcode: string;
+    };
+  }> {
+    return this.post('/deriv/buy', {
+      contract_type: contractType,
+      symbol,
+      amount,
+      duration,
+      duration_unit: durationUnit,
+      barrier
+    });
+  }
+
+  // 13. Vender contrato
+  async derivSellContract(
+    contractId: number,
+    price?: number
+  ): Promise<{
+    status: string;
+    message: string;
+    sale: {
+      sold_for: number;
+      transaction_id: number;
+    };
+  }> {
+    return this.post('/deriv/sell', {
+      contract_id: contractId,
+      price
+    });
+  }
 }
 
 export const apiService = new ApiService();

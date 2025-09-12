@@ -10,6 +10,7 @@ import Settings from "./pages/Settings";
 import History from "./pages/History";
 import Performance from "./pages/Performance";
 import Auth from "./pages/Auth";
+import DerivTrading from "./pages/DerivTrading";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,11 @@ const App = () => (
           <Route path="/performance" element={
             <ProtectedRoute>
               <Performance />
+            </ProtectedRoute>
+          } />
+          <Route path="/trading" element={
+            <ProtectedRoute>
+              <DerivTrading />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
