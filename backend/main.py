@@ -13,6 +13,7 @@ from enhanced_websocket_manager import EnhancedDerivWebSocket, ErrorType
 from capital_manager import CapitalManager, TradeResult
 from oauth_manager import oauth_manager, TokenData
 from trading_engine import TradingEngine, MarketTick, SignalType
+from deriv_trading_adapter import DerivTradingAdapter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,11 +46,29 @@ class OAuthCallbackRequest(BaseModel):
 class TokenRefreshRequest(BaseModel):
     refresh_token: str
 
+# Deriv API request models
+class DerivConnectRequest(BaseModel):
+    api_token: str
+    demo: bool = True
+
+class DerivTradeRequest(BaseModel):
+    contract_type: str  # "CALL", "PUT", etc.
+    symbol: str        # "R_50", "R_100", etc.
+    amount: float      # Valor do stake
+    duration: int      # Duração em minutos/segundos
+    duration_unit: str = "m"  # "m" para minutos, "s" para segundos
+    barrier: Optional[str] = None
+
+class DerivSellRequest(BaseModel):
+    contract_id: int
+    price: Optional[float] = None
+
 # Global instances
 ws_manager: DerivWebSocketManager = None
 enhanced_ws_manager: EnhancedDerivWebSocket = None
 capital_manager: CapitalManager = None
 trading_engine: TradingEngine = None
+deriv_adapter: DerivTradingAdapter = None
 
 # Bot settings
 bot_settings = {
@@ -93,7 +112,7 @@ bot_status = {
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan"""
-    global ws_manager, capital_manager, enhanced_ws_manager, trading_engine
+    global ws_manager, capital_manager, enhanced_ws_manager, trading_engine, deriv_adapter
     
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
@@ -131,9 +150,15 @@ async def lifespan(app: FastAPI):
         settings=bot_settings
     )
     
+    # Initialize Deriv Trading Adapter
+    deriv_adapter = DerivTradingAdapter(
+        app_id=int(app_id),
+        demo=True  # Usar conta demo por padrão
+    )
+    
     # WebSocket manager will be initialized when /connect is called with token
     # This allows dynamic token configuration from frontend
-    logger.info("Trading engine and WebSocket manager initialized")
+    logger.info("Trading engine, WebSocket manager and Deriv adapter initialized")
     
     yield
     
@@ -141,6 +166,8 @@ async def lifespan(app: FastAPI):
     logger.info("Encerrando aplicação Cérebro...")
     if ws_manager:
         await ws_manager.disconnect()
+    if deriv_adapter:
+        await deriv_adapter.disconnect()
 
 app = FastAPI(
     title="Synth Bot Buddy - Cérebro",
@@ -1522,4 +1549,358 @@ async def get_message_queue_status():
         
     except Exception as e:
         logger.error(f"Error getting message queue status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =====================================================
+# DERIV API ENDPOINTS - 16 FUNCIONALIDADES REAIS
+# =====================================================
+
+@app.post("/deriv/connect")
+async def deriv_connect(request: DerivConnectRequest):
+    """Conectar e autenticar com Deriv API usando token real"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter:
+            raise HTTPException(status_code=500, detail="Deriv adapter não inicializado")
+        
+        # Conectar
+        connected = await deriv_adapter.connect()
+        if not connected:
+            raise HTTPException(status_code=500, detail="Falha ao conectar com Deriv")
+        
+        # Autenticar
+        authenticated = await deriv_adapter.authenticate(request.api_token)
+        if not authenticated:
+            raise HTTPException(status_code=401, detail="Token inválido ou falha na autenticação")
+        
+        # Obter informações da conta
+        connection_info = deriv_adapter.get_connection_info()
+        
+        return {
+            "status": "success",
+            "message": "Conectado e autenticado com sucesso na Deriv API",
+            "connection_info": connection_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao conectar com Deriv API: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/deriv/disconnect")
+async def deriv_disconnect():
+    """Desconectar da Deriv API"""
+    global deriv_adapter
+    
+    try:
+        if deriv_adapter:
+            await deriv_adapter.disconnect()
+        
+        return {
+            "status": "success",
+            "message": "Desconectado da Deriv API"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao desconectar da Deriv API: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/balance")
+async def deriv_get_balance():
+    """Obter saldo atual da conta Deriv"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        balance = await deriv_adapter.get_balance()
+        
+        return {
+            "status": "success",
+            "balance": balance,
+            "currency": "USD",  # Assumindo USD por padrão
+            "loginid": deriv_adapter.deriv_api.loginid
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter saldo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/symbols")
+async def deriv_get_symbols():
+    """Obter símbolos disponíveis para trading"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        symbols = await deriv_adapter.get_available_symbols()
+        
+        return {
+            "status": "success",
+            "symbols": symbols,
+            "count": len(symbols)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter símbolos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/symbols/{symbol}/info")
+async def deriv_get_symbol_info(symbol: str):
+    """Obter informações detalhadas de um símbolo"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        symbol_info = await deriv_adapter.get_symbol_info(symbol)
+        
+        if not symbol_info:
+            raise HTTPException(status_code=404, detail=f"Símbolo {symbol} não encontrado")
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "info": symbol_info
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter informações do símbolo {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/deriv/subscribe/ticks/{symbol}")
+async def deriv_subscribe_ticks(symbol: str):
+    """Subscrever a ticks de um símbolo"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        success = await deriv_adapter.subscribe_to_ticks(symbol)
+        
+        if not success:
+            raise HTTPException(status_code=400, detail=f"Falha ao subscrever ao símbolo {symbol}")
+        
+        return {
+            "status": "success",
+            "message": f"Subscrito a ticks de {symbol}",
+            "symbol": symbol
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao subscrever ao símbolo {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/ticks/{symbol}/last")
+async def deriv_get_last_tick(symbol: str):
+    """Obter último tick de um símbolo"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        last_tick = deriv_adapter.get_last_tick(symbol)
+        
+        if not last_tick:
+            raise HTTPException(status_code=404, detail=f"Nenhum tick disponível para {symbol}")
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "tick": {
+                "price": last_tick.price,
+                "timestamp": last_tick.timestamp,
+                "epoch": last_tick.timestamp
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter último tick de {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/deriv/buy")
+async def deriv_buy_contract(request: DerivTradeRequest):
+    """Comprar contrato na Deriv API"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        # Validar parâmetros
+        if request.amount <= 0:
+            raise HTTPException(status_code=400, detail="Valor do stake deve ser maior que zero")
+        
+        if request.duration <= 0:
+            raise HTTPException(status_code=400, detail="Duração deve ser maior que zero")
+        
+        # Executar trade
+        result = await deriv_adapter.place_trade(
+            contract_type=request.contract_type,
+            symbol=request.symbol,
+            amount=request.amount,
+            duration=request.duration,
+            duration_unit=request.duration_unit
+        )
+        
+        if not result['success']:
+            raise HTTPException(status_code=400, detail=result.get('error', 'Falha ao executar trade'))
+        
+        return {
+            "status": "success",
+            "message": "Contrato comprado com sucesso",
+            "contract": {
+                "contract_id": result.get('contract_id'),
+                "buy_price": result.get('buy_price'),
+                "payout": result.get('payout'),
+                "longcode": result.get('longcode')
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao comprar contrato: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/deriv/sell")
+async def deriv_sell_contract(request: DerivSellRequest):
+    """Vender contrato na Deriv API"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        # Executar venda
+        result = await deriv_adapter.close_position(
+            contract_id=request.contract_id,
+            price=request.price
+        )
+        
+        if not result['success']:
+            raise HTTPException(status_code=400, detail=result.get('error', 'Falha ao vender contrato'))
+        
+        return {
+            "status": "success",
+            "message": "Contrato vendido com sucesso",
+            "sale": {
+                "sold_for": result.get('sold_for'),
+                "transaction_id": result.get('transaction_id')
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao vender contrato: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/portfolio")
+async def deriv_get_portfolio():
+    """Obter portfólio de contratos abertos"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        portfolio = await deriv_adapter.get_portfolio()
+        
+        return {
+            "status": "success",
+            "contracts": portfolio,
+            "count": len(portfolio)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter portfólio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/history")
+async def deriv_get_history(limit: int = 50):
+    """Obter histórico de trades"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter or not deriv_adapter.is_authenticated:
+            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
+        
+        history = await deriv_adapter.get_trade_history(limit=limit)
+        
+        return {
+            "status": "success",
+            "transactions": history,
+            "count": len(history)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter histórico: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/deriv/health")
+async def deriv_health_check():
+    """Verificação de saúde da conexão com Deriv"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter:
+            return {
+                "status": "error",
+                "message": "Deriv adapter não inicializado",
+                "is_healthy": False
+            }
+        
+        health_info = await deriv_adapter.health_check()
+        
+        return {
+            "status": "success",
+            "health": health_info,
+            "is_healthy": health_info.get('is_connected', False) and health_info.get('is_authenticated', False)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro no health check da Deriv: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "is_healthy": False
+        }
+
+@app.get("/deriv/status")
+async def deriv_get_status():
+    """Obter status completo da conexão Deriv"""
+    global deriv_adapter
+    
+    try:
+        if not deriv_adapter:
+            return {
+                "status": "error",
+                "message": "Deriv adapter não inicializado",
+                "connection_info": {}
+            }
+        
+        connection_info = deriv_adapter.get_connection_info()
+        
+        return {
+            "status": "success",
+            "connection_info": connection_info,
+            "api_status": deriv_adapter.deriv_api.status.value,
+            "subscribed_symbols": list(deriv_adapter.subscribed_symbols)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status da Deriv: {e}")
         raise HTTPException(status_code=500, detail=str(e))

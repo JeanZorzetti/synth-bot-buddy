@@ -21,3 +21,8 @@ python-multipart>=0.0.6
 # Testing dependencies
 pytest==7.4.3
 pytest-asyncio==0.21.1
+
+# Deriv API dependencies
+websocket-client>=1.6.0
+aiofiles>=23.2.0
+ujson>=5.8.0
