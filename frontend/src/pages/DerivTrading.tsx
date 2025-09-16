@@ -103,35 +103,7 @@ const DerivTrading: React.FC = () => {
     checkEndpointsAvailability();
     checkConnectionStatus();
     loadSymbols();
-    tryAutoConnectWithOAuth();
   }, []);
-
-  // Tentar conectar automaticamente com token OAuth se disponível
-  const tryAutoConnectWithOAuth = async () => {
-    const oauthToken = localStorage.getItem('deriv_primary_token');
-    if (oauthToken && !connection?.is_authenticated) {
-      try {
-        console.log('🔐 Tentando conectar automaticamente com token OAuth...');
-        const response = await apiService.connectWithDerivOAuth(oauthToken, true);
-        if (response.status === 'success') {
-          setConnection(response.connection_info);
-          console.log('✅ Conectado automaticamente com OAuth!');
-
-          // Carregar dados iniciais
-          await loadSymbols();
-          await loadPortfolio();
-          await loadHistory();
-
-          // Subscrever ao símbolo selecionado
-          if (selectedSymbol) {
-            await subscribeToSymbol(selectedSymbol);
-          }
-        }
-      } catch (error) {
-        console.log('❌ Erro ao conectar automaticamente com OAuth:', error);
-      }
-    }
-  };
 
   const checkEndpointsAvailability = async () => {
     try {

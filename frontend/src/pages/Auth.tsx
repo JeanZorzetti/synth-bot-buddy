@@ -108,7 +108,7 @@ export default function Auth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/trading');
+      navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
@@ -130,7 +130,7 @@ export default function Auth() {
 
     const success = await login(account.token);
     if (success) {
-      navigate('/trading');
+      navigate('/dashboard');
     }
   };
 
@@ -139,7 +139,7 @@ export default function Auth() {
 
     const success = await login(apiKey);
     if (success) {
-      navigate('/trading');
+      navigate('/dashboard');
     }
   };
 

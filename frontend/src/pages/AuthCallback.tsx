@@ -48,11 +48,11 @@ export const AuthCallback: React.FC = () => {
       const connectionResult = await apiService.connectWithDerivOAuth(token, true);
 
       setConnectionStatus('connected');
-      setMessage('Conectado com sucesso! Redirecionando para a página de trading...');
+      setMessage('Conectado com sucesso! Redirecionando para o dashboard...');
 
-      // Redirecionar para trading após sucesso
+      // Redirecionar para dashboard após sucesso
       setTimeout(() => {
-        navigate('/trading', { replace: true });
+        navigate('/dashboard', { replace: true });
       }, 2000);
 
     } catch (error: any) {
@@ -62,8 +62,8 @@ export const AuthCallback: React.FC = () => {
     }
   };
 
-  const redirectToTrading = () => {
-    navigate('/trading', { replace: true });
+  const redirectToDashboard = () => {
+    navigate('/dashboard', { replace: true });
   };
 
   const redirectToAuth = () => {
@@ -152,10 +152,10 @@ export const AuthCallback: React.FC = () => {
             <div className="space-y-3">
               {status === 'success' && connectionStatus === 'connected' && (
                 <button
-                  onClick={redirectToTrading}
+                  onClick={redirectToDashboard}
                   className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <span>Ir para Trading</span>
+                  <span>Ir para Dashboard</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -181,10 +181,10 @@ export const AuthCallback: React.FC = () => {
               )}
 
               <button
-                onClick={redirectToTrading}
+                onClick={redirectToDashboard}
                 className="w-full text-gray-600 hover:text-gray-800 text-sm"
               >
-                Pular para Trading
+                Pular para Dashboard
               </button>
             </div>
           </div>
