@@ -318,6 +318,29 @@ class DerivAPI:
         }
         return await self._send_request(request)
     
+    async def get_proposal(self, contract_type: str, symbol: str, amount: float,
+                          duration: int, duration_unit: str = "m", barrier: Optional[str] = None,
+                          basis: str = "stake", currency: str = "USD") -> Dict[str, Any]:
+        """11. Proposal - Obter cotação para contrato"""
+        request = {
+            "proposal": 1,
+            "amount": amount,
+            "basis": basis,
+            "contract_type": contract_type,
+            "currency": currency,
+            "duration": duration,
+            "duration_unit": duration_unit,
+            "symbol": symbol
+        }
+
+        if barrier:
+            request["barrier"] = barrier
+
+        response = await self._send_request(request)
+
+        # Retorna apenas os dados da proposal
+        return response.get('proposal', response)
+
     async def buy(self, contract_type: str, symbol: str, amount: float,
                   duration: int, duration_unit: str = "m", barrier: Optional[str] = None,
                   basis: str = "stake", currency: str = "USD",

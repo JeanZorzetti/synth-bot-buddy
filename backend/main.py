@@ -14,6 +14,10 @@ from capital_manager import CapitalManager, TradeResult
 from oauth_manager import oauth_manager, TokenData
 from trading_engine import TradingEngine, MarketTick, SignalType
 from deriv_trading_adapter import DerivTradingAdapter
+from contract_proposals_engine import (
+    ContractProposalsEngine, ProposalRequest, ProposalResponse,
+    get_proposals_engine, initialize_proposals_engine
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -81,12 +85,28 @@ class DerivSellRequest(BaseModel):
     contract_id: int
     price: Optional[float] = None
 
+# Proposal request models
+class ProposalRequest(BaseModel):
+    contract_type: str
+    symbol: str
+    amount: float
+    duration: int
+    duration_unit: str = "m"
+    barrier: Optional[str] = None
+    basis: str = "stake"
+    currency: str = "USD"
+
+class BatchProposalRequest(BaseModel):
+    proposals: List[ProposalRequest]
+    realtime: bool = False
+
 # Global instances
 ws_manager: DerivWebSocketManager = None
 enhanced_ws_manager: EnhancedDerivWebSocket = None
 capital_manager: CapitalManager = None
 trading_engine: TradingEngine = None
 deriv_adapter: DerivTradingAdapter = None
+proposals_engine: ContractProposalsEngine = None
 
 # Bot settings
 bot_settings = {
@@ -130,7 +150,7 @@ bot_status = {
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan"""
-    global ws_manager, capital_manager, enhanced_ws_manager, trading_engine, deriv_adapter
+    global ws_manager, capital_manager, enhanced_ws_manager, trading_engine, deriv_adapter, proposals_engine
     
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
@@ -170,6 +190,10 @@ async def lifespan(app: FastAPI):
         app_id=int(app_id),
         demo=True  # Usar conta demo por padrão
     )
+
+    # Initialize Contract Proposals Engine
+    proposals_engine = get_proposals_engine(deriv_adapter.deriv_api)
+    await initialize_proposals_engine(deriv_adapter.deriv_api)
     
     # WebSocket manager will be initialized when /connect is called with token
     # This allows dynamic token configuration from frontend
@@ -2241,3 +2265,288 @@ async def deriv_get_status():
     except Exception as e:
         logger.error(f"Erro ao obter status da Deriv: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==============================================
+# CONTRACT PROPOSALS ENGINE ENDPOINTS
+# ==============================================
+
+@app.post("/deriv/proposal")
+async def get_contract_proposal(request: ProposalRequest):
+    """
+    Obter cotação para um contrato (proposal)
+    Inclui validação de barriers, cache e cálculo em tempo real
+    """
+    global proposals_engine, deriv_adapter
+
+    try:
+        if not proposals_engine:
+            # Inicializar engine se não existir
+            if deriv_adapter and deriv_adapter.deriv_api:
+                proposals_engine = get_proposals_engine(deriv_adapter.deriv_api)
+                await initialize_proposals_engine(deriv_adapter.deriv_api)
+            else:
+                return {
+                    "status": "error",
+                    "message": "Sistema de proposals não disponível. Conecte-se primeiro.",
+                    "error_code": "PROPOSALS_ENGINE_NOT_INITIALIZED"
+                }
+
+        # Converter request para ProposalRequest do engine
+        from contract_proposals_engine import ProposalRequest as EngineProposalRequest
+
+        engine_request = EngineProposalRequest(
+            contract_type=request.contract_type,
+            symbol=request.symbol,
+            amount=request.amount,
+            duration=request.duration,
+            duration_unit=request.duration_unit,
+            barrier=request.barrier,
+            basis=request.basis,
+            currency=request.currency
+        )
+
+        # Obter proposal
+        proposal_response = await proposals_engine.get_proposal(engine_request)
+
+        return {
+            "status": "success",
+            "proposal": {
+                "id": proposal_response.id,
+                "ask_price": proposal_response.ask_price,
+                "payout": proposal_response.payout,
+                "spot": proposal_response.spot,
+                "barrier": proposal_response.barrier,
+                "contract_type": proposal_response.contract_type,
+                "symbol": proposal_response.symbol,
+                "display_value": proposal_response.display_value,
+                "timestamp": proposal_response.timestamp,
+                "valid_until": proposal_response.valid_until
+            },
+            "request_params": {
+                "contract_type": request.contract_type,
+                "symbol": request.symbol,
+                "amount": request.amount,
+                "duration": request.duration,
+                "duration_unit": request.duration_unit,
+                "barrier": request.barrier
+            }
+        }
+
+    except ValueError as e:
+        # Erro de validação
+        return {
+            "status": "error",
+            "message": str(e),
+            "error_code": "VALIDATION_ERROR",
+            "error_type": "validation"
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter proposal: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "error_code": "PROPOSAL_ERROR",
+            "error_type": "api_error"
+        }
+
+@app.post("/deriv/proposal/realtime")
+async def get_realtime_proposal(request: ProposalRequest):
+    """
+    Obter cotação em tempo real (força nova requisição, sem cache)
+    """
+    global proposals_engine, deriv_adapter
+
+    try:
+        if not proposals_engine:
+            return {
+                "status": "error",
+                "message": "Sistema de proposals não disponível. Conecte-se primeiro.",
+                "error_code": "PROPOSALS_ENGINE_NOT_INITIALIZED"
+            }
+
+        # Converter request
+        from contract_proposals_engine import ProposalRequest as EngineProposalRequest
+
+        engine_request = EngineProposalRequest(
+            contract_type=request.contract_type,
+            symbol=request.symbol,
+            amount=request.amount,
+            duration=request.duration,
+            duration_unit=request.duration_unit,
+            barrier=request.barrier,
+            basis=request.basis,
+            currency=request.currency
+        )
+
+        # Obter proposal em tempo real
+        proposal_response = await proposals_engine.get_realtime_proposal(engine_request)
+
+        return {
+            "status": "success",
+            "proposal": {
+                "id": proposal_response.id,
+                "ask_price": proposal_response.ask_price,
+                "payout": proposal_response.payout,
+                "spot": proposal_response.spot,
+                "barrier": proposal_response.barrier,
+                "contract_type": proposal_response.contract_type,
+                "symbol": proposal_response.symbol,
+                "display_value": proposal_response.display_value,
+                "timestamp": proposal_response.timestamp,
+                "valid_until": proposal_response.valid_until
+            },
+            "realtime": True,
+            "cache_bypassed": True
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter proposal em tempo real: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "error_code": "REALTIME_PROPOSAL_ERROR"
+        }
+
+@app.post("/deriv/proposals/batch")
+async def get_batch_proposals(request: BatchProposalRequest):
+    """
+    Obter múltiplas cotações de forma otimizada
+    """
+    global proposals_engine
+
+    try:
+        if not proposals_engine:
+            return {
+                "status": "error",
+                "message": "Sistema de proposals não disponível",
+                "error_code": "PROPOSALS_ENGINE_NOT_INITIALIZED"
+            }
+
+        # Converter requests
+        from contract_proposals_engine import ProposalRequest as EngineProposalRequest
+
+        engine_requests = []
+        for req in request.proposals:
+            engine_request = EngineProposalRequest(
+                contract_type=req.contract_type,
+                symbol=req.symbol,
+                amount=req.amount,
+                duration=req.duration,
+                duration_unit=req.duration_unit,
+                barrier=req.barrier,
+                basis=req.basis,
+                currency=req.currency
+            )
+            engine_requests.append(engine_request)
+
+        # Obter proposals
+        if request.realtime:
+            # Usar realtime para todas
+            tasks = [proposals_engine.get_realtime_proposal(req) for req in engine_requests]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+        else:
+            # Usar método batch otimizado
+            responses = await proposals_engine.get_multiple_proposals(engine_requests)
+
+        # Processar respostas
+        results = []
+        for i, response in enumerate(responses):
+            if isinstance(response, Exception):
+                results.append({
+                    "status": "error",
+                    "message": str(response),
+                    "request_index": i
+                })
+            else:
+                results.append({
+                    "status": "success",
+                    "proposal": {
+                        "id": response.id,
+                        "ask_price": response.ask_price,
+                        "payout": response.payout,
+                        "spot": response.spot,
+                        "barrier": response.barrier,
+                        "contract_type": response.contract_type,
+                        "symbol": response.symbol,
+                        "display_value": response.display_value,
+                        "timestamp": response.timestamp,
+                        "valid_until": response.valid_until
+                    },
+                    "request_index": i
+                })
+
+        return {
+            "status": "success",
+            "proposals": results,
+            "total_requests": len(request.proposals),
+            "successful_requests": len([r for r in results if r["status"] == "success"]),
+            "failed_requests": len([r for r in results if r["status"] == "error"]),
+            "realtime_mode": request.realtime
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter proposals em lote: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "error_code": "BATCH_PROPOSALS_ERROR"
+        }
+
+@app.get("/deriv/proposals/stats")
+async def get_proposals_stats():
+    """
+    Obter estatísticas do sistema de proposals
+    """
+    global proposals_engine
+
+    try:
+        if not proposals_engine:
+            return {
+                "status": "error",
+                "message": "Sistema de proposals não disponível",
+                "stats": None
+            }
+
+        stats = proposals_engine.get_stats()
+
+        return {
+            "status": "success",
+            "stats": stats,
+            "engine_running": proposals_engine.running
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter estatísticas de proposals: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "stats": None
+        }
+
+@app.post("/deriv/proposals/reset-stats")
+async def reset_proposals_stats():
+    """
+    Resetar estatísticas do sistema de proposals
+    """
+    global proposals_engine
+
+    try:
+        if not proposals_engine:
+            return {
+                "status": "error",
+                "message": "Sistema de proposals não disponível"
+            }
+
+        proposals_engine.reset_stats()
+
+        return {
+            "status": "success",
+            "message": "Estatísticas resetadas com sucesso"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao resetar estatísticas: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
