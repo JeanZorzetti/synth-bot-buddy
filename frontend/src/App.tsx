@@ -56,11 +56,7 @@ const App = () => (
               <Performance />
             </ProtectedRoute>
           } />
-          <Route path="/trading" element={
-            <ProtectedRoute>
-              <DerivTrading />
-            </ProtectedRoute>
-          } />
+          <Route path="/trading" element={<DerivTrading />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
