@@ -342,7 +342,9 @@ const DerivTrading: React.FC = () => {
     return new Date(timestamp * 1000).toLocaleString('pt-BR');
   };
 
-  if (!connection?.is_authenticated) {
+  // Sempre mostrar interface de trading - remoção da verificação de autenticação
+  // if (!connection?.is_authenticated) {
+  if (false) {
     return (
       <div className="container mx-auto p-6">
         <div className="max-w-md mx-auto">
@@ -479,17 +481,26 @@ const DerivTrading: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold">Trading Real - Deriv API</h1>
           <p className="text-muted-foreground">
-            Conectado como {connection.loginid} • {isDemoMode ? 'Demo' : 'Real'}
+            {connection?.loginid ? `Conectado como ${connection.loginid}` : 'Não conectado'} • {isDemoMode ? 'Demo' : 'Real'}
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Badge variant="outline" className="text-green-600">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Conectado
-          </Badge>
-          <Button variant="outline" onClick={disconnectFromDerivAPI}>
-            Desconectar
-          </Button>
+          {connection?.is_authenticated ? (
+            <>
+              <Badge variant="outline" className="text-green-600">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Conectado
+              </Badge>
+              <Button variant="outline" onClick={disconnectFromDerivAPI}>
+                Desconectar
+              </Button>
+            </>
+          ) : (
+            <Badge variant="outline" className="text-red-600">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Desconectado
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -500,7 +511,7 @@ const DerivTrading: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Saldo</p>
-                <p className="text-2xl font-bold">{formatCurrency(connection.balance)}</p>
+                <p className="text-2xl font-bold">{connection?.balance ? formatCurrency(connection.balance) : '--'}</p>
               </div>
               <Wallet className="h-8 w-8 text-green-600" />
             </div>
@@ -563,6 +574,61 @@ const DerivTrading: React.FC = () => {
               onTradeError={handleTradeError}
               disabled={!connection?.is_authenticated || !endpointsAvailable}
             />
+
+            {/* Card de conexão quando não conectado */}
+            {!connection?.is_authenticated && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-orange-600" />
+                    Conectar à API Deriv
+                  </CardTitle>
+                  <CardDescription>
+                    Conecte-se para acessar dados em tempo real e fazer trades
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="api-token-inline">Token da API Deriv</Label>
+                    <Input
+                      id="api-token-inline"
+                      type="password"
+                      placeholder="Insira seu token"
+                      value={apiToken}
+                      onChange={(e) => setApiToken(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="demo-mode-inline"
+                      checked={isDemoMode}
+                      onChange={(e) => setIsDemoMode(e.target.checked)}
+                    />
+                    <Label htmlFor="demo-mode-inline">Usar conta demo</Label>
+                  </div>
+
+                  <Button
+                    onClick={connectToDerivAPI}
+                    disabled={isConnecting}
+                    className="w-full"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Conectando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Conectar
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Informações do último tick */}
             {currentTick && (
