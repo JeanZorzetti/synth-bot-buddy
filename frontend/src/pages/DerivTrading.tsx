@@ -72,6 +72,8 @@ interface DerivTransaction {
 }
 
 const DerivTrading: React.FC = () => {
+  console.log('🚀 DerivTrading component rendered at:', new Date().toISOString());
+
   // Estados de conexão
   const [connection, setConnection] = useState<DerivConnection | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -343,6 +345,7 @@ const DerivTrading: React.FC = () => {
   };
 
   if (!connection?.is_authenticated) {
+    console.log('🔐 DerivTrading - User not authenticated, showing connection UI. Connection state:', connection);
     return (
       <div className="container mx-auto p-6">
         <div className="max-w-md mx-auto">
@@ -461,6 +464,7 @@ const DerivTrading: React.FC = () => {
     );
   }
 
+  console.log('✅ DerivTrading - User authenticated, rendering trading interface. Connection:', connection);
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Banner de desenvolvimento */}
