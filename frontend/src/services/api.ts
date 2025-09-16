@@ -725,7 +725,199 @@ class ApiService {
       price
     });
   }
+
+  // =====================================================
+  // DERIV OAUTH METHODS
+  // =====================================================
+
+  // Iniciar fluxo OAuth da Deriv
+  async startDerivOAuthFlow(options?: {
+    appId?: string;
+    redirectUri?: string;
+    affiliateToken?: string;
+    utmCampaign?: string;
+  }): Promise<{
+    status: string;
+    authorization_url: string;
+    app_id: string;
+    redirect_uri: string;
+    message: string;
+  }> {
+    return this.post('/deriv/oauth/start', {
+      app_id: options?.appId || '99188',
+      redirect_uri: options?.redirectUri || 'https://botderiv.roilabs.com.br/auth',
+      affiliate_token: options?.affiliateToken,
+      utm_campaign: options?.utmCampaign
+    });
+  }
+
+  // Processar callback OAuth da Deriv
+  async handleDerivOAuthCallback(params: {
+    accounts: string[];
+    token1: string;
+    token2?: string;
+    token3?: string;
+    cur1?: string;
+    cur2?: string;
+    cur3?: string;
+  }): Promise<{
+    status: string;
+    message: string;
+    session_data: {
+      accounts: string[];
+      tokens: string[];
+      currencies: string[];
+    };
+    primary_token: string;
+    primary_account: string;
+  }> {
+    return this.post('/deriv/oauth/callback', {
+      accounts: params.accounts,
+      token1: params.token1,
+      token2: params.token2,
+      token3: params.token3,
+      cur1: params.cur1 || 'USD',
+      cur2: params.cur2,
+      cur3: params.cur3
+    });
+  }
+
+  // Conectar usando token OAuth da Deriv
+  async connectWithDerivOAuth(token: string, demo: boolean = true): Promise<{
+    status: string;
+    message: string;
+    connection_info: any;
+    auth_method: string;
+    demo_mode: boolean;
+  }> {
+    return this.post('/deriv/oauth/connect', { token, demo });
+  }
+
+  // Obter URL de autorização OAuth da Deriv
+  getDerivOAuthUrl(options?: {
+    appId?: string;
+    affiliateToken?: string;
+    utmCampaign?: string;
+  }): string {
+    const appId = options?.appId || '99188';
+    let url = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}`;
+
+    if (options?.affiliateToken) {
+      url += `&affiliate_token=${options.affiliateToken}`;
+    }
+
+    if (options?.utmCampaign) {
+      url += `&utm_campaign=${options.utmCampaign}`;
+    }
+
+    return url;
+  }
+
+  // Armazenar dados OAuth da Deriv
+  storeDerivOAuthData(sessionData: any, primaryToken: string, primaryAccount: string): void {
+    localStorage.setItem('deriv_oauth_session', JSON.stringify(sessionData));
+    localStorage.setItem('deriv_primary_token', primaryToken);
+    localStorage.setItem('deriv_primary_account', primaryAccount);
+    localStorage.setItem('deriv_oauth_timestamp', Date.now().toString());
+  }
+
+  // Recuperar dados OAuth da Deriv
+  getStoredDerivOAuthData(): {
+    sessionData: any | null;
+    primaryToken: string | null;
+    primaryAccount: string | null;
+    timestamp: number | null;
+  } {
+    return {
+      sessionData: JSON.parse(localStorage.getItem('deriv_oauth_session') || 'null'),
+      primaryToken: localStorage.getItem('deriv_primary_token'),
+      primaryAccount: localStorage.getItem('deriv_primary_account'),
+      timestamp: localStorage.getItem('deriv_oauth_timestamp') ? parseInt(localStorage.getItem('deriv_oauth_timestamp')!) : null
+    };
+  }
+
+  // Limpar sessão OAuth da Deriv
+  clearDerivOAuthSession(): void {
+    localStorage.removeItem('deriv_oauth_session');
+    localStorage.removeItem('deriv_primary_token');
+    localStorage.removeItem('deriv_primary_account');
+    localStorage.removeItem('deriv_oauth_timestamp');
+  }
+
+  // Verificar se há sessão OAuth da Deriv válida
+  hasValidDerivOAuthSession(): boolean {
+    const { primaryToken, timestamp } = this.getStoredDerivOAuthData();
+
+    if (!primaryToken || !timestamp) {
+      return false;
+    }
+
+    // Verificar se a sessão não é muito antiga (24 horas)
+    const now = Date.now();
+    const sessionAge = now - timestamp;
+    const maxAge = 24 * 60 * 60 * 1000; // 24 horas em milliseconds
+
+    return sessionAge < maxAge;
+  }
+
+  // Processar parâmetros da URL do callback OAuth
+  parseOAuthCallbackParams(url: string): {
+    accounts: string[];
+    token1: string;
+    token2?: string;
+    token3?: string;
+    cur1?: string;
+    cur2?: string;
+    cur3?: string;
+  } | null {
+    try {
+      const urlObj = new URL(url);
+      const params = urlObj.searchParams;
+
+      const accounts = params.getAll('acct1');
+      const token1 = params.get('token1');
+
+      if (!token1 || accounts.length === 0) {
+        return null;
+      }
+
+      return {
+        accounts,
+        token1,
+        token2: params.get('token2') || undefined,
+        token3: params.get('token3') || undefined,
+        cur1: params.get('cur1') || 'USD',
+        cur2: params.get('cur2') || undefined,
+        cur3: params.get('cur3') || undefined
+      };
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const apiService = new ApiService();
 export default apiService;
+
+// Utility function to handle Deriv OAuth redirect
+export const handleDerivOAuthRedirect = async () => {
+  const currentUrl = window.location.href;
+  const oauthParams = apiService.parseOAuthCallbackParams(currentUrl);
+
+  if (oauthParams) {
+    try {
+      const result = await apiService.handleDerivOAuthCallback(oauthParams);
+      apiService.storeDerivOAuthData(
+        result.session_data,
+        result.primary_token,
+        result.primary_account
+      );
+      return result;
+    } catch (error) {
+      console.error('Erro ao processar callback OAuth da Deriv:', error);
+      throw error;
+    }
+  }
+
+  return null;
+};

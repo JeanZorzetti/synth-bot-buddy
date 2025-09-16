@@ -46,6 +46,22 @@ class OAuthCallbackRequest(BaseModel):
 class TokenRefreshRequest(BaseModel):
     refresh_token: str
 
+# Deriv OAuth request models
+class DerivOAuthStartRequest(BaseModel):
+    app_id: str = "99188"
+    redirect_uri: str = "https://botderiv.roilabs.com.br/auth"
+    affiliate_token: Optional[str] = None
+    utm_campaign: Optional[str] = None
+
+class DerivOAuthCallbackRequest(BaseModel):
+    accounts: List[str]
+    token1: str
+    token2: Optional[str] = None
+    token3: Optional[str] = None
+    cur1: str = "USD"
+    cur2: Optional[str] = None
+    cur3: Optional[str] = None
+
 # Deriv API request models
 class DerivConnectRequest(BaseModel):
     api_token: str
@@ -1030,7 +1046,114 @@ async def get_trade_history():
         "current_stats": capital_manager.get_stats()
     }
 
-# --- OAuth 2.0 Endpoints ---
+# --- Deriv OAuth 2.0 Endpoints ---
+
+@app.post("/deriv/oauth/start")
+async def start_deriv_oauth_flow(request: DerivOAuthStartRequest):
+    """
+    Iniciar fluxo OAuth da Deriv
+    Retorna URL de autorização para o usuário visitar
+    """
+    try:
+        # Construir URL de autorização da Deriv
+        auth_url = f"https://oauth.deriv.com/oauth2/authorize?app_id={request.app_id}"
+
+        # Adicionar parâmetros opcionais
+        if request.affiliate_token:
+            auth_url += f"&affiliate_token={request.affiliate_token}"
+
+        if request.utm_campaign:
+            auth_url += f"&utm_campaign={request.utm_campaign}"
+
+        logger.info(f"Deriv OAuth flow iniciado para App ID: {request.app_id}")
+
+        return {
+            "status": "success",
+            "authorization_url": auth_url,
+            "app_id": request.app_id,
+            "redirect_uri": request.redirect_uri,
+            "message": "Visite a URL de autorização para completar o fluxo OAuth"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao iniciar fluxo OAuth da Deriv: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/deriv/oauth/callback")
+async def handle_deriv_oauth_callback(request: DerivOAuthCallbackRequest):
+    """
+    Lidar com callback OAuth da Deriv
+    Processar parâmetros de sessão retornados
+    """
+    try:
+        # Processar tokens e contas retornados pela Deriv
+        session_data = {
+            "accounts": request.accounts,
+            "tokens": [request.token1],
+            "currencies": [request.cur1]
+        }
+
+        # Adicionar tokens adicionais se existirem
+        if request.token2:
+            session_data["tokens"].append(request.token2)
+            session_data["currencies"].append(request.cur2 or "USD")
+
+        if request.token3:
+            session_data["tokens"].append(request.token3)
+            session_data["currencies"].append(request.cur3 or "USD")
+
+        logger.info(f"Callback OAuth da Deriv processado para {len(request.accounts)} conta(s)")
+
+        return {
+            "status": "success",
+            "message": "Callback OAuth da Deriv processado com sucesso",
+            "session_data": session_data,
+            "primary_token": request.token1,
+            "primary_account": request.accounts[0] if request.accounts else None
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no callback OAuth da Deriv: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/deriv/oauth/connect")
+async def connect_with_deriv_oauth_token(token: str, demo: bool = True):
+    """
+    Conectar à Deriv WebSocket usando token OAuth
+    """
+    global deriv_adapter
+
+    try:
+        if not deriv_adapter:
+            raise HTTPException(status_code=500, detail="Deriv adapter não inicializado")
+
+        # Conectar usando o token OAuth
+        connected = await deriv_adapter.connect()
+        if not connected:
+            raise HTTPException(status_code=500, detail="Falha ao conectar com Deriv")
+
+        # Autenticar usando o token OAuth
+        authenticated = await deriv_adapter.authenticate(token)
+        if not authenticated:
+            raise HTTPException(status_code=401, detail="Token OAuth inválido ou falha na autenticação")
+
+        connection_info = deriv_adapter.get_connection_info()
+
+        logger.info(f"Conectado com sucesso usando OAuth token para conta: {connection_info.get('loginid')}")
+
+        return {
+            "status": "success",
+            "message": "Conectado e autenticado com sucesso usando OAuth",
+            "connection_info": connection_info,
+            "auth_method": "OAuth 2.0",
+            "demo_mode": demo
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao conectar com token OAuth da Deriv: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- OAuth 2.0 Endpoints (Originais) ---
 
 @app.post("/oauth/start")
 async def start_oauth_flow(request: OAuthStartRequest):
@@ -1902,7 +2025,7 @@ async def deriv_health_check():
 async def deriv_get_status():
     """Obter status completo da conexão Deriv"""
     global deriv_adapter
-    
+
     try:
         if not deriv_adapter:
             return {
@@ -1910,9 +2033,9 @@ async def deriv_get_status():
                 "message": "Deriv adapter não inicializado",
                 "connection_info": {}
             }
-        
+
         connection_info = deriv_adapter.get_connection_info()
-        
+
         # Para desenvolvimento local, simular conexão funcional
         if os.getenv("ENVIRONMENT", "development") == "development":
             connection_info = {
@@ -1922,16 +2045,23 @@ async def deriv_get_status():
                 "loginid": None,
                 "subscribed_symbols": [],
                 "balance": 0.0,
-                "demo_mode": True
+                "demo_mode": True,
+                "oauth_enabled": True,
+                "oauth_url": f"https://oauth.deriv.com/oauth2/authorize?app_id=99188"
             }
-        
+
         return {
             "status": "success",
             "connection_info": connection_info,
             "api_status": connection_info.get("status", "connected"),
-            "subscribed_symbols": list(deriv_adapter.subscribed_symbols) if deriv_adapter.subscribed_symbols else []
+            "subscribed_symbols": list(deriv_adapter.subscribed_symbols) if deriv_adapter.subscribed_symbols else [],
+            "oauth_info": {
+                "enabled": True,
+                "auth_url": f"https://oauth.deriv.com/oauth2/authorize?app_id=99188",
+                "redirect_uri": "https://botderiv.roilabs.com.br/auth"
+            }
         }
-        
+
     except Exception as e:
         logger.error(f"Erro ao obter status da Deriv: {e}")
         raise HTTPException(status_code=500, detail=str(e))

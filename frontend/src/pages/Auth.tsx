@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
+import DerivOAuth from '@/components/DerivOAuth';
 
 interface DerivAccount {
   loginid: string;
@@ -111,10 +112,14 @@ export default function Auth() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleOAuthLogin = () => {
-    const APP_ID = import.meta.env.VITE_DERIV_APP_ID || '99188';
-    const oAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}`;
-    window.location.href = oAuthUrl;
+  const handleOAuthSuccess = (tokenData: any) => {
+    console.log('OAuth success:', tokenData);
+    // Navigate will be handled by the OAuth component
+  };
+
+  const handleOAuthError = (error: string) => {
+    console.error('OAuth error:', error);
+    // Error handling is done by the OAuth component
   };
 
   const handleAccountSelect = async () => {
@@ -267,95 +272,15 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* OAuth Authentication Card */}
+        {/* OAuth Authentication Component */}
+        <DerivOAuth
+          onAuthSuccess={handleOAuthSuccess}
+          onAuthError={handleOAuthError}
+        />
+
+        {/* Manual Login Option (Collapsible) */}
         <Card className="trading-card">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <LogIn className="h-5 w-5 mr-2 text-primary" />
-              Login Seguro via Deriv
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Faça login de forma segura usando sua conta Deriv oficial. 
-                Não é necessário gerar tokens manualmente.
-              </p>
-
-              <Button 
-                onClick={handleOAuthLogin}
-                disabled={backendStatus === 'offline'}
-                className="w-full success-gradient hover:opacity-90"
-                size="lg"
-              >
-                <LogIn className="h-5 w-5 mr-2" />
-                Fazer Login com Deriv
-              </Button>
-            </div>
-
-            {/* Status Information */}
-            {backendStatus === 'offline' && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  <strong>Servidor offline:</strong> Aguarde o servidor ficar online para fazer login.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Security Notice */}
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                <strong>OAuth Seguro:</strong> Login oficial da Deriv usando protocolo OAuth. 
-                Seus dados permanecem seguros e privados.
-              </AlertDescription>
-            </Alert>
-
-            {/* OAuth Process Explanation */}
-            <div className="pt-4 border-t border-border">
-              <h4 className="text-sm font-medium mb-3">🔐 Como funciona o login OAuth:</h4>
-              <div className="text-sm text-muted-foreground space-y-2 mb-4">
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary font-medium">1.</span>
-                  <span>Você será redirecionado para a Deriv oficial</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary font-medium">2.</span>
-                  <span>Faça login com suas credenciais da Deriv</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary font-medium">3.</span>
-                  <span>Autorize o acesso às suas contas</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary font-medium">4.</span>
-                  <span>Retorne automaticamente e selecione sua conta</span>
-                </div>
-              </div>
-              
-              <h4 className="text-sm font-medium mb-3">Vantagens do OAuth:</h4>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Maior segurança (sem tokens permanentes)
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Processo automatizado
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Suporte a múltiplas contas
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 text-success mr-2" />
-                  Recomendado oficialmente pela Deriv
-                </li>
-              </ul>
-            </div>
-
-            {/* Manual Login Option (Collapsible) */}
+          <CardContent className="pt-6">
             <Collapsible open={showManualLogin} onOpenChange={setShowManualLogin}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-between" size="sm">
@@ -370,11 +295,11 @@ export default function Auth() {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-sm">
-                    <strong>Método Legacy:</strong> Use apenas se tiver problemas com OAuth. 
+                    <strong>Método Legacy:</strong> Use apenas se tiver problemas com OAuth.
                     O método OAuth é mais seguro e recomendado.
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="apiKey">Token de API da Deriv</Label>
                   <div className="relative">
@@ -398,7 +323,7 @@ export default function Auth() {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={handleManualLogin}
                   disabled={isValidating || !apiKey.trim()}
                   className="w-full"

@@ -10,13 +10,16 @@ import Settings from "./pages/Settings";
 import History from "./pages/History";
 import Performance from "./pages/Performance";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import DerivTrading from "./pages/DerivTrading";
 
 const queryClient = new QueryClient();
 
-// Simple auth check - the useAuth hook will handle the real validation
+// Enhanced auth check - check for both API key and OAuth session
 const isAuthenticated = () => {
-  return localStorage.getItem('deriv_api_key') !== null;
+  const hasApiKey = localStorage.getItem('deriv_api_key') !== null;
+  const hasOAuthToken = localStorage.getItem('deriv_primary_token') !== null;
+  return hasApiKey || hasOAuthToken;
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -32,6 +35,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
