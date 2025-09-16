@@ -1154,22 +1154,33 @@ async def connect_with_deriv_oauth_token(request: OAuthConnectRequest):
     global deriv_adapter
 
     try:
+        logger.info(f"🔐 Iniciando OAuth connect com token: {request.token[:10]}...")
+
         if not deriv_adapter:
+            logger.error("❌ Deriv adapter não inicializado")
             raise HTTPException(status_code=500, detail="Deriv adapter não inicializado")
+
+        logger.info("✅ Deriv adapter encontrado, tentando conectar...")
 
         # Conectar usando o token OAuth
         connected = await deriv_adapter.connect()
         if not connected:
+            logger.error("❌ Falha ao conectar com Deriv WebSocket")
             raise HTTPException(status_code=500, detail="Falha ao conectar com Deriv")
+
+        logger.info("✅ Conectado ao WebSocket, tentando autenticar...")
 
         # Autenticar usando o token OAuth
         authenticated = await deriv_adapter.authenticate(request.token)
         if not authenticated:
+            logger.error("❌ Falha na autenticação com token OAuth")
             raise HTTPException(status_code=401, detail="Token OAuth inválido ou falha na autenticação")
+
+        logger.info("✅ Autenticado com sucesso, obtendo informações da conexão...")
 
         connection_info = deriv_adapter.get_connection_info()
 
-        logger.info(f"Conectado com sucesso usando OAuth token para conta: {connection_info.get('loginid')}")
+        logger.info(f"✅ Conectado com sucesso usando OAuth token para conta: {connection_info.get('loginid')}")
 
         return {
             "status": "success",
@@ -1179,9 +1190,14 @@ async def connect_with_deriv_oauth_token(request: OAuthConnectRequest):
             "demo_mode": request.demo
         }
 
+    except HTTPException:
+        # Re-raise HTTP exceptions as they are
+        raise
     except Exception as e:
-        logger.error(f"Erro ao conectar com token OAuth da Deriv: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Erro interno ao conectar com token OAuth da Deriv: {e}")
+        logger.error(f"❌ Tipo do erro: {type(e).__name__}")
+        logger.error(f"❌ Detalhes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 # --- OAuth 2.0 Endpoints (Originais) ---
 
