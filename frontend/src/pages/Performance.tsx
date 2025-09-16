@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -125,21 +124,18 @@ export default function Performance() {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin" />
             <p className="text-muted-foreground">Carregando dados de performance...</p>
           </div>
         </div>
-      </Layout>
-    );
+          );
   }
 
   if (!performanceData) {
     return (
-      <Layout>
-        <div className="space-y-6">
+              <div className="space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -189,8 +185,7 @@ export default function Performance() {
             </CardContent>
           </Card>
         </div>
-      </Layout>
-    );
+          );
   }
 
   const { session_stats, risk_metrics, trading_engine } = performanceData;
@@ -218,8 +213,7 @@ export default function Performance() {
   };
 
   return (
-    <Layout>
-      <div className="space-y-6">
+          <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -491,6 +485,5 @@ export default function Performance() {
           </Card>
         )}
       </div>
-    </Layout>
-  );
+      );
 }

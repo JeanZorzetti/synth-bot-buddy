@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,20 +179,17 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin" />
             <p className="text-muted-foreground">Carregando configurações...</p>
           </div>
         </div>
-      </Layout>
-    );
+          );
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
+          <div className="space-y-6">
         {/* Page Header */}
         <div>
           <h1 className="text-3xl font-bold">Configurações do Bot</h1>
@@ -405,6 +401,5 @@ export default function Settings() {
           </Button>
         </div>
       </div>
-    </Layout>
-  );
+      );
 }

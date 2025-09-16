@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -118,25 +117,21 @@ export default function History() {
   // Show loading state
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin" />
             <p className="text-muted-foreground">Carregando histórico de trades...</p>
           </div>
         </div>
-      </Layout>
-    );
+          );
   }
 
   if (!historyData) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Erro ao carregar dados</p>
         </div>
-      </Layout>
-    );
+          );
   }
 
   // Convert symbol to readable asset name
@@ -185,8 +180,7 @@ export default function History() {
 
 
   return (
-    <Layout>
-      <div className="space-y-6">
+          <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -436,6 +430,5 @@ export default function History() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
-  );
+      );
 }
