@@ -1685,11 +1685,25 @@ async def get_message_queue_status():
 async def deriv_connect(request: DerivConnectRequest):
     """Conectar e autenticar com Deriv API usando token real"""
     global deriv_adapter
-    
+
     try:
+        # Verificar se adapter existe, se não, tentar criar
         if not deriv_adapter:
-            raise HTTPException(status_code=500, detail="Deriv adapter não inicializado")
-        
+            logger.warning("Deriv adapter não inicializado, tentando criar...")
+            try:
+                from deriv_trading_adapter import DerivTradingAdapter
+                deriv_adapter = DerivTradingAdapter()
+                logger.info("Deriv adapter criado com sucesso")
+            except Exception as e:
+                logger.error(f"Erro ao criar adapter: {e}")
+                # Retornar resposta de erro mais amigável
+                return {
+                    "status": "error",
+                    "message": "Sistema de trading não disponível no momento",
+                    "error_code": "ADAPTER_UNAVAILABLE",
+                    "suggestion": "Tente novamente em alguns momentos"
+                }
+
         # Para desenvolvimento, simular conexão bem-sucedida
         if os.getenv("ENVIRONMENT", "development") == "development":
             # Simular conexão e autenticação bem-sucedidas
@@ -1703,33 +1717,68 @@ async def deriv_connect(request: DerivConnectRequest):
                 "demo_mode": True,
                 "currency": "USD"
             }
-            
+
+            logger.info("Modo desenvolvimento: simulando conexão bem-sucedida")
+
             return {
                 "status": "success",
                 "message": "Conectado com sucesso no modo DEMO",
                 "connection_info": connection_info
             }
-        
-        # Código original para produção
-        connected = await deriv_adapter.connect()
-        if not connected:
-            raise HTTPException(status_code=500, detail="Falha ao conectar com Deriv")
-        
-        authenticated = await deriv_adapter.authenticate(request.api_token)
-        if not authenticated:
-            raise HTTPException(status_code=401, detail="Token inválido ou falha na autenticação")
-        
-        connection_info = deriv_adapter.get_connection_info()
-        
-        return {
-            "status": "success",
-            "message": "Conectado e autenticado com sucesso na Deriv API",
-            "connection_info": connection_info
-        }
-        
+
+        # Código para produção com melhor tratamento de erro
+        try:
+            logger.info("Tentando conectar com Deriv API...")
+            connected = await deriv_adapter.connect()
+            if not connected:
+                logger.error("Falha na conexão com Deriv")
+                return {
+                    "status": "error",
+                    "message": "Não foi possível conectar com a Deriv",
+                    "error_code": "CONNECTION_FAILED",
+                    "suggestion": "Verifique sua conexão com a internet"
+                }
+
+            logger.info("Tentando autenticar com token...")
+            authenticated = await deriv_adapter.authenticate(request.api_token)
+            if not authenticated:
+                logger.error("Falha na autenticação")
+                return {
+                    "status": "error",
+                    "message": "Token inválido ou expirado",
+                    "error_code": "AUTHENTICATION_FAILED",
+                    "suggestion": "Verifique se o token está correto e válido"
+                }
+
+            connection_info = deriv_adapter.get_connection_info()
+
+            logger.info(f"Conectado com sucesso - Login ID: {connection_info.get('loginid')}")
+
+            return {
+                "status": "success",
+                "message": "Conectado e autenticado com sucesso na Deriv API",
+                "connection_info": connection_info
+            }
+
+        except Exception as conn_error:
+            logger.error(f"Erro específico na conexão: {conn_error}")
+            return {
+                "status": "error",
+                "message": "Erro durante a conexão com Deriv",
+                "error_code": "CONNECTION_ERROR",
+                "error_details": str(conn_error),
+                "suggestion": "Tente novamente ou verifique suas credenciais"
+            }
+
     except Exception as e:
-        logger.error(f"Erro ao conectar com Deriv API: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro geral ao conectar com Deriv API: {e}")
+        return {
+            "status": "error",
+            "message": "Erro interno do sistema",
+            "error_code": "INTERNAL_ERROR",
+            "error_details": str(e),
+            "suggestion": "Contate o suporte se o problema persistir"
+        }
 
 @app.post("/deriv/disconnect")
 async def deriv_disconnect():
@@ -1753,44 +1802,107 @@ async def deriv_disconnect():
 async def deriv_get_balance():
     """Obter saldo atual da conta Deriv"""
     global deriv_adapter
-    
+
     try:
         if not deriv_adapter or not deriv_adapter.is_authenticated:
-            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
-        
-        balance = await deriv_adapter.get_balance()
-        
-        return {
-            "status": "success",
-            "balance": balance,
-            "currency": "USD",  # Assumindo USD por padrão
-            "loginid": deriv_adapter.deriv_api.loginid
-        }
-        
+            # Retornar resposta amigável em vez de HTTP 401
+            return {
+                "status": "error",
+                "message": "Não conectado à Deriv API",
+                "error_code": "NOT_AUTHENTICATED",
+                "balance": 0.0,
+                "currency": "USD",
+                "suggestion": "Faça login primeiro usando OAuth ou token"
+            }
+
+        try:
+            balance = await deriv_adapter.get_balance()
+
+            return {
+                "status": "success",
+                "balance": balance,
+                "currency": "USD",  # Assumindo USD por padrão
+                "loginid": getattr(deriv_adapter.deriv_api, 'loginid', 'N/A')
+            }
+        except Exception as e:
+            logger.warning(f"Erro ao obter saldo da API: {e}")
+            return {
+                "status": "error",
+                "message": "Erro ao consultar saldo",
+                "error_code": "BALANCE_ERROR",
+                "balance": 0.0,
+                "currency": "USD",
+                "error_details": str(e)
+            }
+
     except Exception as e:
-        logger.error(f"Erro ao obter saldo: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro geral ao obter saldo: {e}")
+        return {
+            "status": "error",
+            "message": "Erro interno",
+            "error_code": "INTERNAL_ERROR",
+            "balance": 0.0,
+            "currency": "USD",
+            "error_details": str(e)
+        }
 
 @app.get("/deriv/symbols")
 async def deriv_get_symbols():
     """Obter símbolos disponíveis para trading"""
     global deriv_adapter
-    
+
     try:
+        # Se não há adapter ou não está autenticado, retornar símbolos padrão
         if not deriv_adapter or not deriv_adapter.is_authenticated:
-            raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
-        
-        symbols = await deriv_adapter.get_available_symbols()
-        
+            # Símbolos padrão da Deriv para não quebrar o frontend
+            default_symbols = [
+                "R_10", "R_25", "R_50", "R_75", "R_100",
+                "JD10", "JD25", "JD50", "JD75", "JD100",
+                "BOOM1000", "CRASH1000", "RDBULL", "RDBEAR"
+            ]
+
+            logger.warning("Deriv adapter não autenticado, retornando símbolos padrão")
+
+            return {
+                "status": "success",
+                "symbols": default_symbols,
+                "count": len(default_symbols),
+                "note": "Símbolos padrão - autenticação necessária para lista completa"
+            }
+
+        # Se conectado, tentar obter símbolos reais
+        try:
+            symbols = await deriv_adapter.get_available_symbols()
+
+            return {
+                "status": "success",
+                "symbols": symbols,
+                "count": len(symbols)
+            }
+        except Exception as e:
+            logger.warning(f"Erro ao obter símbolos da API, usando padrão: {e}")
+            # Fallback para símbolos padrão se a API falhar
+            default_symbols = [
+                "R_10", "R_25", "R_50", "R_75", "R_100",
+                "JD10", "JD25", "JD50", "JD75", "JD100"
+            ]
+
+            return {
+                "status": "success",
+                "symbols": default_symbols,
+                "count": len(default_symbols),
+                "note": "Símbolos padrão - erro na API da Deriv"
+            }
+
+    except Exception as e:
+        logger.error(f"Erro geral ao obter símbolos: {e}")
+        # Último fallback
         return {
             "status": "success",
-            "symbols": symbols,
-            "count": len(symbols)
+            "symbols": ["R_50", "R_75", "R_100"],
+            "count": 3,
+            "note": "Símbolos mínimos - erro no sistema"
         }
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter símbolos: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/deriv/symbols/{symbol}/info")
 async def deriv_get_symbol_info(symbol: str):
