@@ -50,6 +50,10 @@ class OAuthCallbackRequest(BaseModel):
 class TokenRefreshRequest(BaseModel):
     refresh_token: str
 
+class OAuthConnectRequest(BaseModel):
+    token: str
+    demo: bool = True
+
 # Deriv OAuth request models
 class DerivOAuthStartRequest(BaseModel):
     app_id: str = "99188"
@@ -1143,7 +1147,7 @@ async def handle_deriv_oauth_callback(request: DerivOAuthCallbackRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/deriv/oauth/connect")
-async def connect_with_deriv_oauth_token(token: str, demo: bool = True):
+async def connect_with_deriv_oauth_token(request: OAuthConnectRequest):
     """
     Conectar à Deriv WebSocket usando token OAuth
     """
@@ -1159,7 +1163,7 @@ async def connect_with_deriv_oauth_token(token: str, demo: bool = True):
             raise HTTPException(status_code=500, detail="Falha ao conectar com Deriv")
 
         # Autenticar usando o token OAuth
-        authenticated = await deriv_adapter.authenticate(token)
+        authenticated = await deriv_adapter.authenticate(request.token)
         if not authenticated:
             raise HTTPException(status_code=401, detail="Token OAuth inválido ou falha na autenticação")
 
@@ -1172,7 +1176,7 @@ async def connect_with_deriv_oauth_token(token: str, demo: bool = True):
             "message": "Conectado e autenticado com sucesso usando OAuth",
             "connection_info": connection_info,
             "auth_method": "OAuth 2.0",
-            "demo_mode": demo
+            "demo_mode": request.demo
         }
 
     except Exception as e:
