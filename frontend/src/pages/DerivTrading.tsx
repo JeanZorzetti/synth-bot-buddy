@@ -353,7 +353,7 @@ const DerivTrading: React.FC = () => {
                 Conectar à API Deriv
               </CardTitle>
               <CardDescription>
-                Conecte-se à API real da Deriv para operar em conta fictícia
+                Conecte-se à API real da Deriv para operar em conta fictícia. Escolha o método de autenticação abaixo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -409,23 +409,51 @@ const DerivTrading: React.FC = () => {
                 </AlertDescription>
               </Alert>
 
-              <Button 
-                onClick={connectToDerivAPI}
-                disabled={isConnecting}
-                className="w-full"
-              >
-                {isConnecting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Conectando...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4 mr-2" />
-                    Conectar
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={connectToDerivAPI}
+                  disabled={isConnecting}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {isConnecting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Conectar com Token
+                    </>
+                  )}
+                </Button>
+
+                <div className="text-center">
+                  <span className="text-sm text-muted-foreground">ou</span>
+                </div>
+
+                <Button
+                  onClick={() => window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=99188&redirect_uri=https://botderiv.roilabs.com.br/auth'}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.383 0 0 5.383 0 12s5.383 12 12 12 12-5.383 12-12S18.617 0 12 0zm0 21.5C6.201 21.5 1.5 16.799 1.5 11S6.201.5 12 .5 22.5 5.201 22.5 11 17.799 21.5 12 21.5z"/>
+                  </svg>
+                  Conectar via OAuth (Recomendado)
+                </Button>
+
+                <Alert className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    <strong>OAuth (Recomendado):</strong> Mais seguro, sem precisar copiar tokens.<br/>
+                    <strong>Token Manual:</strong> Cole seu token da API obtido em{' '}
+                    <a href="https://app.deriv.com/account/api-token" target="_blank" className="text-blue-600 underline">
+                      app.deriv.com/account/api-token
+                    </a>
+                  </AlertDescription>
+                </Alert>
+              </div>
             </CardContent>
           </Card>
         </div>
