@@ -318,23 +318,33 @@ class DerivAPI:
         }
         return await self._send_request(request)
     
-    async def buy(self, contract_type: str, symbol: str, amount: float, 
-                  duration: int, duration_unit: str = "m", barrier: Optional[str] = None) -> Dict[str, Any]:
+    async def buy(self, contract_type: str, symbol: str, amount: float,
+                  duration: int, duration_unit: str = "m", barrier: Optional[str] = None,
+                  basis: str = "stake", currency: str = "USD",
+                  subscribe: bool = True) -> Dict[str, Any]:
         """12. Buy - Comprar contratos"""
         request = {
             "buy": 1,
-            "price": amount,
+            "price": amount * 2,  # Max price willing to pay (payout potential)
             "parameters": {
+                "amount": amount,
+                "basis": basis,
                 "contract_type": contract_type,
+                "currency": currency,
                 "symbol": symbol,
                 "duration": duration,
                 "duration_unit": duration_unit
             }
         }
-        
+
+        # Adicionar subscrição se solicitado
+        if subscribe:
+            request["subscribe"] = 1
+
+        # Adicionar barreira se especificada
         if barrier:
             request["parameters"]["barrier"] = barrier
-        
+
         return await self._send_request(request)
     
     async def sell(self, contract_id: int, price: Optional[float] = None) -> Dict[str, Any]:

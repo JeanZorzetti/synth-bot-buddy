@@ -687,7 +687,9 @@ class ApiService {
     amount: number,
     duration: number,
     durationUnit: string = 'm',
-    barrier?: string
+    barrier?: string,
+    basis: string = 'stake',
+    currency: string = 'USD'
   ): Promise<{
     status: string;
     message: string;
@@ -696,6 +698,18 @@ class ApiService {
       buy_price: number;
       payout: number;
       longcode: string;
+      symbol: string;
+      contract_type: string;
+      duration: string;
+      stake_amount: number;
+    };
+    balance_after: number;
+    timestamp: number;
+    risk_info?: {
+      risk_level: string;
+      risk_percentage: number;
+      recommended_amount: number;
+      is_martingale: boolean;
     };
   }> {
     return this.post('/deriv/buy', {
@@ -704,7 +718,9 @@ class ApiService {
       amount,
       duration,
       duration_unit: durationUnit,
-      barrier
+      barrier,
+      basis,
+      currency
     });
   }
 

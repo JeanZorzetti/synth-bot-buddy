@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiService from '@/services/api';
+import TradingBuyForm from '@/components/TradingBuyForm';
+import TradeResultModal from '@/components/TradeResultModal';
 
 interface DerivConnection {
   is_connected: boolean;
@@ -89,6 +91,11 @@ const DerivTrading: React.FC = () => {
   const [history, setHistory] = useState<DerivTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [endpointsAvailable, setEndpointsAvailable] = useState<boolean | null>(null);
+
+  // Estados para o novo componente de buy
+  const [tradeResult, setTradeResult] = useState<any>(null);
+  const [tradeError, setTradeError] = useState<string | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -296,6 +303,33 @@ const DerivTrading: React.FC = () => {
     }
   };
 
+  // Callbacks para o novo componente de trading
+  const handleTradeSuccess = async (result: any) => {
+    setTradeResult(result);
+    setTradeError(null);
+    setShowResultModal(true);
+
+    // Atualizar dados após sucesso
+    await loadPortfolio();
+    await loadHistory();
+
+    toast.success(`Contrato comprado! ID: ${result.contract.contract_id}`);
+  };
+
+  const handleTradeError = (error: string) => {
+    setTradeResult(null);
+    setTradeError(error);
+    setShowResultModal(true);
+
+    toast.error(`Erro ao executar trade: ${error}`);
+  };
+
+  const closeResultModal = () => {
+    setShowResultModal(false);
+    setTradeResult(null);
+    setTradeError(null);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -491,113 +525,48 @@ const DerivTrading: React.FC = () => {
         </TabsList>
 
         <TabsContent value="trade" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Executar Trade</CardTitle>
-              <CardDescription>
-                Configure e execute um trade na API real da Deriv
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="symbol">Símbolo</Label>
-                  <Select 
-                    value={selectedSymbol} 
-                    onValueChange={(value) => {
-                      setSelectedSymbol(value);
-                      subscribeToSymbol(value);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {symbols.map(symbol => (
-                        <SelectItem key={symbol} value={symbol}>
-                          {symbol}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Novo componente de compra */}
+            <TradingBuyForm
+              symbol={selectedSymbol}
+              onTradeSuccess={handleTradeSuccess}
+              onTradeError={handleTradeError}
+              disabled={!connection?.is_authenticated || !endpointsAvailable}
+            />
 
-                <div className="space-y-2">
-                  <Label htmlFor="contract-type">Tipo de Contrato</Label>
-                  <Select value={contractType} onValueChange={setContractType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CALL">CALL (Rise)</SelectItem>
-                      <SelectItem value="PUT">PUT (Fall)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Informações do último tick */}
+            {currentTick && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Preço Atual - {selectedSymbol}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {currentTick.price}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Atualizado em: {new Date(currentTick.timestamp * 1000).toLocaleTimeString()}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Valor do Stake</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(Number(e.target.value))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Duração</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
-                      className="flex-1"
-                    />
-                    <Select value={durationUnit} onValueChange={setDurationUnit}>
-                      <SelectTrigger className="w-20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="s">Seg</SelectItem>
-                        <SelectItem value="m">Min</SelectItem>
-                        <SelectItem value="h">Hora</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      variant="outline"
+                      onClick={updateCurrentTick}
+                      className="w-full"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Atualizar Preço
+                    </Button>
                   </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  onClick={executeTrade}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Executando...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Executar Trade
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={updateCurrentTick}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="portfolio">
@@ -722,6 +691,14 @@ const DerivTrading: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de resultado */}
+      <TradeResultModal
+        result={tradeResult}
+        error={tradeError}
+        isOpen={showResultModal}
+        onClose={closeResultModal}
+      />
     </div>
   );
 };

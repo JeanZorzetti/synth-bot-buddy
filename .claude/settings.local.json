@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(py --version)",
+      "Bash(py -m pip install:*)",
+      "Bash(py:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:botderivapi.roilabs.com.br)",
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Production optimizations and troubleshooting\n\n🔧 Backend Improvements:\n- Add production CORS for frontend domain\n- Implement detailed health check endpoint (/health)\n- Add routes listing endpoint for debugging (/routes)\n- Update Dockerfile health check to use /health\n- Add requests dependency for health check\n\n📱 Frontend Configuration:\n- Configure production API URL (https://botderivapi.roilabs.com.br)\n- Set environment to production\n\n📚 Documentation:\n- Add comprehensive deploy guide with troubleshooting\n- Include EasyPanel configuration instructions\n- Add monitoring and debugging commands\n- Document common issues and solutions\n\n🎯 Ready for production testing and validation\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install)",
+      "WebFetch(domain:developers.deriv.com)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(pip install:*)",
+      "WebSearch",
+      "WebFetch(domain:api.deriv.com)",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

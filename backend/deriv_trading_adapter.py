@@ -163,24 +163,36 @@ class DerivTradingAdapter:
     # OPERAÇÕES DE TRADING
     # =====================================================
     
-    async def place_trade(self, contract_type: str, symbol: str, amount: float, 
-                         duration: int, duration_unit: str = "m") -> Dict[str, Any]:
+    async def place_trade(self, contract_type: str, symbol: str, amount: float,
+                         duration: int, duration_unit: str = "m", barrier: Optional[str] = None,
+                         basis: str = "stake", currency: str = "USD") -> Dict[str, Any]:
         """Realizar uma operação de trade"""
         try:
             if not self.is_authenticated:
                 raise Exception("Não autenticado")
-            
+
             # Validar se símbolo está disponível
             if not await self._is_symbol_available(symbol):
                 raise Exception(f"Símbolo {symbol} não está disponível")
-            
+
+            # Validar parâmetros
+            if amount <= 0:
+                raise Exception("Amount deve ser maior que zero")
+
+            if duration <= 0:
+                raise Exception("Duration deve ser maior que zero")
+
             # Executar compra
             response = await self.deriv_api.buy(
                 contract_type=contract_type,
                 symbol=symbol,
                 amount=amount,
                 duration=duration,
-                duration_unit=duration_unit
+                duration_unit=duration_unit,
+                barrier=barrier,
+                basis=basis,
+                currency=currency,
+                subscribe=True
             )
             
             if response and 'buy' in response:

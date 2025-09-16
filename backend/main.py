@@ -68,12 +68,14 @@ class DerivConnectRequest(BaseModel):
     demo: bool = True
 
 class DerivTradeRequest(BaseModel):
-    contract_type: str  # "CALL", "PUT", etc.
+    contract_type: str  # "CALL", "PUT", "DIGITEVEN", etc.
     symbol: str        # "R_50", "R_100", etc.
     amount: float      # Valor do stake
     duration: int      # Duração em minutos/segundos
     duration_unit: str = "m"  # "m" para minutos, "s" para segundos
-    barrier: Optional[str] = None
+    barrier: Optional[str] = None  # Barreira para contratos que precisam
+    basis: str = "stake"  # "stake" ou "payout"
+    currency: str = "USD"  # Moeda do contrato
 
 class DerivSellRequest(BaseModel):
     contract_id: int
@@ -1875,42 +1877,104 @@ async def deriv_get_last_tick(symbol: str):
 @app.post("/deriv/buy")
 async def deriv_buy_contract(request: DerivTradeRequest):
     """Comprar contrato na Deriv API"""
-    global deriv_adapter
-    
+    global deriv_adapter, capital_manager
+
     try:
         if not deriv_adapter or not deriv_adapter.is_authenticated:
             raise HTTPException(status_code=401, detail="Não conectado à Deriv API")
-        
+
         # Validar parâmetros
         if request.amount <= 0:
             raise HTTPException(status_code=400, detail="Valor do stake deve ser maior que zero")
-        
+
         if request.duration <= 0:
             raise HTTPException(status_code=400, detail="Duração deve ser maior que zero")
-        
+
+        # Validar tipos de contrato suportados
+        valid_contract_types = [
+            "CALL", "PUT", "CALLE", "PUTE",
+            "DIGITEVEN", "DIGITODD", "DIGITOVER", "DIGITUNDER",
+            "DIGITMATCH", "DIGITDIFF", "ONETOUCH", "NOTOUCH",
+            "RANGE", "UPORDOWN"
+        ]
+
+        if request.contract_type not in valid_contract_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de contrato '{request.contract_type}' não é válido. Tipos válidos: {', '.join(valid_contract_types)}"
+            )
+
+        # Verificar saldo antes de executar trade
+        current_balance = await deriv_adapter.get_balance()
+        if current_balance < request.amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Saldo insuficiente. Saldo atual: ${current_balance:.2f}, Valor solicitado: ${request.amount:.2f}"
+            )
+
+        # Usar capital manager se disponível
+        trade_amount = request.amount
+        risk_info = None
+
+        if capital_manager:
+            # Obter informações de risco
+            risk_assessment = capital_manager.get_risk_assessment()
+            risk_info = {
+                "risk_level": risk_assessment["risk_level"],
+                "risk_percentage": risk_assessment["risk_percentage"],
+                "recommended_amount": capital_manager.get_next_trade_amount(),
+                "is_martingale": capital_manager.is_in_loss_sequence
+            }
+
+            # Verificar se amount está muito acima do recomendado
+            recommended = capital_manager.get_next_trade_amount()
+            if trade_amount > recommended * 2:
+                logger.warning(f"Amount ${trade_amount} muito acima do recomendado ${recommended}")
+
         # Executar trade
         result = await deriv_adapter.place_trade(
             contract_type=request.contract_type,
             symbol=request.symbol,
-            amount=request.amount,
+            amount=trade_amount,
             duration=request.duration,
             duration_unit=request.duration_unit
         )
-        
+
         if not result['success']:
-            raise HTTPException(status_code=400, detail=result.get('error', 'Falha ao executar trade'))
-        
-        return {
+            error_message = result.get('error', 'Falha ao executar trade')
+            # Log do erro para debug
+            logger.error(f"Erro na compra: {error_message}")
+            raise HTTPException(status_code=400, detail=error_message)
+
+        # Preparar resposta
+        response_data = {
             "status": "success",
             "message": "Contrato comprado com sucesso",
             "contract": {
                 "contract_id": result.get('contract_id'),
                 "buy_price": result.get('buy_price'),
                 "payout": result.get('payout'),
-                "longcode": result.get('longcode')
-            }
+                "longcode": result.get('longcode'),
+                "symbol": request.symbol,
+                "contract_type": request.contract_type,
+                "duration": f"{request.duration}{request.duration_unit}",
+                "stake_amount": trade_amount
+            },
+            "balance_after": current_balance - trade_amount,
+            "timestamp": time.time()
         }
-        
+
+        # Adicionar informações de risco se disponível
+        if risk_info:
+            response_data["risk_info"] = risk_info
+
+        # Registrar trade no capital manager se disponível
+        if capital_manager and result.get('contract_id'):
+            # Nota: O resultado final será registrado quando o contrato finalizar
+            logger.info(f"Trade registrado - Stake: ${trade_amount}, Risk Level: {risk_info.get('risk_level', 'N/A')}")
+
+        return response_data
+
     except HTTPException:
         raise
     except Exception as e:
