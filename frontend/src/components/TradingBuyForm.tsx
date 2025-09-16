@@ -99,6 +99,10 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [lastTick, setLastTick] = useState<any>(null);
+  const [currentProposal, setCurrentProposal] = useState<any>(null);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [proposalError, setProposalError] = useState<string | null>(null);
+  const [proposalUpdateInterval, setProposalUpdateInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Get current contract type details
   const currentContractType = CONTRACT_TYPES.find(ct => ct.value === contractType);
@@ -109,6 +113,40 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
     loadBalance();
     loadLastTick();
   }, [symbol]);
+
+  // Load proposal when parameters change
+  useEffect(() => {
+    if (amount > 0 && duration > 0) {
+      // Clear existing interval
+      if (proposalUpdateInterval) {
+        clearInterval(proposalUpdateInterval);
+      }
+
+      // Load initial proposal
+      loadProposal(false);
+
+      // Set up real-time updates every 3 seconds
+      const interval = setInterval(() => {
+        loadProposal(true);
+      }, 3000);
+
+      setProposalUpdateInterval(interval);
+
+      // Cleanup on unmount or parameter change
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [contractType, symbol, amount, duration, durationUnit, barrier]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (proposalUpdateInterval) {
+        clearInterval(proposalUpdateInterval);
+      }
+    };
+  }, []);
 
   const loadBalance = async () => {
     try {
@@ -128,6 +166,56 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
     }
   };
 
+  // Load real-time proposal
+  const loadProposal = async (realtime: boolean = false) => {
+    if (!amount || amount <= 0 || !duration || !contractType) return;
+
+    setProposalLoading(true);
+    setProposalError(null);
+
+    try {
+      const params = {
+        contract_type: contractType,
+        symbol,
+        amount,
+        duration,
+        duration_unit: durationUnit,
+        barrier: currentContractType?.needsBarrier ? barrier : undefined,
+        basis: 'stake',
+        currency: 'USD'
+      };
+
+      const result = realtime
+        ? await apiService.getRealtimeProposal(params)
+        : await apiService.getProposal(params);
+
+      if (result.status === 'success' && result.proposal) {
+        setCurrentProposal(result.proposal);
+        setProposalError(null);
+      } else {
+        setProposalError(result.message || 'Erro ao obter cotação');
+        setCurrentProposal(null);
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar proposal:', error);
+      setProposalError(error.message || 'Erro ao obter cotação');
+      setCurrentProposal(null);
+    } finally {
+      setProposalLoading(false);
+    }
+  };
+
+  // Validate barrier for current contract type
+  const validateBarrier = (contractType: string, barrier: string): { isValid: boolean; error?: string } => {
+    if (contractType === 'DIGITOVER' || contractType === 'DIGITUNDER') {
+      const barrierNum = parseInt(barrier);
+      if (isNaN(barrierNum) || barrierNum < 0 || barrierNum > 9) {
+        return { isValid: false, error: 'Barrier deve ser um dígito entre 0 e 9' };
+      }
+    }
+    return { isValid: true };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -143,6 +231,14 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
 
       if (balance !== null && amount > balance) {
         throw new Error(`Saldo insuficiente. Saldo atual: $${balance.toFixed(2)}`);
+      }
+
+      // Validate barrier if needed
+      if (currentContractType?.needsBarrier) {
+        const barrierValidation = validateBarrier(contractType, barrier);
+        if (!barrierValidation.isValid) {
+          throw new Error(barrierValidation.error || 'Barrier inválida');
+        }
       }
 
       // Prepare contract parameters
@@ -193,9 +289,22 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
   };
 
   const getPotentialPayout = () => {
+    // Use real proposal data if available, otherwise fallback to estimation
+    if (currentProposal?.payout) {
+      return currentProposal.payout;
+    }
+
     // Simple estimation - real calculation would depend on market conditions
     const baseMultiplier = contractType.includes('DIGIT') ? 9.5 : 1.85;
     return amount * baseMultiplier;
+  };
+
+  const getCurrentAskPrice = () => {
+    // Use real proposal data if available, otherwise fallback to amount
+    if (currentProposal?.ask_price) {
+      return currentProposal.ask_price;
+    }
+    return amount;
   };
 
   return (
@@ -231,6 +340,68 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
           </div>
         </div>
       )}
+
+      {/* Real-time Proposal Display */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-4 border border-green-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${proposalLoading ? 'bg-yellow-500 animate-pulse' : currentProposal ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+            <span className="text-sm font-medium text-gray-700">
+              Cotação em Tempo Real
+            </span>
+          </div>
+          {proposalLoading && (
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          )}
+        </div>
+
+        {proposalError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <span className="text-sm text-red-700">{proposalError}</span>
+            </div>
+          </div>
+        )}
+
+        {currentProposal && !proposalError && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <span className="text-xs text-gray-600 block">Preço de Compra</span>
+              <span className="text-lg font-bold text-green-600">
+                ${currentProposal.ask_price?.toFixed(2) || '0.00'}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-600 block">Pagamento Potencial</span>
+              <span className="text-lg font-bold text-blue-600">
+                ${currentProposal.payout?.toFixed(2) || '0.00'}
+              </span>
+            </div>
+            {currentProposal.spot && (
+              <div className="col-span-2">
+                <span className="text-xs text-gray-600 block">Preço Atual (Spot)</span>
+                <span className="text-sm font-medium text-gray-800">
+                  {currentProposal.spot}
+                </span>
+              </div>
+            )}
+            <div className="col-span-2">
+              <span className="text-xs text-gray-600 block">Lucro Potencial</span>
+              <span className="text-sm font-semibold text-purple-600">
+                ${((currentProposal.payout || 0) - (currentProposal.ask_price || 0)).toFixed(2)}
+                {' '}({(((currentProposal.payout || 0) - (currentProposal.ask_price || 0)) / (currentProposal.ask_price || 1) * 100).toFixed(1)}%)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!currentProposal && !proposalError && !proposalLoading && (
+          <div className="text-center text-gray-500 text-sm py-2">
+            Configure os parâmetros para ver a cotação
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Contract Type Selection */}
@@ -343,7 +514,14 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
 
         {/* Trade Summary */}
         <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-3">Resumo da Operação</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900">Resumo da Operação</h4>
+            {currentProposal && (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                Dados Reais
+              </span>
+            )}
+          </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Tipo:</span>
@@ -357,14 +535,33 @@ export const TradingBuyForm: React.FC<TradingBuyFormProps> = ({
               <span className="text-gray-600">Stake:</span>
               <span className="font-medium">${amount.toFixed(2)}</span>
             </div>
+            {currentProposal && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Preço Real:</span>
+                <span className="font-medium text-blue-600">${getCurrentAskPrice().toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Duração:</span>
               <span className="font-medium">{duration}{durationUnit}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Payout Estimado:</span>
-              <span className="font-medium text-green-600">${getPotentialPayout().toFixed(2)}</span>
+              <span className="text-gray-600">
+                {currentProposal ? 'Payout Real:' : 'Payout Estimado:'}
+              </span>
+              <span className={`font-medium ${currentProposal ? 'text-green-700' : 'text-green-600'}`}>
+                ${getPotentialPayout().toFixed(2)}
+              </span>
             </div>
+            {currentProposal && (
+              <div className="flex justify-between border-t pt-2 mt-2">
+                <span className="text-gray-600">Lucro Potencial:</span>
+                <span className="font-semibold text-purple-600">
+                  ${(getPotentialPayout() - getCurrentAskPrice()).toFixed(2)}
+                  {' '}({((getPotentialPayout() - getCurrentAskPrice()) / getCurrentAskPrice() * 100).toFixed(1)}%)
+                </span>
+              </div>
+            )}
             {currentContractType?.needsBarrier && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Barreira:</span>

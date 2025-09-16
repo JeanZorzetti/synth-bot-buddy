@@ -248,6 +248,137 @@ class ApiService {
     return this.get('/capital/history');
   }
 
+  // =============================================
+  // CONTRACT PROPOSALS ENGINE METHODS
+  // =============================================
+
+  // Get single proposal with cache
+  async getProposal(params: {
+    contract_type: string;
+    symbol: string;
+    amount: number;
+    duration: number;
+    duration_unit?: string;
+    barrier?: string;
+    basis?: string;
+    currency?: string;
+  }): Promise<{
+    status: string;
+    proposal?: {
+      id: string;
+      ask_price: number;
+      payout: number;
+      spot?: number;
+      barrier?: string;
+      contract_type: string;
+      symbol: string;
+      display_value: string;
+      timestamp: number;
+      valid_until?: number;
+    };
+    request_params?: any;
+    error_code?: string;
+    message?: string;
+  }> {
+    return this.derivApiCall('/deriv/proposal', params);
+  }
+
+  // Get real-time proposal (no cache)
+  async getRealtimeProposal(params: {
+    contract_type: string;
+    symbol: string;
+    amount: number;
+    duration: number;
+    duration_unit?: string;
+    barrier?: string;
+    basis?: string;
+    currency?: string;
+  }): Promise<{
+    status: string;
+    proposal?: {
+      id: string;
+      ask_price: number;
+      payout: number;
+      spot?: number;
+      barrier?: string;
+      contract_type: string;
+      symbol: string;
+      display_value: string;
+      timestamp: number;
+      valid_until?: number;
+    };
+    realtime: boolean;
+    cache_bypassed: boolean;
+    error_code?: string;
+    message?: string;
+  }> {
+    return this.derivApiCall('/deriv/proposal/realtime', params);
+  }
+
+  // Get multiple proposals in batch
+  async getBatchProposals(params: {
+    proposals: Array<{
+      contract_type: string;
+      symbol: string;
+      amount: number;
+      duration: number;
+      duration_unit?: string;
+      barrier?: string;
+      basis?: string;
+      currency?: string;
+    }>;
+    realtime?: boolean;
+  }): Promise<{
+    status: string;
+    proposals?: Array<{
+      status: string;
+      proposal?: any;
+      request_index: number;
+      message?: string;
+    }>;
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    realtime_mode: boolean;
+    error_code?: string;
+    message?: string;
+  }> {
+    return this.derivApiCall('/deriv/proposals/batch', params);
+  }
+
+  // Get proposals engine statistics
+  async getProposalsStats(): Promise<{
+    status: string;
+    stats?: {
+      total_requests: number;
+      cache_hits: number;
+      cache_misses: number;
+      validation_errors: number;
+      api_errors: number;
+      cache: {
+        size: number;
+        max_size: number;
+        hit_rate: number;
+        oldest_entry?: number;
+      };
+      price_cache_symbols: number;
+      hit_rate: number;
+      error_rate: number;
+    };
+    engine_running: boolean;
+    message?: string;
+  }> {
+    return this.derivApiCall('/deriv/proposals/stats');
+  }
+
+  // Reset proposals engine statistics
+  async resetProposalsStats(): Promise<{
+    status: string;
+    message: string;
+  }> {
+    return this.derivApiCall('/deriv/proposals/reset-stats', {}, 'POST');
+  }
+
   // Token validation
   async validateToken(apiToken: string): Promise<{
     valid: boolean;
