@@ -719,8 +719,8 @@ const DerivTrading: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-sm mb-2">Melhorias Implementadas:</h4>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• Latência reduzida para <50ms</li>
-                      <li>• Hit rate de cache >80%</li>
+                      <li>• Latência reduzida para &lt;50ms</li>
+                      <li>• Hit rate de cache &gt;80%</li>
                       <li>• Validação de contratos digit</li>
                       <li>• Monitoramento em tempo real</li>
                       <li>• Estatísticas detalhadas</li>
