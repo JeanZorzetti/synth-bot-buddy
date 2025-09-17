@@ -1,0 +1,413 @@
+# Security Configuration for Trading Bot Production
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-config
+  namespace: trading-system
+data:
+  # Network policies
+  network-policy.yaml: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: trading-bot-network-policy
+      namespace: trading-system
+    spec:
+      podSelector:
+        matchLabels:
+          app: trading-bot
+      policyTypes:
+      - Ingress
+      - Egress
+      ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              name: trading-system
+        - podSelector:
+            matchLabels:
+              app: nginx
+        ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 8080
+      egress:
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              name: trading-system
+        ports:
+        - protocol: TCP
+          port: 5432  # PostgreSQL
+        - protocol: TCP
+          port: 6379  # Redis
+        - protocol: TCP
+          port: 8086  # InfluxDB
+      - to: []
+        ports:
+        - protocol: TCP
+          port: 443   # HTTPS outbound
+        - protocol: TCP
+          port: 80    # HTTP outbound (for API calls)
+        - protocol: UDP
+          port: 53    # DNS
+
+  # Pod Security Policy
+  pod-security-policy.yaml: |
+    apiVersion: policy/v1beta1
+    kind: PodSecurityPolicy
+    metadata:
+      name: trading-bot-psp
+    spec:
+      privileged: false
+      allowPrivilegeEscalation: false
+      requiredDropCapabilities:
+        - ALL
+      volumes:
+        - 'configMap'
+        - 'emptyDir'
+        - 'projected'
+        - 'secret'
+        - 'downwardAPI'
+        - 'persistentVolumeClaim'
+      runAsUser:
+        rule: 'MustRunAsNonRoot'
+      seLinux:
+        rule: 'RunAsAny'
+      fsGroup:
+        rule: 'RunAsAny'
+
+  # RBAC configuration
+  rbac.yaml: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: trading-bot-sa
+      namespace: trading-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      namespace: trading-system
+      name: trading-bot-role
+    rules:
+    - apiGroups: [""]
+      resources: ["configmaps", "secrets"]
+      verbs: ["get", "list"]
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get", "list"]
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: trading-bot-binding
+      namespace: trading-system
+    subjects:
+    - kind: ServiceAccount
+      name: trading-bot-sa
+      namespace: trading-system
+    roleRef:
+      kind: Role
+      name: trading-bot-role
+      apiGroup: rbac.authorization.k8s.io
+
+  # Security context
+  security-context.yaml: |
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+
+  # Secrets management
+  secrets.yaml: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: trading-secrets
+      namespace: trading-system
+    type: Opaque
+    data:
+      database-url: ${DATABASE_URL_B64}
+      deriv-api-token: ${DERIV_API_TOKEN_B64}
+      influxdb-token: ${INFLUXDB_TOKEN_B64}
+      email-password: ${EMAIL_PASSWORD_B64}
+      jwt-secret: ${JWT_SECRET_B64}
+
+---
+# Firewall rules configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: firewall-config
+  namespace: trading-system
+data:
+  iptables.rules: |
+    # Flush existing rules
+    *filter
+    :INPUT DROP [0:0]
+    :FORWARD DROP [0:0]
+    :OUTPUT ACCEPT [0:0]
+
+    # Allow loopback
+    -A INPUT -i lo -j ACCEPT
+
+    # Allow established connections
+    -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+    # Allow SSH (restricted IPs)
+    -A INPUT -p tcp --dport 22 -s 203.0.113.0/24 -j ACCEPT
+    -A INPUT -p tcp --dport 22 -s 198.51.100.0/24 -j ACCEPT
+
+    # Allow HTTP/HTTPS
+    -A INPUT -p tcp --dport 80 -j ACCEPT
+    -A INPUT -p tcp --dport 443 -j ACCEPT
+
+    # Allow Kubernetes API
+    -A INPUT -p tcp --dport 6443 -j ACCEPT
+
+    # Allow internal cluster communication
+    -A INPUT -s 172.20.0.0/16 -j ACCEPT
+    -A INPUT -s 10.0.0.0/8 -j ACCEPT
+
+    # Allow monitoring ports (restricted)
+    -A INPUT -p tcp --dport 9090 -s 172.20.0.0/16 -j ACCEPT  # Prometheus
+    -A INPUT -p tcp --dport 3000 -s 172.20.0.0/16 -j ACCEPT  # Grafana
+    -A INPUT -p tcp --dport 5601 -s 172.20.0.0/16 -j ACCEPT  # Kibana
+
+    # Rate limiting
+    -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT
+    -A INPUT -p tcp --dport 443 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT
+
+    # DDoS protection
+    -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 3 -j ACCEPT
+    -A INPUT -p icmp -m limit --limit 1/s --limit-burst 1 -j ACCEPT
+
+    # Drop everything else
+    -A INPUT -j DROP
+
+    COMMIT
+
+  fail2ban.conf: |
+    [DEFAULT]
+    bantime = 3600
+    findtime = 600
+    maxretry = 5
+    backend = systemd
+
+    [nginx-http-auth]
+    enabled = true
+    filter = nginx-http-auth
+    logpath = /var/log/nginx/error.log
+    maxretry = 3
+
+    [nginx-limit-req]
+    enabled = true
+    filter = nginx-limit-req
+    logpath = /var/log/nginx/error.log
+    maxretry = 10
+
+    [trading-api-abuse]
+    enabled = true
+    filter = trading-api-abuse
+    logpath = /app/logs/trading/*.log
+    maxretry = 20
+    bantime = 7200
+
+---
+# SSL/TLS Certificate configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ssl-config
+  namespace: trading-system
+data:
+  cert-manager.yaml: |
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: letsencrypt-prod
+    spec:
+      acme:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        email: admin@trading-bot.example.com
+        privateKeySecretRef:
+          name: letsencrypt-prod
+        solvers:
+        - http01:
+            ingress:
+              class: nginx
+    ---
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: trading-bot-tls
+      namespace: trading-system
+    spec:
+      secretName: trading-bot-tls
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+      dnsNames:
+      - trading-bot.example.com
+      - www.trading-bot.example.com
+      - monitoring.trading-bot.example.com
+      - admin.trading-bot.example.com
+
+  ssl-hardening.conf: |
+    # SSL/TLS hardening configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_early_data off;
+
+    # HSTS
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    # OCSP Stapling
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+
+---
+# Intrusion Detection System
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ids-config
+  namespace: trading-system
+data:
+  suricata.yaml: |
+    vars:
+      address-groups:
+        HOME_NET: "[172.20.0.0/16,10.0.0.0/8]"
+        EXTERNAL_NET: "!$HOME_NET"
+        HTTP_SERVERS: "$HOME_NET"
+        SMTP_SERVERS: "$HOME_NET"
+        SQL_SERVERS: "$HOME_NET"
+        DNS_SERVERS: "$HOME_NET"
+
+    default-log-dir: /var/log/suricata/
+
+    outputs:
+      - console:
+          enabled: yes
+      - file:
+          enabled: yes
+          level: info
+          filename: suricata.log
+      - syslog:
+          enabled: yes
+          facility: local5
+          format: "[%i] <%d> -- "
+
+    rules:
+      - /etc/suricata/rules/trading-rules.rules
+      - /etc/suricata/rules/emerging-threats.rules
+
+  trading-rules.rules: |
+    # Trading-specific IDS rules
+    alert tcp any any -> $HTTP_SERVERS 8000 (msg:"Suspicious trading API access"; content:"POST"; http_method; content:"/api/trading/execute"; http_uri; threshold:type limit, track by_src, count 100, seconds 60; sid:1000001;)
+
+    alert tcp any any -> $HTTP_SERVERS 8080 (msg:"WebSocket connection flood"; flow:to_server; threshold:type limit, track by_src, count 10, seconds 60; sid:1000002;)
+
+    alert tcp any any -> $HTTP_SERVERS any (msg:"SQL injection attempt"; content:"SELECT"; nocase; content:"UNION"; nocase; sid:1000003;)
+
+    alert tcp any any -> $HTTP_SERVERS any (msg:"XSS attempt"; content:"<script"; nocase; sid:1000004;)
+
+    alert tcp any any -> $HTTP_SERVERS any (msg:"Authentication brute force"; content:"401"; http_stat_code; threshold:type limit, track by_src, count 5, seconds 300; sid:1000005;)
+
+---
+# Backup and disaster recovery
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: trading-system
+data:
+  backup-script.sh: |
+    #!/bin/bash
+    set -e
+
+    BACKUP_DIR="/backups"
+    DATE=$(date +%Y%m%d_%H%M%S)
+
+    # Database backup
+    echo "Starting database backup..."
+    pg_dump $DATABASE_URL > "$BACKUP_DIR/postgres_$DATE.sql"
+    gzip "$BACKUP_DIR/postgres_$DATE.sql"
+
+    # InfluxDB backup
+    echo "Starting InfluxDB backup..."
+    influxd backup -portable "$BACKUP_DIR/influxdb_$DATE"
+    tar -czf "$BACKUP_DIR/influxdb_$DATE.tar.gz" "$BACKUP_DIR/influxdb_$DATE"
+    rm -rf "$BACKUP_DIR/influxdb_$DATE"
+
+    # Redis backup
+    echo "Starting Redis backup..."
+    redis-cli --rdb "$BACKUP_DIR/redis_$DATE.rdb"
+    gzip "$BACKUP_DIR/redis_$DATE.rdb"
+
+    # Application data backup
+    echo "Starting application data backup..."
+    tar -czf "$BACKUP_DIR/app_data_$DATE.tar.gz" /app/data /app/models /app/logs
+
+    # Upload to cloud storage
+    echo "Uploading to cloud storage..."
+    aws s3 cp "$BACKUP_DIR/" "s3://trading-bot-backups/$(date +%Y/%m/%d)/" --recursive
+
+    # Cleanup old local backups (keep last 7 days)
+    find "$BACKUP_DIR" -name "*.gz" -mtime +7 -delete
+    find "$BACKUP_DIR" -name "*.sql" -mtime +7 -delete
+    find "$BACKUP_DIR" -name "*.rdb" -mtime +7 -delete
+
+    echo "Backup completed successfully"
+
+  restore-script.sh: |
+    #!/bin/bash
+    set -e
+
+    if [ -z "$1" ]; then
+        echo "Usage: $0 <backup_date>"
+        echo "Example: $0 20231201_120000"
+        exit 1
+    fi
+
+    BACKUP_DATE=$1
+    BACKUP_DIR="/backups"
+
+    echo "Starting restore from backup $BACKUP_DATE..."
+
+    # Download from cloud storage
+    aws s3 cp "s3://trading-bot-backups/" "$BACKUP_DIR/" --recursive --include "*$BACKUP_DATE*"
+
+    # Restore database
+    echo "Restoring PostgreSQL..."
+    gunzip -c "$BACKUP_DIR/postgres_$BACKUP_DATE.sql.gz" | psql $DATABASE_URL
+
+    # Restore InfluxDB
+    echo "Restoring InfluxDB..."
+    tar -xzf "$BACKUP_DIR/influxdb_$BACKUP_DATE.tar.gz" -C "$BACKUP_DIR"
+    influxd restore -portable "$BACKUP_DIR/influxdb_$BACKUP_DATE"
+
+    # Restore Redis
+    echo "Restoring Redis..."
+    gunzip "$BACKUP_DIR/redis_$BACKUP_DATE.rdb.gz"
+    redis-cli --rdb < "$BACKUP_DIR/redis_$BACKUP_DATE.rdb"
+
+    # Restore application data
+    echo "Restoring application data..."
+    tar -xzf "$BACKUP_DIR/app_data_$BACKUP_DATE.tar.gz" -C /
+
+    echo "Restore completed successfully"

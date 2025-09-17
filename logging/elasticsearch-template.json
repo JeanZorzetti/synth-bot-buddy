@@ -1,0 +1,157 @@
+{
+  "index_patterns": ["trading-bot-*"],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "index": {
+      "refresh_interval": "5s",
+      "max_result_window": 50000
+    }
+  },
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "@version": {
+        "type": "keyword"
+      },
+      "message": {
+        "type": "text",
+        "analyzer": "standard"
+      },
+      "level": {
+        "type": "keyword"
+      },
+      "logger": {
+        "type": "keyword"
+      },
+      "service": {
+        "type": "keyword"
+      },
+      "environment": {
+        "type": "keyword"
+      },
+      "host": {
+        "type": "keyword"
+      },
+      "log_type": {
+        "type": "keyword"
+      },
+
+      "trading_symbol": {
+        "type": "keyword"
+      },
+      "order_id": {
+        "type": "keyword"
+      },
+      "position_id": {
+        "type": "keyword"
+      },
+      "pnl": {
+        "type": "float"
+      },
+      "trade_type": {
+        "type": "keyword"
+      },
+      "amount": {
+        "type": "float"
+      },
+      "price": {
+        "type": "float"
+      },
+      "volume": {
+        "type": "float"
+      },
+
+      "model_name": {
+        "type": "keyword"
+      },
+      "prediction": {
+        "type": "float"
+      },
+      "confidence": {
+        "type": "float"
+      },
+      "accuracy": {
+        "type": "float"
+      },
+      "training_time": {
+        "type": "float"
+      },
+
+      "risk_level": {
+        "type": "keyword"
+      },
+      "drawdown": {
+        "type": "float"
+      },
+      "var": {
+        "type": "float"
+      },
+      "sharpe_ratio": {
+        "type": "float"
+      },
+
+      "alert_type": {
+        "type": "keyword"
+      },
+      "alert_priority": {
+        "type": "keyword"
+      },
+      "alert_id": {
+        "type": "keyword"
+      },
+
+      "client_ip": {
+        "type": "ip"
+      },
+      "user_agent": {
+        "type": "text"
+      },
+      "response_time": {
+        "type": "float"
+      },
+      "status_code": {
+        "type": "integer"
+      },
+
+      "geoip": {
+        "properties": {
+          "location": {
+            "type": "geo_point"
+          },
+          "country_name": {
+            "type": "keyword"
+          },
+          "country_code2": {
+            "type": "keyword"
+          },
+          "city_name": {
+            "type": "keyword"
+          },
+          "region_name": {
+            "type": "keyword"
+          }
+        }
+      },
+
+      "ua": {
+        "properties": {
+          "browser": {
+            "type": "keyword"
+          },
+          "version": {
+            "type": "keyword"
+          },
+          "os": {
+            "type": "keyword"
+          },
+          "device": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}

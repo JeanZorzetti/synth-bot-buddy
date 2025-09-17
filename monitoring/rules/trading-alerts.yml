@@ -1,0 +1,199 @@
+groups:
+  - name: trading-system-alerts
+    rules:
+      # High-level system alerts
+      - alert: TradingBotDown
+        expr: up{job="trading-bot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: trading-bot
+        annotations:
+          summary: "Trading Bot is down"
+          description: "Trading Bot has been down for more than 1 minute"
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been down for more than 30 seconds"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for more than 30 seconds"
+
+      # Trading-specific alerts
+      - alert: HighTradingLatency
+        expr: trading_order_execution_duration_seconds{quantile="0.95"} > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "High trading execution latency"
+          description: "95th percentile order execution time is {{ $value }}s"
+
+      - alert: LowSuccessRate
+        expr: rate(trading_orders_total{status="failed"}[5m]) / rate(trading_orders_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "High order failure rate"
+          description: "Order failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: PortfolioDrawdown
+        expr: trading_portfolio_drawdown_percent > 10
+        for: 1m
+        labels:
+          severity: critical
+          component: risk
+        annotations:
+          summary: "High portfolio drawdown"
+          description: "Portfolio drawdown is {{ $value }}%"
+
+      - alert: DailyLossLimit
+        expr: trading_daily_pnl_usd < -5000
+        for: 30s
+        labels:
+          severity: critical
+          component: risk
+        annotations:
+          summary: "Daily loss limit exceeded"
+          description: "Daily P&L is {{ $value }} USD"
+
+      # AI Model alerts
+      - alert: ModelPredictionLatency
+        expr: ai_model_prediction_duration_seconds{quantile="0.95"} > 1
+        for: 2m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "High AI model prediction latency"
+          description: "95th percentile model prediction time is {{ $value }}s"
+
+      - alert: ModelAccuracyDrop
+        expr: ai_model_accuracy_percent < 60
+        for: 5m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "AI model accuracy dropped"
+          description: "Model accuracy is {{ $value }}%"
+
+      - alert: ModelDriftDetected
+        expr: ai_model_drift_score > 0.7
+        for: 2m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "Model drift detected"
+          description: "Model drift score is {{ $value }}"
+
+      # Resource alerts
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{container="trading-bot"}[5m]) > 0.8
+        for: 3m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes{container="trading-bot"} / container_spec_memory_limit_bytes > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value | humanizePercentage }} available"
+
+      # Market data alerts
+      - alert: MarketDataStale
+        expr: time() - market_data_last_update_timestamp > 60
+        for: 1m
+        labels:
+          severity: critical
+          component: market-data
+        annotations:
+          summary: "Stale market data"
+          description: "Market data hasn't been updated for {{ $value }}s"
+
+      - alert: HighMarketDataLatency
+        expr: market_data_latency_seconds > 1
+        for: 2m
+        labels:
+          severity: warning
+          component: market-data
+        annotations:
+          summary: "High market data latency"
+          description: "Market data latency is {{ $value }}s"
+
+      # WebSocket connection alerts
+      - alert: WebSocketDisconnected
+        expr: websocket_connections_active == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: websocket
+        annotations:
+          summary: "WebSocket disconnected"
+          description: "No active WebSocket connections"
+
+      - alert: HighWebSocketErrors
+        expr: rate(websocket_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High WebSocket error rate"
+          description: "WebSocket error rate is {{ $value }} errors/second"
+
+  - name: trading-performance
+    rules:
+      # Performance recording rules
+      - record: trading:order_success_rate_5m
+        expr: rate(trading_orders_total{status="success"}[5m]) / rate(trading_orders_total[5m])
+
+      - record: trading:avg_execution_time_5m
+        expr: rate(trading_order_execution_duration_seconds_sum[5m]) / rate(trading_order_execution_duration_seconds_count[5m])
+
+      - record: trading:pnl_rate_1h
+        expr: rate(trading_realized_pnl_usd[1h])
+
+      - record: ai:prediction_accuracy_1h
+        expr: rate(ai_correct_predictions_total[1h]) / rate(ai_predictions_total[1h])
+
+      - record: system:cpu_usage_5m
+        expr: rate(container_cpu_usage_seconds_total{container="trading-bot"}[5m])
+
+      - record: system:memory_usage_ratio
+        expr: container_memory_usage_bytes{container="trading-bot"} / container_spec_memory_limit_bytes

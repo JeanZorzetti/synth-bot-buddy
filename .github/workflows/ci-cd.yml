@@ -1,0 +1,367 @@
+name: 🚀 AI Trading Bot CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # 🧪 Testing Jobs
+  test-backend:
+    name: 🐍 Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: trading_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: 🔧 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-asyncio pytest-cov
+
+    - name: 🧪 Run backend tests
+      env:
+        DATABASE_URL: postgresql://postgres:testpass@localhost:5432/trading_test
+        REDIS_URL: redis://localhost:6379/0
+        TRADING_ENV: test
+      run: |
+        cd backend
+        python -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  test-frontend:
+    name: ⚛️ Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📦 Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: 🔧 Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: 🧪 Run frontend tests
+      run: |
+        cd frontend
+        npm run test:ci
+
+    - name: 🔍 Run linting
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: 🏗️ Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  # 🔒 Security Scanning
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # 🐳 Build Docker Images
+  build-images:
+    name: 🐳 Build & Push Images
+    runs-on: ubuntu-latest
+    needs: [ test-backend, test-frontend, security-scan ]
+    if: github.event_name != 'pull_request'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🔧 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 📝 Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: 🏗️ Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # 🚀 Deploy to Staging
+  deploy-staging:
+    name: 🧪 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [ build-images ]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.trading-bot.example.com
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: 🔐 Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: 🚀 Deploy to staging
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl set image deployment/trading-bot trading-bot=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop -n trading-staging
+        kubectl rollout status deployment/trading-bot -n trading-staging --timeout=600s
+
+    - name: 🧪 Run smoke tests
+      run: |
+        cd tests/smoke
+        python smoke_tests.py --env staging
+
+  # 🚀 Deploy to Production
+  deploy-production:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [ build-images ]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://trading-bot.example.com
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: 🔐 Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: 🚀 Deploy to production
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl set image deployment/trading-bot trading-bot=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest -n trading-system
+        kubectl rollout status deployment/trading-bot -n trading-system --timeout=600s
+
+    - name: 🧪 Run production health checks
+      run: |
+        cd tests/health
+        python health_checks.py --env production
+
+    - name: 📊 Update deployment metrics
+      run: |
+        curl -X POST "${{ secrets.METRICS_WEBHOOK }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "event": "deployment",
+            "environment": "production",
+            "version": "${{ github.sha }}",
+            "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+          }'
+
+  # 📊 Performance Tests
+  performance-tests:
+    name: 📊 Performance Tests
+    runs-on: ubuntu-latest
+    needs: [ deploy-staging ]
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install load testing tools
+      run: |
+        pip install locust pytest-benchmark
+
+    - name: 🚀 Run performance tests
+      run: |
+        cd tests/performance
+        python run_performance_tests.py --target staging
+
+    - name: 📊 Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: tests/performance/results/
+
+  # 🔄 Database Migration
+  database-migration:
+    name: 🗄️ Database Migration
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 🔧 Install dependencies
+      run: |
+        pip install alembic psycopg2-binary
+
+    - name: 🗄️ Run database migrations
+      env:
+        DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      run: |
+        cd backend
+        alembic upgrade head
+
+  # 📈 Post-Deployment Monitoring
+  post-deployment:
+    name: 📈 Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: [ deploy-production ]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: 📊 Trigger monitoring alerts
+      run: |
+        curl -X POST "${{ secrets.MONITORING_WEBHOOK }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "event": "deployment_complete",
+            "version": "${{ github.sha }}",
+            "environment": "production"
+          }'
+
+    - name: 🔔 Notify team
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#trading-bot-alerts'
+        text: |
+          🚀 Production deployment completed successfully!
+          Version: ${{ github.sha }}
+          Deployed by: ${{ github.actor }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # 🧹 Cleanup
+  cleanup:
+    name: 🧹 Cleanup Old Images
+    runs-on: ubuntu-latest
+    needs: [ deploy-production ]
+    if: always()
+
+    steps:
+    - name: 🗑️ Delete old container images
+      uses: actions/delete-package-versions@v4
+      with:
+        package-name: ${{ env.IMAGE_NAME }}
+        package-type: 'container'
+        min-versions-to-keep: 10
+        delete-only-untagged-versions: true
