@@ -15,6 +15,11 @@ import Performance from "./pages/Performance";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import DerivTrading from "./pages/DerivTrading";
+import RealTimeData from "./pages/RealTimeData";
+import AIControlCenter from "./pages/AIControlCenter";
+import MultiAssetManagement from "./pages/MultiAssetManagement";
+import StrategyMarketplace from "./pages/StrategyMarketplace";
+import EnterprisePlatform from "./pages/EnterprisePlatform";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +72,31 @@ const App = () => (
           <Route path="/performance" element={
             <ProtectedRoute>
               <Performance />
+            </ProtectedRoute>
+          } />
+          <Route path="/real-time-data" element={
+            <ProtectedRoute>
+              <RealTimeData />
+            </ProtectedRoute>
+          } />
+          <Route path="/ai-control-center" element={
+            <ProtectedRoute>
+              <AIControlCenter />
+            </ProtectedRoute>
+          } />
+          <Route path="/multi-asset-management" element={
+            <ProtectedRoute>
+              <MultiAssetManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/strategy-marketplace" element={
+            <ProtectedRoute>
+              <StrategyMarketplace />
+            </ProtectedRoute>
+          } />
+          <Route path="/enterprise-platform" element={
+            <ProtectedRoute>
+              <EnterprisePlatform />
             </ProtectedRoute>
           } />
           <Route path="/deriv-trading" element={<DerivTrading />} />

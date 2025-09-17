@@ -11,7 +11,12 @@ import {
   BarChart3,
   Brain,
   Activity,
-  Shield
+  Shield,
+  Database,
+  Cpu,
+  Globe,
+  Store,
+  Building
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -33,6 +38,46 @@ const navItems: NavItem[] = [
     href: '/dashboard',
     icon: LayoutDashboard,
     description: 'Métricas em tempo real'
+  },
+  {
+    title: 'Dados Tempo Real',
+    href: '/real-time-data',
+    icon: Database,
+    description: 'Market Data & Features',
+    badge: 'Phase 6',
+    badgeVariant: 'secondary'
+  },
+  {
+    title: 'AI Control Center',
+    href: '/ai-control-center',
+    icon: Cpu,
+    description: 'AI Ensemble & Learning',
+    badge: 'Phase 8',
+    badgeVariant: 'secondary'
+  },
+  {
+    title: 'Multi-Asset',
+    href: '/multi-asset-management',
+    icon: Globe,
+    description: 'Portfolio Multi-Ativos',
+    badge: 'Phase 9',
+    badgeVariant: 'secondary'
+  },
+  {
+    title: 'Marketplace',
+    href: '/strategy-marketplace',
+    icon: Store,
+    description: 'Strategy Marketplace',
+    badge: 'Phase 10',
+    badgeVariant: 'secondary'
+  },
+  {
+    title: 'Enterprise',
+    href: '/enterprise-platform',
+    icon: Building,
+    description: 'Plataforma Empresarial',
+    badge: 'Phase 10',
+    badgeVariant: 'secondary'
   },
   {
     title: 'Treinamento',
@@ -174,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false }) => {
               <div>Autonomous Trading System</div>
               <div className="mt-2 text-center">
                 <Badge variant="outline" className="text-xs">
-                  Phase 4 Complete
+                  Phases 6-10 Integration
                 </Badge>
               </div>
             </div>
