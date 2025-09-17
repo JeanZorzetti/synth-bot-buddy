@@ -309,9 +309,9 @@ class DatabaseOptimizer:
             # 2. Otimizar estrutura da query
             optimized_query = self._optimize_query_structure(query)
 
-            # 3. Simular execução (em produção seria execução real)
+            # 3. Execute real query with database manager
             start_time = time.perf_counter()
-            result = await self._simulate_query_execution(optimized_query)
+            result = await self._execute_real_query(optimized_query)
             execution_time_ms = (time.perf_counter() - start_time) * 1000
 
             # 4. Cache resultado se consulta for lenta
@@ -337,17 +337,89 @@ class DatabaseOptimizer:
 
         return optimized
 
-    async def _simulate_query_execution(self, query: Dict) -> Dict:
-        """Simular execução de consulta"""
-        # Simular tempo de execução baseado na complexidade
-        complexity = len(query.get('conditions', '')) * 0.01
-        await asyncio.sleep(complexity)
+    async def _execute_real_query(self, query: Dict) -> Dict:
+        """Execute real database query with performance monitoring"""
+        try:
+            # Import database manager
+            from database_config import get_db_manager
 
-        return {
-            'query': query,
-            'result_count': 100,
-            'execution_time_ms': complexity * 1000
-        }
+            db_manager = await get_db_manager()
+
+            # Extract query parameters
+            table = query.get('table', 'market_data')
+            conditions = query.get('conditions', '')
+            limit = query.get('limit', 100)
+            fields = query.get('fields', '*')
+
+            # Construct and execute real SQL query
+            if table == 'market_data':
+                if 'timestamp' in conditions:
+                    # Time-based query
+                    sql_query = f"""
+                        SELECT {fields} FROM market_data
+                        WHERE {conditions}
+                        ORDER BY timestamp DESC
+                        LIMIT {limit}
+                    """
+                else:
+                    # General market data query
+                    sql_query = f"""
+                        SELECT {fields} FROM market_data
+                        ORDER BY timestamp DESC
+                        LIMIT {limit}
+                    """
+
+                async with db_manager.postgres_pool.acquire() as conn:
+                    start_time = time.perf_counter()
+                    rows = await conn.fetch(sql_query)
+                    execution_time_ms = (time.perf_counter() - start_time) * 1000
+
+                    return {
+                        'query': query,
+                        'result_count': len(rows),
+                        'execution_time_ms': execution_time_ms,
+                        'results': [dict(row) for row in rows[:10]]  # Sample results
+                    }
+
+            elif table == 'system_metrics':
+                sql_query = f"""
+                    SELECT {fields} FROM system_metrics
+                    WHERE timestamp >= NOW() - INTERVAL '1 hour'
+                    ORDER BY timestamp DESC
+                    LIMIT {limit}
+                """
+
+                async with db_manager.postgres_pool.acquire() as conn:
+                    start_time = time.perf_counter()
+                    rows = await conn.fetch(sql_query)
+                    execution_time_ms = (time.perf_counter() - start_time) * 1000
+
+                    return {
+                        'query': query,
+                        'result_count': len(rows),
+                        'execution_time_ms': execution_time_ms,
+                        'results': [dict(row) for row in rows[:10]]
+                    }
+
+            else:
+                # Default query execution
+                return {
+                    'query': query,
+                    'result_count': 0,
+                    'execution_time_ms': 1.0,
+                    'error': f'Unsupported table: {table}'
+                }
+
+        except Exception as e:
+            # Fallback to estimated performance metrics
+            estimated_time = len(query.get('conditions', '')) * 10  # 10ms per condition
+            return {
+                'query': query,
+                'result_count': 0,
+                'execution_time_ms': estimated_time,
+                'error': str(e),
+                'fallback': True
+            }
 
 
 class SystemProfiler:
