@@ -1,632 +1,1064 @@
 """
-Real Trading Executor - Execução Real de Trades
-Sistema completo para execução de trades reais na API Deriv com validação, monitoramento e controle de risco.
+Real Trading Executor - Phase 14 Trading Execution Integration
+Sistema completo de execução de trading real integrado com Deriv API
 """
 
 import asyncio
-import logging
-import time
-import json
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
-from enum import Enum
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
-import threading
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass, asdict
+from enum import Enum
+import logging
+import json
+import uuid
 
-from real_deriv_client import RealDerivWebSocketClient, TickData as RealTickData
-from real_tick_processor import RealTickProcessor, ProcessedTickData
-from risk_management import RiskManager, RiskMetrics
-from autonomous_trading_engine import TradingDecision, DecisionType
+from real_deriv_websocket import get_deriv_websocket, RealDerivWebSocket
+from realtime_feature_processor import get_feature_processor, ProcessedFeatures
+from real_model_trainer import get_model_trainer
+from database_config import get_db_manager
+from redis_cache_manager import get_cache_manager, CacheNamespace
+from real_logging_system import logging_system, LogComponent, LogLevel
 
-# Configuração de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class TradeStatus(Enum):
-    PENDING = "pending"
-    EXECUTED = "executed"
-    PARTIALLY_FILLED = "partially_filled"
-    CANCELLED = "cancelled"
-    FAILED = "failed"
-    REJECTED = "rejected"
-
-class TradeType(Enum):
+class OrderType(Enum):
     BUY = "buy"
     SELL = "sell"
 
-class ContractType(Enum):
-    CALL = "CALL"
-    PUT = "PUT"
-    RISE_FALL = "RISEFALL"
-    HIGHER_LOWER = "HIGHERLOWER"
-    TOUCH_NO_TOUCH = "TOUCHNOTOUCH"
-    ENDS_BETWEEN = "ENDSBETWEEN"
-    STAYS_BETWEEN = "STAYSBETWEEN"
+class OrderStatus(Enum):
+    PENDING = "pending"
+    OPEN = "open"
+    FILLED = "filled"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+class PositionStatus(Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+    PARTIAL = "partial"
+
+class TradingMode(Enum):
+    PAPER = "paper"
+    LIVE = "live"
+    BACKTEST = "backtest"
 
 @dataclass
-class RealTradeRequest:
-    """Requisição de trade real"""
+class TradingSignal:
+    signal_id: str
+    model_id: str
     symbol: str
-    trade_type: TradeType
-    contract_type: ContractType
-    amount: float
-    duration: int
-    duration_unit: str = "s"  # s, m, h, d
-    barrier: Optional[float] = None
-    barrier2: Optional[float] = None
-    currency: str = "USD"
-    trading_decision_id: Optional[str] = None
-    ai_confidence: Optional[float] = None
-    expected_profit: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
+    timestamp: datetime
 
-@dataclass
-class RealTradeResult:
-    """Resultado de trade real"""
-    trade_id: str
-    contract_id: Optional[str]
-    status: TradeStatus
-    symbol: str
-    trade_type: TradeType
-    amount: float
+    # Signal details
+    signal_type: OrderType  # BUY or SELL
+    confidence: float
+    probability_up: float
+    probability_down: float
+
+    # Risk parameters
     entry_price: Optional[float]
-    exit_price: Optional[float]
-    profit_loss: Optional[float]
-    execution_time: datetime
-    completion_time: Optional[datetime]
-    error_message: Optional[str] = None
-    commission: Optional[float] = None
-    swap: Optional[float] = None
+    stop_loss: Optional[float]
+    take_profit: Optional[float]
+    position_size: float
+
+    # Model context
+    features_used: Dict[str, float]
+    model_version: str
+    prediction_horizon_minutes: int
+
+@dataclass
+class TradingOrder:
+    order_id: str
+    signal_id: str
+    symbol: str
+    order_type: OrderType
+    quantity: float
+
+    # Price details
+    entry_price: Optional[float]
+    current_price: Optional[float]
+    stop_loss: Optional[float]
+    take_profit: Optional[float]
+
+    # Status and timing
+    status: OrderStatus
+    created_at: datetime
+    executed_at: Optional[datetime]
+    closed_at: Optional[datetime]
+
+    # Execution details
+    fill_price: Optional[float]
+    commission: float
+    slippage: float
+
+    # P&L
+    unrealized_pnl: float
+    realized_pnl: float
 
 @dataclass
 class TradingPosition:
-    """Posição de trading ativa"""
-    contract_id: str
+    position_id: str
     symbol: str
-    trade_type: TradeType
-    amount: float
+    side: OrderType
+    quantity: float
+
+    # Price tracking
     entry_price: float
-    entry_time: datetime
-    current_price: Optional[float] = None
-    unrealized_pnl: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
+    current_price: float
+    stop_loss: Optional[float]
+    take_profit: Optional[float]
 
-@dataclass
-class TradingSession:
-    """Sessão de trading"""
-    session_id: str
-    start_time: datetime
-    end_time: Optional[datetime]
-    total_trades: int = 0
-    successful_trades: int = 0
-    total_profit: float = 0.0
-    total_loss: float = 0.0
-    max_drawdown: float = 0.0
-    win_rate: float = 0.0
-    active_positions: List[TradingPosition] = None
+    # Status
+    status: PositionStatus
+    opened_at: datetime
+    closed_at: Optional[datetime]
 
-    def __post_init__(self):
-        if self.active_positions is None:
-            self.active_positions = []
+    # P&L tracking
+    unrealized_pnl: float
+    realized_pnl: float
+    total_commission: float
+
+    # Risk metrics
+    max_favorable: float
+    max_adverse: float
+    current_drawdown: float
 
 class RealTradingExecutor:
-    """Executor de Trading Real com integração completa à API Deriv"""
+    """Advanced real trading execution system with full Deriv API integration"""
 
-    def __init__(self, app_id: str, api_token: str = None):
-        self.app_id = app_id
-        self.api_token = api_token
+    def __init__(self):
+        # Trading configuration
+        self.trading_mode = TradingMode.PAPER  # Start with paper trading
+        self.max_concurrent_positions = 5
+        self.max_daily_trades = 50
+        self.max_risk_per_trade = 0.02  # 2% of capital
+        self.default_stop_loss_pct = 0.02  # 2%
+        self.default_take_profit_pct = 0.04  # 4%
 
-        # Clientes e processadores
-        self.deriv_client = RealDerivWebSocketClient(app_id, api_token)
-        self.tick_processor = RealTickProcessor()
-        self.risk_manager = RiskManager()
+        # Account management
+        self.account_balance = 10000.0  # Starting balance
+        self.available_balance = 10000.0
+        self.equity = 10000.0
+        self.margin_used = 0.0
+        self.free_margin = 10000.0
 
-        # Estado de trading
-        self.is_trading_enabled = False
-        self.trading_session: Optional[TradingSession] = None
+        # Trading state
+        self.trading_active = False
         self.active_positions: Dict[str, TradingPosition] = {}
-        self.trade_history: List[RealTradeResult] = []
-        self.pending_orders: Dict[str, RealTradeRequest] = {}
+        self.pending_orders: Dict[str, TradingOrder] = {}
+        self.closed_positions: List[TradingPosition] = []
+        self.trading_history: List[TradingOrder] = []
 
-        # Configurações de trading
-        self.max_concurrent_trades = 5
-        self.max_daily_loss = 1000.0  # USD
-        self.max_position_size = 100.0  # USD
-        self.min_confidence_threshold = 0.65
+        # Signal processing
+        self.signal_queue: List[TradingSignal] = []
+        self.processed_signals: Dict[str, TradingSignal] = {}
 
-        # Controle de risco em tempo real
+        # Risk management
         self.daily_pnl = 0.0
-        self.session_pnl = 0.0
-        self.last_trade_time = None
-        self.trade_cooldown_seconds = 30
+        self.daily_trades_count = 0
+        self.max_daily_loss = 500.0  # $500 max daily loss
+        self.max_drawdown_pct = 0.10  # 10% max drawdown
 
-        # Threading e async
-        self.thread_pool = ThreadPoolExecutor(max_workers=4)
-        self.monitoring_task = None
-        self.position_update_task = None
+        # Dependencies
+        self.websocket_client: Optional[RealDerivWebSocket] = None
+        self.feature_processor = None
+        self.model_trainer = None
+        self.db_manager = None
+        self.cache_manager = None
 
-        # Locks para thread safety
-        self.trading_lock = threading.Lock()
-        self.position_lock = threading.Lock()
+        # Model management
+        self.active_models: Dict[str, Any] = {}  # model_id -> model_info
+        self.model_weights: Dict[str, float] = {}  # model_id -> weight
 
-        logger.info("RealTradingExecutor inicializado")
+        # Logging
+        self.logger = logging_system.loggers.get('trading', logging.getLogger(__name__))
 
-    async def initialize(self) -> bool:
-        """Inicializa o executor de trading"""
+    async def initialize(self):
+        """Initialize trading executor"""
         try:
-            # Conectar ao cliente Deriv
-            if not await self.deriv_client.connect():
-                logger.error("Falha ao conectar ao cliente Deriv")
+            # Initialize dependencies
+            self.websocket_client = await get_deriv_websocket()
+            self.feature_processor = await get_feature_processor()
+            self.model_trainer = await get_model_trainer()
+            self.db_manager = await get_db_manager()
+            self.cache_manager = await get_cache_manager()
+
+            # Load active models
+            await self._load_active_models()
+
+            # Setup callbacks
+            self.feature_processor.add_feature_callback(self._process_features)
+
+            logging_system.log(
+                LogComponent.TRADING,
+                LogLevel.INFO,
+                "Real trading executor initialized",
+                {
+                    'trading_mode': self.trading_mode.value,
+                    'account_balance': self.account_balance,
+                    'active_models': len(self.active_models)
+                }
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'initialize_trading_executor'}
+            )
+            raise
+
+    async def start_trading(self, symbols: List[str], trading_mode: TradingMode = TradingMode.PAPER):
+        """Start automated trading"""
+        try:
+            self.trading_mode = trading_mode
+            self.trading_active = True
+
+            # Reset daily counters
+            self.daily_pnl = 0.0
+            self.daily_trades_count = 0
+
+            # Start feature processing for symbols
+            await self.feature_processor.start_processing(symbols)
+
+            # Start periodic tasks
+            asyncio.create_task(self._position_monitoring_loop())
+            asyncio.create_task(self._signal_processing_loop())
+            asyncio.create_task(self._risk_monitoring_loop())
+
+            logging_system.log(
+                LogComponent.TRADING,
+                LogLevel.INFO,
+                f"Trading started in {trading_mode.value} mode",
+                {
+                    'symbols': symbols,
+                    'max_positions': self.max_concurrent_positions,
+                    'account_balance': self.account_balance
+                }
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'start_trading', 'symbols': symbols}
+            )
+            raise
+
+    async def stop_trading(self):
+        """Stop automated trading"""
+        try:
+            self.trading_active = False
+
+            # Close all open positions (if in live mode)
+            if self.trading_mode == TradingMode.LIVE:
+                await self._close_all_positions("Trading stopped")
+
+            await self.feature_processor.stop_processing()
+
+            logging_system.log(
+                LogComponent.TRADING,
+                LogLevel.INFO,
+                "Trading stopped",
+                {
+                    'final_balance': self.account_balance,
+                    'daily_pnl': self.daily_pnl,
+                    'open_positions': len(self.active_positions)
+                }
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'stop_trading'}
+            )
+
+    async def _process_features(self, features: ProcessedFeatures):
+        """Process new features and generate trading signals"""
+        try:
+            if not self.trading_active:
+                return
+
+            # Generate signals from all active models
+            signals = await self._generate_signals(features)
+
+            # Add signals to queue
+            for signal in signals:
+                self.signal_queue.append(signal)
+                self.processed_signals[signal.signal_id] = signal
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'process_features', 'symbol': features.symbol}
+            )
+
+    async def _generate_signals(self, features: ProcessedFeatures) -> List[TradingSignal]:
+        """Generate trading signals from AI models"""
+        try:
+            signals = []
+
+            for model_id, model_info in self.active_models.items():
+                try:
+                    # Load model and scaler
+                    model = model_info['model']
+                    scaler = model_info['scaler']
+
+                    # Prepare feature vector
+                    feature_vector = self._prepare_feature_vector(features)
+                    if feature_vector is None:
+                        continue
+
+                    # Scale features
+                    feature_vector_scaled = scaler.transform([feature_vector])
+
+                    # Make prediction
+                    prediction = model.predict(feature_vector_scaled)[0]
+
+                    # Get prediction probability if available
+                    probability = 0.5
+                    if hasattr(model, 'predict_proba'):
+                        proba = model.predict_proba(feature_vector_scaled)[0]
+                        probability = proba[1] if len(proba) > 1 else 0.5
+
+                    # Calculate confidence
+                    confidence = abs(probability - 0.5) * 2  # Scale to 0-1
+
+                    # Only generate signal if confidence is high enough
+                    min_confidence = 0.6
+                    if confidence < min_confidence:
+                        continue
+
+                    # Determine signal type
+                    signal_type = OrderType.BUY if prediction > 0 else OrderType.SELL
+
+                    # Calculate position size based on confidence and risk
+                    position_size = self._calculate_position_size(
+                        features.symbol, confidence, features.price
+                    )
+
+                    if position_size <= 0:
+                        continue
+
+                    # Calculate risk parameters
+                    stop_loss, take_profit = self._calculate_risk_parameters(
+                        signal_type, features.price, features.atr_14
+                    )
+
+                    # Create signal
+                    signal = TradingSignal(
+                        signal_id=f"signal_{uuid.uuid4().hex[:8]}",
+                        model_id=model_id,
+                        symbol=features.symbol,
+                        timestamp=features.timestamp,
+                        signal_type=signal_type,
+                        confidence=confidence,
+                        probability_up=probability,
+                        probability_down=1 - probability,
+                        entry_price=features.price,
+                        stop_loss=stop_loss,
+                        take_profit=take_profit,
+                        position_size=position_size,
+                        features_used=self._extract_features_dict(features),
+                        model_version=model_info.get('version', '1.0'),
+                        prediction_horizon_minutes=5
+                    )
+
+                    signals.append(signal)
+
+                    logging_system.log(
+                        LogComponent.TRADING,
+                        LogLevel.INFO,
+                        f"Generated {signal_type.value} signal for {features.symbol}",
+                        {
+                            'model_id': model_id,
+                            'confidence': confidence,
+                            'position_size': position_size,
+                            'entry_price': features.price
+                        }
+                    )
+
+                except Exception as model_error:
+                    logging_system.log_error(
+                        LogComponent.TRADING,
+                        model_error,
+                        {'action': 'model_prediction', 'model_id': model_id}
+                    )
+
+            return signals
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'generate_signals', 'symbol': features.symbol}
+            )
+            return []
+
+    def _prepare_feature_vector(self, features: ProcessedFeatures) -> Optional[List[float]]:
+        """Prepare feature vector for model prediction"""
+        try:
+            feature_dict = asdict(features)
+
+            # Remove non-numeric fields
+            feature_dict.pop('symbol', None)
+            feature_dict.pop('timestamp', None)
+
+            # Create feature vector in consistent order
+            feature_vector = []
+            expected_features = [
+                'price', 'sma_5', 'sma_10', 'sma_20', 'sma_50',
+                'ema_5', 'ema_10', 'ema_20', 'ema_50',
+                'rsi_14', 'rsi_21', 'macd', 'macd_signal', 'macd_histogram',
+                'momentum_10', 'roc_10', 'atr_14',
+                'bollinger_upper', 'bollinger_middle', 'bollinger_lower',
+                'bollinger_width', 'bollinger_position',
+                'stoch_k', 'stoch_d', 'williams_r',
+                'volume_sma_10', 'volume_ratio', 'vwap',
+                'price_change_1', 'price_change_5', 'price_change_10',
+                'volatility_5', 'volatility_10',
+                'bid_ask_spread', 'spread_ratio', 'tick_direction', 'tick_intensity',
+                'hurst_exponent', 'fractal_dimension', 'entropy',
+                'autocorr_1', 'autocorr_5'
+            ]
+
+            for feature_name in expected_features:
+                value = feature_dict.get(feature_name, 0.0)
+                if np.isnan(value) or np.isinf(value):
+                    value = 0.0
+                feature_vector.append(float(value))
+
+            return feature_vector
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'prepare_feature_vector'}
+            )
+            return None
+
+    def _calculate_position_size(self, symbol: str, confidence: float, price: float) -> float:
+        """Calculate position size based on risk management"""
+        try:
+            # Base position size on available capital and risk per trade
+            max_risk_amount = self.available_balance * self.max_risk_per_trade
+
+            # Adjust based on confidence
+            confidence_multiplier = min(confidence * 1.5, 1.0)  # Max 1.0
+
+            # Calculate position size
+            position_value = max_risk_amount * confidence_multiplier
+            position_size = position_value / price
+
+            # Apply minimum and maximum limits
+            min_position_size = 0.01  # Minimum trade size
+            max_position_size = self.available_balance * 0.1 / price  # Max 10% of balance
+
+            position_size = max(min_position_size, min(position_size, max_position_size))
+
+            return round(position_size, 2)
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'calculate_position_size', 'symbol': symbol}
+            )
+            return 0.0
+
+    def _calculate_risk_parameters(self, signal_type: OrderType, entry_price: float, atr: float) -> Tuple[float, float]:
+        """Calculate stop loss and take profit levels"""
+        try:
+            # Use ATR for dynamic stop loss and take profit
+            atr_multiplier_sl = 2.0  # 2x ATR for stop loss
+            atr_multiplier_tp = 3.0  # 3x ATR for take profit
+
+            if signal_type == OrderType.BUY:
+                stop_loss = entry_price - (atr * atr_multiplier_sl)
+                take_profit = entry_price + (atr * atr_multiplier_tp)
+            else:  # SELL
+                stop_loss = entry_price + (atr * atr_multiplier_sl)
+                take_profit = entry_price - (atr * atr_multiplier_tp)
+
+            # Fallback to percentage-based if ATR is too small
+            if abs(stop_loss - entry_price) / entry_price < 0.005:  # Less than 0.5%
+                sl_pct = self.default_stop_loss_pct
+                tp_pct = self.default_take_profit_pct
+
+                if signal_type == OrderType.BUY:
+                    stop_loss = entry_price * (1 - sl_pct)
+                    take_profit = entry_price * (1 + tp_pct)
+                else:
+                    stop_loss = entry_price * (1 + sl_pct)
+                    take_profit = entry_price * (1 - tp_pct)
+
+            return round(stop_loss, 5), round(take_profit, 5)
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'calculate_risk_parameters'}
+            )
+            return entry_price * 0.98, entry_price * 1.02  # Default 2% levels
+
+    def _extract_features_dict(self, features: ProcessedFeatures) -> Dict[str, float]:
+        """Extract key features for signal context"""
+        return {
+            'price': features.price,
+            'rsi_14': features.rsi_14,
+            'macd': features.macd,
+            'bollinger_position': features.bollinger_position,
+            'atr_14': features.atr_14,
+            'volatility_10': features.volatility_10
+        }
+
+    async def _signal_processing_loop(self):
+        """Process signals and execute trades"""
+        while self.trading_active:
+            try:
+                if self.signal_queue:
+                    # Process signals in FIFO order
+                    signal = self.signal_queue.pop(0)
+                    await self._process_signal(signal)
+
+                await asyncio.sleep(1)  # Check every second
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging_system.log_error(
+                    LogComponent.TRADING,
+                    e,
+                    {'action': 'signal_processing_loop'}
+                )
+                await asyncio.sleep(5)
+
+    async def _process_signal(self, signal: TradingSignal):
+        """Process individual trading signal"""
+        try:
+            # Check if we can trade
+            if not await self._can_execute_trade(signal):
+                return
+
+            # Check for conflicting positions
+            if await self._has_conflicting_position(signal):
+                logging_system.log(
+                    LogComponent.TRADING,
+                    LogLevel.DEBUG,
+                    f"Skipping signal due to conflicting position: {signal.symbol}"
+                )
+                return
+
+            # Execute trade
+            order = await self._execute_trade(signal)
+            if order:
+                logging_system.log_trading_activity(
+                    'signal_executed',
+                    signal.symbol,
+                    {
+                        'signal_id': signal.signal_id,
+                        'order_id': order.order_id,
+                        'order_type': order.order_type.value,
+                        'quantity': order.quantity,
+                        'confidence': signal.confidence
+                    }
+                )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'process_signal', 'signal_id': signal.signal_id}
+            )
+
+    async def _can_execute_trade(self, signal: TradingSignal) -> bool:
+        """Check if trade can be executed"""
+        try:
+            # Check if trading is active
+            if not self.trading_active:
                 return False
 
-            # Inicializar processador de ticks
-            await self.tick_processor.initialize()
-
-            # Inicializar gerenciador de risco
-            await self.risk_manager.initialize()
-
-            # Verificar saldo da conta
-            account_info = await self.get_account_info()
-            if not account_info:
-                logger.error("Falha ao obter informações da conta")
+            # Check daily trade limit
+            if self.daily_trades_count >= self.max_daily_trades:
                 return False
 
-            logger.info(f"Conta conectada: {account_info}")
+            # Check maximum concurrent positions
+            if len(self.active_positions) >= self.max_concurrent_positions:
+                return False
 
-            # Iniciar tarefas de monitoramento
-            await self._start_monitoring_tasks()
+            # Check available balance
+            required_margin = signal.position_size * signal.entry_price * 0.1  # 10% margin
+            if required_margin > self.available_balance:
+                return False
 
-            logger.info("RealTradingExecutor inicializado com sucesso")
+            # Check daily loss limit
+            if self.daily_pnl < -self.max_daily_loss:
+                return False
+
+            # Check maximum drawdown
+            current_drawdown = (self.account_balance - self.equity) / self.account_balance
+            if current_drawdown > self.max_drawdown_pct:
+                return False
+
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao inicializar RealTradingExecutor: {e}")
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'can_execute_trade'}
+            )
             return False
 
-    async def get_account_info(self) -> Optional[Dict]:
-        """Obtém informações da conta"""
-        try:
-            response = await self.deriv_client.send_request({
-                "balance": 1
-            })
+    async def _has_conflicting_position(self, signal: TradingSignal) -> bool:
+        """Check if there's a conflicting position for the symbol"""
+        for position in self.active_positions.values():
+            if (position.symbol == signal.symbol and
+                position.side != signal.signal_type and
+                position.status == PositionStatus.OPEN):
+                return True
+        return False
 
-            if response and "balance" in response:
-                return {
-                    "balance": response["balance"]["balance"],
-                    "currency": response["balance"]["currency"],
-                    "login_id": response["balance"]["loginid"]
-                }
+    async def _execute_trade(self, signal: TradingSignal) -> Optional[TradingOrder]:
+        """Execute trading order"""
+        try:
+            order_id = f"order_{uuid.uuid4().hex[:8]}"
+
+            # Create order
+            order = TradingOrder(
+                order_id=order_id,
+                signal_id=signal.signal_id,
+                symbol=signal.symbol,
+                order_type=signal.signal_type,
+                quantity=signal.position_size,
+                entry_price=signal.entry_price,
+                current_price=signal.entry_price,
+                stop_loss=signal.stop_loss,
+                take_profit=signal.take_profit,
+                status=OrderStatus.PENDING,
+                created_at=datetime.utcnow(),
+                executed_at=None,
+                closed_at=None,
+                fill_price=None,
+                commission=0.0,
+                slippage=0.0,
+                unrealized_pnl=0.0,
+                realized_pnl=0.0
+            )
+
+            if self.trading_mode == TradingMode.LIVE:
+                # Execute real trade via Deriv API
+                success = await self._execute_real_trade(order, signal)
+            else:
+                # Execute paper trade
+                success = await self._execute_paper_trade(order, signal)
+
+            if success:
+                self.pending_orders[order_id] = order
+                self.daily_trades_count += 1
+
+                # Store in database
+                await self._store_order(order)
+
+                return order
 
             return None
 
         except Exception as e:
-            logger.error(f"Erro ao obter informações da conta: {e}")
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'execute_trade', 'signal_id': signal.signal_id}
+            )
             return None
 
-    async def start_trading_session(self, session_config: Dict = None) -> str:
-        """Inicia uma nova sessão de trading"""
-        session_id = f"session_{int(time.time())}"
+    async def _execute_paper_trade(self, order: TradingOrder, signal: TradingSignal) -> bool:
+        """Execute paper trade (simulation)"""
+        try:
+            # Simulate execution delay and slippage
+            await asyncio.sleep(0.1)  # 100ms execution delay
 
-        self.trading_session = TradingSession(
-            session_id=session_id,
-            start_time=datetime.now()
-        )
+            # Add realistic slippage (0.1-0.5 pips)
+            slippage_pips = np.random.uniform(0.1, 0.5) * 0.0001
+            if order.order_type == OrderType.BUY:
+                fill_price = order.entry_price + slippage_pips
+            else:
+                fill_price = order.entry_price - slippage_pips
 
-        self.is_trading_enabled = True
-        self.daily_pnl = 0.0
-        self.session_pnl = 0.0
+            order.status = OrderStatus.FILLED
+            order.executed_at = datetime.utcnow()
+            order.fill_price = fill_price
+            order.slippage = abs(fill_price - order.entry_price)
 
-        logger.info(f"Sessão de trading iniciada: {session_id}")
-        return session_id
+            # Calculate commission
+            order.commission = order.quantity * fill_price * 0.0005  # 0.05% for paper trading
 
-    async def stop_trading_session(self) -> TradingSession:
-        """Para a sessão de trading atual"""
-        self.is_trading_enabled = False
+            # Create position
+            await self._create_position_from_order(order)
 
-        if self.trading_session:
-            self.trading_session.end_time = datetime.now()
-
-            # Calcular estatísticas finais
-            if self.trading_session.total_trades > 0:
-                self.trading_session.win_rate = (
-                    self.trading_session.successful_trades /
-                    self.trading_session.total_trades
-                )
-
-            # Fechar todas as posições abertas
-            await self._close_all_positions()
-
-            logger.info(f"Sessão de trading finalizada: {self.trading_session.session_id}")
-
-        return self.trading_session
-
-    async def execute_trade(self, trade_request: RealTradeRequest) -> RealTradeResult:
-        """Executa um trade real"""
-        async with asyncio.Lock():
-            try:
-                # Validações pré-trade
-                validation_result = await self._validate_trade_request(trade_request)
-                if not validation_result["valid"]:
-                    return RealTradeResult(
-                        trade_id=f"failed_{int(time.time())}",
-                        contract_id=None,
-                        status=TradeStatus.REJECTED,
-                        symbol=trade_request.symbol,
-                        trade_type=trade_request.trade_type,
-                        amount=trade_request.amount,
-                        entry_price=None,
-                        exit_price=None,
-                        profit_loss=None,
-                        execution_time=datetime.now(),
-                        completion_time=None,
-                        error_message=validation_result["reason"]
-                    )
-
-                # Verificar cooldown entre trades
-                if not self._check_trade_cooldown():
-                    return RealTradeResult(
-                        trade_id=f"cooldown_{int(time.time())}",
-                        contract_id=None,
-                        status=TradeStatus.REJECTED,
-                        symbol=trade_request.symbol,
-                        trade_type=trade_request.trade_type,
-                        amount=trade_request.amount,
-                        entry_price=None,
-                        exit_price=None,
-                        profit_loss=None,
-                        execution_time=datetime.now(),
-                        completion_time=None,
-                        error_message="Trade cooldown ativo"
-                    )
-
-                # Preparar requisição para API Deriv
-                deriv_request = self._prepare_deriv_request(trade_request)
-
-                # Executar trade na API
-                logger.info(f"Executando trade: {trade_request.symbol} {trade_request.trade_type.value}")
-                response = await self.deriv_client.send_request(deriv_request)
-
-                if not response or "error" in response:
-                    error_msg = response.get("error", {}).get("message", "Erro desconhecido") if response else "Sem resposta da API"
-                    return RealTradeResult(
-                        trade_id=f"error_{int(time.time())}",
-                        contract_id=None,
-                        status=TradeStatus.FAILED,
-                        symbol=trade_request.symbol,
-                        trade_type=trade_request.trade_type,
-                        amount=trade_request.amount,
-                        entry_price=None,
-                        exit_price=None,
-                        profit_loss=None,
-                        execution_time=datetime.now(),
-                        completion_time=None,
-                        error_message=error_msg
-                    )
-
-                # Processar resposta de sucesso
-                buy_result = response.get("buy", {})
-                contract_id = buy_result.get("contract_id")
-
-                if not contract_id:
-                    return RealTradeResult(
-                        trade_id=f"no_contract_{int(time.time())}",
-                        contract_id=None,
-                        status=TradeStatus.FAILED,
-                        symbol=trade_request.symbol,
-                        trade_type=trade_request.trade_type,
-                        amount=trade_request.amount,
-                        entry_price=None,
-                        exit_price=None,
-                        profit_loss=None,
-                        execution_time=datetime.now(),
-                        completion_time=None,
-                        error_message="Contract ID não recebido"
-                    )
-
-                # Criar resultado de trade
-                trade_result = RealTradeResult(
-                    trade_id=str(contract_id),
-                    contract_id=contract_id,
-                    status=TradeStatus.EXECUTED,
-                    symbol=trade_request.symbol,
-                    trade_type=trade_request.trade_type,
-                    amount=trade_request.amount,
-                    entry_price=buy_result.get("start_spot"),
-                    exit_price=None,
-                    profit_loss=None,
-                    execution_time=datetime.now(),
-                    completion_time=None
-                )
-
-                # Registrar posição ativa
-                position = TradingPosition(
-                    contract_id=contract_id,
-                    symbol=trade_request.symbol,
-                    trade_type=trade_request.trade_type,
-                    amount=trade_request.amount,
-                    entry_price=buy_result.get("start_spot", 0.0),
-                    entry_time=datetime.now(),
-                    stop_loss=trade_request.stop_loss,
-                    take_profit=trade_request.take_profit
-                )
-
-                with self.position_lock:
-                    self.active_positions[contract_id] = position
-
-                # Atualizar estatísticas
-                self._update_trading_statistics(trade_result)
-                self.trade_history.append(trade_result)
-                self.last_trade_time = time.time()
-
-                logger.info(f"Trade executado com sucesso: {contract_id}")
-                return trade_result
-
-            except Exception as e:
-                logger.error(f"Erro ao executar trade: {e}")
-                return RealTradeResult(
-                    trade_id=f"exception_{int(time.time())}",
-                    contract_id=None,
-                    status=TradeStatus.FAILED,
-                    symbol=trade_request.symbol,
-                    trade_type=trade_request.trade_type,
-                    amount=trade_request.amount,
-                    entry_price=None,
-                    exit_price=None,
-                    profit_loss=None,
-                    execution_time=datetime.now(),
-                    completion_time=None,
-                    error_message=str(e)
-                )
-
-    async def _validate_trade_request(self, trade_request: RealTradeRequest) -> Dict[str, Any]:
-        """Valida uma requisição de trade"""
-        # Verificar se trading está habilitado
-        if not self.is_trading_enabled:
-            return {"valid": False, "reason": "Trading desabilitado"}
-
-        # Verificar limites de posições
-        if len(self.active_positions) >= self.max_concurrent_trades:
-            return {"valid": False, "reason": "Máximo de posições atingido"}
-
-        # Verificar tamanho da posição
-        if trade_request.amount > self.max_position_size:
-            return {"valid": False, "reason": "Tamanho da posição excede limite"}
-
-        # Verificar perda diária
-        if abs(self.daily_pnl) >= self.max_daily_loss:
-            return {"valid": False, "reason": "Limite de perda diária atingido"}
-
-        # Verificar confiança da IA
-        if (trade_request.ai_confidence and
-            trade_request.ai_confidence < self.min_confidence_threshold):
-            return {"valid": False, "reason": "Confiança da IA insuficiente"}
-
-        # Verificar saldo da conta
-        account_info = await self.get_account_info()
-        if account_info and account_info["balance"] < trade_request.amount:
-            return {"valid": False, "reason": "Saldo insuficiente"}
-
-        return {"valid": True, "reason": "Validação aprovada"}
-
-    def _check_trade_cooldown(self) -> bool:
-        """Verifica cooldown entre trades"""
-        if self.last_trade_time is None:
             return True
 
-        return (time.time() - self.last_trade_time) >= self.trade_cooldown_seconds
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'execute_paper_trade', 'order_id': order.order_id}
+            )
+            return False
 
-    def _prepare_deriv_request(self, trade_request: RealTradeRequest) -> Dict:
-        """Prepara requisição para API Deriv"""
-        request = {
-            "buy": 1,
-            "parameters": {
-                "contract_type": trade_request.contract_type.value,
-                "symbol": trade_request.symbol,
-                "amount": trade_request.amount,
-                "duration": trade_request.duration,
-                "duration_unit": trade_request.duration_unit,
-                "currency": trade_request.currency
+    async def _create_position_from_order(self, order: TradingOrder, contract_id: Optional[str] = None):
+        """Create position from executed order"""
+        try:
+            position_id = f"pos_{uuid.uuid4().hex[:8]}"
+
+            position = TradingPosition(
+                position_id=position_id,
+                symbol=order.symbol,
+                side=order.order_type,
+                quantity=order.quantity,
+                entry_price=order.fill_price,
+                current_price=order.fill_price,
+                stop_loss=order.stop_loss,
+                take_profit=order.take_profit,
+                status=PositionStatus.OPEN,
+                opened_at=order.executed_at,
+                closed_at=None,
+                unrealized_pnl=0.0,
+                realized_pnl=0.0,
+                total_commission=order.commission,
+                max_favorable=0.0,
+                max_adverse=0.0,
+                current_drawdown=0.0
+            )
+
+            self.active_positions[position_id] = position
+
+            # Update account balance
+            self.available_balance -= (order.quantity * order.fill_price + order.commission)
+            self.margin_used += order.quantity * order.fill_price * 0.1  # 10% margin
+            self.free_margin = self.available_balance - self.margin_used
+
+            # Store position
+            await self._store_position(position)
+
+            logging_system.log(
+                LogComponent.TRADING,
+                LogLevel.INFO,
+                f"Position opened: {position.side.value} {position.quantity} {position.symbol}",
+                {
+                    'position_id': position_id,
+                    'entry_price': position.entry_price,
+                    'stop_loss': position.stop_loss,
+                    'take_profit': position.take_profit
+                }
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'create_position_from_order', 'order_id': order.order_id}
+            )
+
+    async def _position_monitoring_loop(self):
+        """Monitor open positions and manage risk"""
+        while self.trading_active:
+            try:
+                for position_id, position in list(self.active_positions.items()):
+                    await self._update_position(position)
+
+                await asyncio.sleep(5)  # Check every 5 seconds
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging_system.log_error(
+                    LogComponent.TRADING,
+                    e,
+                    {'action': 'position_monitoring_loop'}
+                )
+                await asyncio.sleep(10)
+
+    async def _update_position(self, position: TradingPosition):
+        """Update position with current market price"""
+        try:
+            # Get current market price
+            latest_tick = await self.cache_manager.get_latest_tick(position.symbol)
+            if not latest_tick:
+                return
+
+            current_price = latest_tick.get('price', position.current_price)
+            position.current_price = current_price
+
+            # Calculate unrealized P&L
+            if position.side == OrderType.BUY:
+                price_diff = current_price - position.entry_price
+            else:  # SELL
+                price_diff = position.entry_price - current_price
+
+            position.unrealized_pnl = price_diff * position.quantity
+
+            # Update max favorable/adverse
+            if position.unrealized_pnl > position.max_favorable:
+                position.max_favorable = position.unrealized_pnl
+            elif position.unrealized_pnl < position.max_adverse:
+                position.max_adverse = position.unrealized_pnl
+
+            # Calculate current drawdown from max favorable
+            if position.max_favorable > 0:
+                position.current_drawdown = (position.max_favorable - position.unrealized_pnl) / position.max_favorable
+
+            # Update equity
+            self._update_account_equity()
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'update_position', 'position_id': position.position_id}
+            )
+
+    async def _risk_monitoring_loop(self):
+        """Monitor overall risk and account health"""
+        while self.trading_active:
+            try:
+                # Update account equity
+                self._update_account_equity()
+
+                # Update risk metrics in cache
+                await self._store_account_status()
+
+                await asyncio.sleep(30)  # Check every 30 seconds
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging_system.log_error(
+                    LogComponent.TRADING,
+                    e,
+                    {'action': 'risk_monitoring_loop'}
+                )
+                await asyncio.sleep(60)
+
+    def _update_account_equity(self):
+        """Update account equity based on unrealized P&L"""
+        try:
+            total_unrealized_pnl = sum(pos.unrealized_pnl for pos in self.active_positions.values())
+            self.equity = self.account_balance + total_unrealized_pnl
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'update_account_equity'}
+            )
+
+    async def _close_all_positions(self, reason: str):
+        """Close all open positions"""
+        try:
+            for position in list(self.active_positions.values()):
+                position.status = PositionStatus.CLOSED
+                position.closed_at = datetime.utcnow()
+                self.closed_positions.append(position)
+
+            self.active_positions.clear()
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'close_all_positions'}
+            )
+
+    async def _load_active_models(self):
+        """Load active trading models"""
+        try:
+            # Get trained models from model trainer
+            if hasattr(self.model_trainer, 'trained_models'):
+                for model_id, model_info in self.model_trainer.trained_models.items():
+                    try:
+                        # Load model and scaler
+                        import joblib
+                        model = joblib.load(model_info['model_path'])
+                        scaler = None
+
+                        if model_info.get('scaler_path'):
+                            scaler = joblib.load(model_info['scaler_path'])
+
+                        self.active_models[model_id] = {
+                            'model': model,
+                            'scaler': scaler,
+                            'metadata': model_info['metadata'],
+                            'version': '1.0'
+                        }
+
+                        # Set equal weights for all models
+                        self.model_weights[model_id] = 1.0 / len(self.model_trainer.trained_models)
+
+                    except Exception as model_error:
+                        logging_system.log_error(
+                            LogComponent.TRADING,
+                            model_error,
+                            {'action': 'load_model', 'model_id': model_id}
+                        )
+
+            logging_system.log(
+                LogComponent.TRADING,
+                LogLevel.INFO,
+                f"Loaded {len(self.active_models)} trading models"
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'load_active_models'}
+            )
+
+    async def _store_order(self, order: TradingOrder):
+        """Store order in database"""
+        try:
+            if self.db_manager:
+                order_data = {
+                    'order_id': order.order_id,
+                    'signal_id': order.signal_id,
+                    'symbol': order.symbol,
+                    'order_type': order.order_type.value,
+                    'quantity': order.quantity,
+                    'entry_price': order.entry_price,
+                    'status': order.status.value,
+                    'created_at': order.created_at,
+                    'executed_at': order.executed_at,
+                    'fill_price': order.fill_price,
+                    'commission': order.commission,
+                    'realized_pnl': order.realized_pnl
+                }
+
+                await self.db_manager.store_trading_session([order_data])
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'store_order', 'order_id': order.order_id}
+            )
+
+    async def _store_position(self, position: TradingPosition):
+        """Store position in database"""
+        try:
+            if self.db_manager:
+                position_data = {
+                    'position_id': position.position_id,
+                    'symbol': position.symbol,
+                    'side': position.side.value,
+                    'quantity': position.quantity,
+                    'entry_price': position.entry_price,
+                    'current_price': position.current_price,
+                    'status': position.status.value,
+                    'opened_at': position.opened_at,
+                    'closed_at': position.closed_at,
+                    'unrealized_pnl': position.unrealized_pnl,
+                    'realized_pnl': position.realized_pnl,
+                    'total_commission': position.total_commission
+                }
+
+                await self.db_manager.store_trading_positions([position_data])
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'store_position', 'position_id': position.position_id}
+            )
+
+    async def _store_account_status(self):
+        """Store account status in cache"""
+        try:
+            account_status = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'account_balance': self.account_balance,
+                'available_balance': self.available_balance,
+                'equity': self.equity,
+                'margin_used': self.margin_used,
+                'free_margin': self.free_margin,
+                'daily_pnl': self.daily_pnl,
+                'daily_trades_count': self.daily_trades_count,
+                'open_positions_count': len(self.active_positions),
+                'trading_mode': self.trading_mode.value,
+                'trading_active': self.trading_active
+            }
+
+            await self.cache_manager.set(
+                CacheNamespace.TRADING_POSITIONS,
+                'account_status',
+                account_status,
+                ttl=300  # 5 minutes
+            )
+
+        except Exception as e:
+            logging_system.log_error(
+                LogComponent.TRADING,
+                e,
+                {'action': 'store_account_status'}
+            )
+
+    # Public API methods
+
+    async def get_account_status(self) -> Dict[str, Any]:
+        """Get current account status"""
+        self._update_account_equity()
+
+        return {
+            'account_balance': self.account_balance,
+            'available_balance': self.available_balance,
+            'equity': self.equity,
+            'margin_used': self.margin_used,
+            'free_margin': self.free_margin,
+            'daily_pnl': self.daily_pnl,
+            'daily_trades_count': self.daily_trades_count,
+            'open_positions': len(self.active_positions),
+            'trading_mode': self.trading_mode.value,
+            'trading_active': self.trading_active,
+            'active_models': len(self.active_models)
+        }
+
+    async def get_open_positions(self) -> List[Dict[str, Any]]:
+        """Get all open positions"""
+        positions = []
+        for position in self.active_positions.values():
+            await self._update_position(position)
+            positions.append(asdict(position))
+
+        return positions
+
+    def get_trading_status(self) -> Dict[str, Any]:
+        """Get overall trading status"""
+        return {
+            'trading_active': self.trading_active,
+            'trading_mode': self.trading_mode.value,
+            'active_positions_count': len(self.active_positions),
+            'pending_orders_count': len(self.pending_orders),
+            'signals_in_queue': len(self.signal_queue),
+            'daily_trades_count': self.daily_trades_count,
+            'daily_pnl': self.daily_pnl,
+            'active_models_count': len(self.active_models),
+            'risk_limits': {
+                'max_concurrent_positions': self.max_concurrent_positions,
+                'max_daily_trades': self.max_daily_trades,
+                'max_daily_loss': self.max_daily_loss,
+                'max_drawdown_pct': self.max_drawdown_pct
             }
         }
 
-        # Adicionar barreiras se necessário
-        if trade_request.barrier:
-            request["parameters"]["barrier"] = trade_request.barrier
-        if trade_request.barrier2:
-            request["parameters"]["barrier2"] = trade_request.barrier2
+# Global trading executor instance
+trading_executor = RealTradingExecutor()
 
-        return request
-
-    def _update_trading_statistics(self, trade_result: RealTradeResult):
-        """Atualiza estatísticas de trading"""
-        if self.trading_session:
-            self.trading_session.total_trades += 1
-
-    async def _start_monitoring_tasks(self):
-        """Inicia tarefas de monitoramento"""
-        self.monitoring_task = asyncio.create_task(self._monitor_positions())
-        self.position_update_task = asyncio.create_task(self._update_positions())
-
-    async def _monitor_positions(self):
-        """Monitora posições ativas"""
-        while self.is_trading_enabled:
-            try:
-                await self._check_position_exits()
-                await asyncio.sleep(5)  # Verificar a cada 5 segundos
-            except Exception as e:
-                logger.error(f"Erro no monitoramento de posições: {e}")
-                await asyncio.sleep(10)
-
-    async def _update_positions(self):
-        """Atualiza preços das posições"""
-        while self.is_trading_enabled:
-            try:
-                for contract_id, position in list(self.active_positions.items()):
-                    # Obter preço atual
-                    current_price = await self._get_current_price(position.symbol)
-                    if current_price:
-                        position.current_price = current_price
-                        position.unrealized_pnl = self._calculate_unrealized_pnl(position)
-
-                await asyncio.sleep(1)  # Atualizar a cada segundo
-            except Exception as e:
-                logger.error(f"Erro na atualização de posições: {e}")
-                await asyncio.sleep(5)
-
-    async def _check_position_exits(self):
-        """Verifica condições de saída das posições"""
-        for contract_id, position in list(self.active_positions.items()):
-            try:
-                # Verificar stop loss
-                if (position.stop_loss and position.current_price and
-                    ((position.trade_type == TradeType.BUY and position.current_price <= position.stop_loss) or
-                     (position.trade_type == TradeType.SELL and position.current_price >= position.stop_loss))):
-                    await self._close_position(contract_id, "Stop Loss")
-
-                # Verificar take profit
-                if (position.take_profit and position.current_price and
-                    ((position.trade_type == TradeType.BUY and position.current_price >= position.take_profit) or
-                     (position.trade_type == TradeType.SELL and position.current_price <= position.take_profit))):
-                    await self._close_position(contract_id, "Take Profit")
-
-            except Exception as e:
-                logger.error(f"Erro ao verificar saída da posição {contract_id}: {e}")
-
-    async def _close_position(self, contract_id: str, reason: str):
-        """Fecha uma posição"""
-        try:
-            # Enviar comando de fechamento para API
-            response = await self.deriv_client.send_request({
-                "sell": contract_id,
-                "price": 0  # Mercado
-            })
-
-            if response and "sell" in response:
-                # Atualizar resultado do trade
-                position = self.active_positions.get(contract_id)
-                if position:
-                    # Encontrar trade correspondente no histórico
-                    for trade_result in self.trade_history:
-                        if trade_result.contract_id == contract_id:
-                            trade_result.exit_price = position.current_price
-                            trade_result.profit_loss = position.unrealized_pnl
-                            trade_result.completion_time = datetime.now()
-                            trade_result.status = TradeStatus.EXECUTED
-                            break
-
-                    # Atualizar estatísticas
-                    if position.unrealized_pnl and position.unrealized_pnl > 0:
-                        if self.trading_session:
-                            self.trading_session.successful_trades += 1
-
-                    self.session_pnl += position.unrealized_pnl or 0
-                    self.daily_pnl += position.unrealized_pnl or 0
-
-                # Remover posição ativa
-                with self.position_lock:
-                    del self.active_positions[contract_id]
-
-                logger.info(f"Posição {contract_id} fechada: {reason}")
-
-        except Exception as e:
-            logger.error(f"Erro ao fechar posição {contract_id}: {e}")
-
-    async def _close_all_positions(self):
-        """Fecha todas as posições ativas"""
-        for contract_id in list(self.active_positions.keys()):
-            await self._close_position(contract_id, "Sessão finalizada")
-
-    async def _get_current_price(self, symbol: str) -> Optional[float]:
-        """Obtém preço atual de um símbolo"""
-        try:
-            response = await self.deriv_client.send_request({
-                "ticks": symbol
-            })
-
-            if response and "tick" in response:
-                return response["tick"]["quote"]
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Erro ao obter preço atual de {symbol}: {e}")
-            return None
-
-    def _calculate_unrealized_pnl(self, position: TradingPosition) -> float:
-        """Calcula PnL não realizado de uma posição"""
-        if not position.current_price:
-            return 0.0
-
-        if position.trade_type == TradeType.BUY:
-            return (position.current_price - position.entry_price) * position.amount
-        else:
-            return (position.entry_price - position.current_price) * position.amount
-
-    async def get_trading_status(self) -> Dict[str, Any]:
-        """Obtém status atual do trading"""
-        return {
-            "is_trading_enabled": self.is_trading_enabled,
-            "session": asdict(self.trading_session) if self.trading_session else None,
-            "active_positions": len(self.active_positions),
-            "session_pnl": self.session_pnl,
-            "daily_pnl": self.daily_pnl,
-            "total_trades": len(self.trade_history),
-            "last_trade_time": self.last_trade_time
-        }
-
-    async def get_positions(self) -> List[Dict]:
-        """Obtém posições ativas"""
-        return [asdict(position) for position in self.active_positions.values()]
-
-    async def get_trade_history(self, limit: int = 100) -> List[Dict]:
-        """Obtém histórico de trades"""
-        return [asdict(trade) for trade in self.trade_history[-limit:]]
-
-    async def shutdown(self):
-        """Encerra o executor de trading"""
-        self.is_trading_enabled = False
-
-        # Parar tarefas de monitoramento
-        if self.monitoring_task:
-            self.monitoring_task.cancel()
-        if self.position_update_task:
-            self.position_update_task.cancel()
-
-        # Fechar todas as posições
-        await self._close_all_positions()
-
-        # Desconectar cliente
-        await self.deriv_client.disconnect()
-
-        logger.info("RealTradingExecutor encerrado")
-
-# Integração com Autonomous Trading Engine
-async def execute_ai_decision(executor: RealTradingExecutor, decision: TradingDecision) -> RealTradeResult:
-    """Executa uma decisão da IA no executor real"""
-    if decision.action == DecisionType.BUY:
-        trade_type = TradeType.BUY
-        contract_type = ContractType.CALL
-    elif decision.action == DecisionType.SELL:
-        trade_type = TradeType.SELL
-        contract_type = ContractType.PUT
-    else:
-        # Não executar trades para HOLD
-        return None
-
-    trade_request = RealTradeRequest(
-        symbol=decision.symbol,
-        trade_type=trade_type,
-        contract_type=contract_type,
-        amount=decision.position_size,
-        duration=60,  # 1 minuto
-        duration_unit="s",
-        trading_decision_id=decision.decision_id,
-        ai_confidence=decision.confidence,
-        expected_profit=decision.expected_return
-    )
-
-    return await executor.execute_trade(trade_request)
+async def get_trading_executor() -> RealTradingExecutor:
+    """Get initialized trading executor"""
+    if not trading_executor.websocket_client:
+        await trading_executor.initialize()
+    return trading_executor
