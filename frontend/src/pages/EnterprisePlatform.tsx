@@ -130,14 +130,16 @@ const EnterprisePlatform: React.FC = () => {
         error_rate: 0.02
       });
 
-      setUserActivities(orgUsers.map(user => ({
-        user_id: user.user_id,
-        username: user.username,
-        last_activity: user.last_login || '2024-01-15T10:30:00Z',
-        api_calls: Math.floor(Math.random() * 1000),
-        strategies_used: Math.floor(Math.random() * 10),
-        trading_volume: Math.random() * 100000,
-        status: Math.random() > 0.1 ? 'active' : 'inactive' as any
+      // Load real user activities
+      const realActivities = await apiClient.getUserActivities(orgUsers.map(u => u.user_id));
+      setUserActivities(realActivities.map(activity => ({
+        user_id: activity.user_id,
+        username: activity.username,
+        last_activity: activity.last_activity || new Date().toISOString(),
+        api_calls: activity.api_calls || 0,
+        strategies_used: activity.strategies_used || 0,
+        trading_volume: activity.trading_volume || 0,
+        status: activity.status || 'inactive'
       })));
 
     } catch (error) {

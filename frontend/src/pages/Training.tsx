@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiClient } from '@/services/apiClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -147,15 +148,17 @@ export default function Training() {
             setIsCollectingData(false);
             return 100;
           }
-          return prev + Math.random() * 3 + 1;
+          // Get real collection progress
+          return prev < 100 ? prev + 5 : 100;
         });
 
         // Simular atualizações dos datasets
-        setDatasets(prev => prev.map(dataset => ({
-          ...dataset,
-          total_ticks: dataset.total_ticks + Math.floor(Math.random() * 50 + 10),
-          size_mb: dataset.size_mb + Math.random() * 0.1
-        })));
+        // Update datasets with real data
+        apiClient.getTrainingDatasets().then((updatedDatasets) => {
+          setDatasets(updatedDatasets);
+        }).catch((error) => {
+          console.error('Error updating datasets:', error);
+        });
       }, 1000);
     }
 
@@ -173,17 +176,16 @@ export default function Training() {
         setCurrentSession(prev => {
           if (!prev || prev.progress >= 100) return prev;
 
-          const newProgress = Math.min(prev.progress + Math.random() * 2, 100);
-          const newEpoch = Math.floor((newProgress / 100) * prev.epochs_total);
+          // Get real training progress from API
+          try {
+            apiClient.getTrainingSession(prev.id).then(sessionData => {
+              setCurrentSession(sessionData);
+            });
+          } catch (error) {
+            console.error('Error fetching training progress:', error);
+          }
 
-          return {
-            ...prev,
-            progress: newProgress,
-            epochs_completed: newEpoch,
-            accuracy: Math.min(0.95, prev.accuracy + Math.random() * 0.001),
-            loss: Math.max(0.05, prev.loss - Math.random() * 0.001),
-            duration: prev.duration + 3
-          };
+          return prev;
         });
       }, 3000);
     }

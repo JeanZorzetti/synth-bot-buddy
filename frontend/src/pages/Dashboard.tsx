@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiClient } from '@/services/apiClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,72 +67,159 @@ interface LogEntry {
 
 const Dashboard = () => {
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({
-    accuracy: 72.3,
-    confidence_avg: 0.784,
-    signals_generated: 47,
-    patterns_detected: 23,
-    model_version: 'v2.1.3',
-    last_prediction: {
-      direction: 'UP',
-      confidence: 0.89,
-      symbol: 'R_100',
-      timestamp: new Date().toISOString()
-    }
+    accuracy: 0,
+    confidence_avg: 0,
+    signals_generated: 0,
+    patterns_detected: 0,
+    model_version: 'Loading...',
+    last_prediction: undefined
   });
 
   const [tradingMetrics, setTradingMetrics] = useState<TradingMetrics>({
-    total_trades: 152,
-    winning_trades: 103,
-    losing_trades: 49,
-    win_rate: 67.8,
-    total_pnl: 2847.65,
-    session_pnl: 127.30,
-    sharpe_ratio: 1.82,
-    max_drawdown: 3.2,
-    current_balance: 12847.65
+    total_trades: 0,
+    winning_trades: 0,
+    losing_trades: 0,
+    win_rate: 0,
+    total_pnl: 0,
+    session_pnl: 0,
+    sharpe_ratio: 0,
+    max_drawdown: 0,
+    current_balance: 0
   });
 
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics>({
-    uptime_hours: 18.7,
-    ticks_processed: 1245673,
-    processing_speed: 127.3,
-    api_latency: 142,
-    websocket_status: 'connected',
-    deriv_api_status: 'connected'
+    uptime_hours: 0,
+    ticks_processed: 0,
+    processing_speed: 0,
+    api_latency: 0,
+    websocket_status: 'disconnected',
+    deriv_api_status: 'disconnected'
   });
 
-  const [realtimeLog, setRealtimeLog] = useState<LogEntry[]>([
-    { id: 1, type: 'ai', message: 'Modelo LSTM treinado com 98.2% de acurácia', time: new Date().toLocaleTimeString() },
-    { id: 2, type: 'trade', message: 'Trade CALL executado em R_100 - Profit: $23.45', time: new Date().toLocaleTimeString() },
-    { id: 3, type: 'system', message: 'Sistema de risk management ativado', time: new Date().toLocaleTimeString() },
-    { id: 4, type: 'ai', message: 'Padrão de momentum detectado (85% confiança)', time: new Date().toLocaleTimeString() },
-    { id: 5, type: 'trade', message: 'Portfolio rebalanceado automaticamente', time: new Date().toLocaleTimeString() }
-  ]);
+  const [realtimeLog, setRealtimeLog] = useState<LogEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [wsConnected, setWsConnected] = useState(false);
 
+  // Load real data from APIs
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      // Load AI metrics from real API
+      const aiData = await apiClient.getAIStatus();
+      setAiMetrics({
+        accuracy: aiData.accuracy || 0,
+        confidence_avg: aiData.confidence_avg || 0,
+        signals_generated: aiData.signals_generated || 0,
+        patterns_detected: aiData.patterns_detected || 0,
+        model_version: aiData.model_version || 'v2.1.3',
+        last_prediction: aiData.last_prediction
+      });
+
+      // Load trading metrics from real API
+      const tradingData = await apiClient.getTradingMetrics();
+      setTradingMetrics({
+        total_trades: tradingData.total_trades || 0,
+        winning_trades: tradingData.winning_trades || 0,
+        losing_trades: tradingData.losing_trades || 0,
+        win_rate: tradingData.win_rate || 0,
+        total_pnl: tradingData.total_pnl || 0,
+        session_pnl: tradingData.session_pnl || 0,
+        sharpe_ratio: tradingData.sharpe_ratio || 0,
+        max_drawdown: tradingData.max_drawdown || 0,
+        current_balance: tradingData.current_balance || 0
+      });
+
+      // Load system metrics from real API
+      const systemData = await apiClient.getSystemMetrics();
+      setSystemMetrics({
+        uptime_hours: systemData.uptime_hours || 0,
+        ticks_processed: systemData.ticks_processed || 0,
+        processing_speed: systemData.processing_speed || 0,
+        api_latency: systemData.api_latency || 0,
+        websocket_status: systemData.websocket_status || 'disconnected',
+        deriv_api_status: systemData.deriv_api_status || 'disconnected'
+      });
+
+      // Load real-time logs
+      const logData = await apiClient.getSystemLogs();
+      setRealtimeLog(logData.slice(0, 10)); // Keep only latest 10 entries
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Set default values on error
+      setAiMetrics(prev => ({ ...prev, model_version: 'Error loading' }));
+    }
+    setIsLoading(false);
+  };
+
+  // WebSocket connection for real-time updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newEntry = {
-        id: Date.now(),
-        type: Math.random() > 0.6 ? 'ai' : Math.random() > 0.5 ? 'trade' : 'system',
-        time: new Date().toLocaleTimeString(),
-        message: Math.random() > 0.5
-          ? `Padrão detectado em R_${Math.random() > 0.5 ? '50' : '100'} (${(Math.random() * 30 + 70).toFixed(1)}% confiança)`
-          : `Processando ${Math.floor(Math.random() * 200 + 50)} ticks por segundo`
-      };
+    loadDashboardData();
 
-      setRealtimeLog(prev => [newEntry, ...prev.slice(0, 9)]);
+    // Setup WebSocket for real-time updates
+    const setupWebSocket = () => {
+      try {
+        const ws = new WebSocket(`ws://localhost:8000/ws/dashboard`);
 
-      setAiMetrics(prev => ({
-        ...prev,
-        accuracy: Math.min(100, prev.accuracy + (Math.random() - 0.5) * 0.5),
-        confidence_avg: Math.max(0, Math.min(1, prev.confidence_avg + (Math.random() - 0.5) * 0.02)),
-        signals_generated: prev.signals_generated + (Math.random() > 0.8 ? 1 : 0),
-        patterns_detected: prev.patterns_detected + (Math.random() > 0.9 ? 1 : 0)
-      }));
-    }, 3000);
+        ws.onopen = () => {
+          console.log('Dashboard WebSocket connected');
+          setWsConnected(true);
+        };
 
-    return () => clearInterval(interval);
-  }, []);
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+
+          switch (data.type) {
+            case 'ai_metrics':
+              setAiMetrics(prev => ({ ...prev, ...data.payload }));
+              break;
+            case 'trading_metrics':
+              setTradingMetrics(prev => ({ ...prev, ...data.payload }));
+              break;
+            case 'system_metrics':
+              setSystemMetrics(prev => ({ ...prev, ...data.payload }));
+              break;
+            case 'new_log':
+              setRealtimeLog(prev => [data.payload, ...prev.slice(0, 9)]);
+              break;
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('Dashboard WebSocket disconnected');
+          setWsConnected(false);
+          // Attempt to reconnect after 5 seconds
+          setTimeout(setupWebSocket, 5000);
+        };
+
+        ws.onerror = (error) => {
+          console.error('Dashboard WebSocket error:', error);
+          setWsConnected(false);
+        };
+
+        return () => {
+          ws.close();
+        };
+      } catch (error) {
+        console.error('Failed to setup WebSocket:', error);
+        setWsConnected(false);
+      }
+    };
+
+    const wsCleanup = setupWebSocket();
+
+    // Fallback: reload data every 30 seconds if WebSocket fails
+    const fallbackInterval = setInterval(() => {
+      if (!wsConnected) {
+        loadDashboardData();
+      }
+    }, 30000);
+
+    return () => {
+      if (wsCleanup) wsCleanup();
+      clearInterval(fallbackInterval);
+    };
+  }, [wsConnected]);
 
   const getLogIcon = (type: LogEntry['type']) => {
     switch (type) {
@@ -253,7 +341,7 @@ const Dashboard = () => {
               </p>
               <div className="flex items-center mt-2 text-xs">
                 <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                +{Math.floor(Math.random() * 5 + 2)} na última hora
+                {aiMetrics.signals_generated > 0 ? `+${aiMetrics.signals_generated}` : 'Aguardando...'} sinais hoje
               </div>
             </CardContent>
           </Card>

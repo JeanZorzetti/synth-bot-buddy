@@ -13,9 +13,9 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Database, Wifi, WifiOff, Eye, Settings } from 'lucide-react';
-import apiClient, { RealTickData, ProcessedFeatures } from '@/services/apiClient';
+import { apiClient, RealTickData, ProcessedFeatures } from '@/services/apiClient';
 
-interface DataQualityMetrics {
+interface DataQuality {
   symbol: string;
   completeness: number;
   accuracy: number;
@@ -24,7 +24,7 @@ interface DataQualityMetrics {
   overall_score: number;
 }
 
-interface ConnectionStatus {
+interface SystemStatus {
   deriv_api: boolean;
   database: boolean;
   feature_engine: boolean;
@@ -37,16 +37,16 @@ const RealTimeData: React.FC = () => {
   const [timeframe, setTimeframe] = useState<string>('1m');
   const [tickData, setTickData] = useState<RealTickData[]>([]);
   const [features, setFeatures] = useState<ProcessedFeatures | null>(null);
-  const [dataQuality, setDataQuality] = useState<DataQualityMetrics[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
+  const [dataQuality, setDataQuality] = useState<DataQuality[]>([]);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     deriv_api: false,
     database: false,
     feature_engine: false,
     tick_processor: false,
     last_update: ''
   });
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const symbols = [
     'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'AUD/USD',

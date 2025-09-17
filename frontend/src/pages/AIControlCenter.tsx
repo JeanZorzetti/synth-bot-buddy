@@ -104,11 +104,16 @@ const AIControlCenter: React.FC = () => {
       const importance = await apiClient.getFeatureImportance(selectedSymbol);
       setFeatureImportance(importance);
 
-      // Simulate AI status
+      // Load real AI status
+      const realAiStatus = await apiClient.getAIControlStatus();
       setAiStatus(prev => ({
         ...prev,
-        last_retrain: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-        total_predictions_today: Math.floor(Math.random() * 1000) + 500
+        last_retrain: realAiStatus.last_retrain || new Date().toISOString(),
+        total_predictions_today: realAiStatus.total_predictions_today || 0,
+        active_models: realAiStatus.active_models || 0,
+        ensemble_accuracy: realAiStatus.ensemble_accuracy || 0,
+        drift_detected: realAiStatus.drift_detected || false,
+        retraining_in_progress: realAiStatus.retraining_in_progress || false
       }));
 
     } catch (error) {

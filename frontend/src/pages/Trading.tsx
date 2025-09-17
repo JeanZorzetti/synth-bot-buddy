@@ -142,21 +142,40 @@ const Trading: React.FC = () => {
     }
   };
 
-  const handleStartAutonomous = () => {
-    setIsAutonomousMode(true);
-    setEmergencyStop(false);
-    setAiStatus(prev => ({ ...prev, status: 'analyzing' }));
+  const handleStartAutonomous = async () => {
+    try {
+      await apiClient.startAutonomousTrading();
+      setIsAutonomousMode(true);
+      setEmergencyStop(false);
+      setAiStatus(prev => ({ ...prev, status: 'analyzing' }));
+    } catch (error) {
+      console.error('Error starting autonomous trading:', error);
+    }
   };
 
-  const handleStopAutonomous = () => {
-    setIsAutonomousMode(false);
-    setAiStatus(prev => ({ ...prev, status: 'idle' }));
+  const handleStopAutonomous = async () => {
+    try {
+      await apiClient.stopAutonomousTrading();
+      setIsAutonomousMode(false);
+      setAiStatus(prev => ({ ...prev, status: 'idle' }));
+    } catch (error) {
+      console.error('Error stopping autonomous trading:', error);
+    }
   };
 
-  const handleEmergencyStop = () => {
-    setEmergencyStop(true);
-    setIsAutonomousMode(false);
-    setAiStatus(prev => ({ ...prev, status: 'paused' }));
+  const handleEmergencyStop = async () => {
+    try {
+      await apiClient.emergencyStopTrading();
+      setEmergencyStop(true);
+      setIsAutonomousMode(false);
+      setAiStatus(prev => ({ ...prev, status: 'paused' }));
+    } catch (error) {
+      console.error('Error executing emergency stop:', error);
+      // Force local emergency stop even if API fails
+      setEmergencyStop(true);
+      setIsAutonomousMode(false);
+      setAiStatus(prev => ({ ...prev, status: 'paused' }));
+    }
   };
 
   return (

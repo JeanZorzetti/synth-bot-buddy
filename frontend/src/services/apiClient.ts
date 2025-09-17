@@ -5,6 +5,50 @@
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
+// Dashboard real-time interfaces
+export interface AIMetrics {
+  accuracy: number;
+  confidence_avg: number;
+  signals_generated: number;
+  patterns_detected: number;
+  model_version: string;
+  last_prediction?: {
+    direction: 'UP' | 'DOWN';
+    confidence: number;
+    symbol: string;
+    timestamp: string;
+  };
+}
+
+export interface TradingMetrics {
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  total_pnl: number;
+  session_pnl: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  current_balance: number;
+}
+
+export interface SystemMetrics {
+  uptime_hours: number;
+  ticks_processed: number;
+  processing_speed: number;
+  api_latency: number;
+  websocket_status: 'connected' | 'disconnected';
+  deriv_api_status: 'connected' | 'disconnected';
+}
+
+export interface SystemLog {
+  id: number;
+  type: 'ai' | 'trade' | 'system';
+  message: string;
+  time: string;
+  timestamp: string;
+}
+
 // Types para Phase 6-10 Integration
 export interface RealTickData {
   timestamp: string;
@@ -181,6 +225,148 @@ class APIClient {
 
   async getAPIKeys(): Promise<APIKey[]> {
     const response = await this.api.get('/api-keys');
+    return response.data;
+  }
+
+  // Dashboard Real Data Methods
+  async getAIStatus(): Promise<AIMetrics> {
+    const response = await this.api.get('/dashboard/ai-metrics');
+    return response.data;
+  }
+
+  async getTradingMetrics(): Promise<TradingMetrics> {
+    const response = await this.api.get('/dashboard/trading-metrics');
+    return response.data;
+  }
+
+  async getSystemMetrics(): Promise<SystemMetrics> {
+    const response = await this.api.get('/dashboard/system-metrics');
+    return response.data;
+  }
+
+  async getSystemLogs(): Promise<SystemLog[]> {
+    const response = await this.api.get('/dashboard/logs');
+    return response.data;
+  }
+
+  // Trading Real Data Methods
+  async getTradingAIStatus(): Promise<any> {
+    const response = await this.api.get('/trading/ai-status');
+    return response.data;
+  }
+
+  async getRiskMetrics(): Promise<any> {
+    const response = await this.api.get('/trading/risk-metrics');
+    return response.data;
+  }
+
+  async getRecentTradingDecisions(): Promise<any[]> {
+    const response = await this.api.get('/trading/recent-decisions');
+    return response.data;
+  }
+
+  async startAutonomousTrading(): Promise<void> {
+    await this.api.post('/trading/start-autonomous');
+  }
+
+  async stopAutonomousTrading(): Promise<void> {
+    await this.api.post('/trading/stop-autonomous');
+  }
+
+  async emergencyStopTrading(): Promise<void> {
+    await this.api.post('/trading/emergency-stop');
+  }
+
+  // Training Real Data Methods
+  async startDataCollection(): Promise<void> {
+    await this.api.post('/training/start-collection');
+  }
+
+  async getDataCollectionProgress(): Promise<{ progress: number }> {
+    const response = await this.api.get('/training/collection-progress');
+    return response.data;
+  }
+
+  async getTrainingDatasets(): Promise<any[]> {
+    const response = await this.api.get('/training/datasets');
+    return response.data;
+  }
+
+  async startTrainingSession(config: any): Promise<any> {
+    const response = await this.api.post('/training/start-session', config);
+    return response.data;
+  }
+
+  async getTrainingSession(sessionId: string): Promise<any> {
+    const response = await this.api.get(`/training/session/${sessionId}`);
+    return response.data;
+  }
+
+  async stopTrainingSession(sessionId: string): Promise<void> {
+    await this.api.post(`/training/session/${sessionId}/stop`);
+  }
+
+  async getTrainingHistory(): Promise<any[]> {
+    const response = await this.api.get('/training/history');
+    return response.data;
+  }
+
+  // Real-Time Data Methods
+  async getDataQualityMetrics(symbols: string[]): Promise<any[]> {
+    const response = await this.api.post('/realtime/data-quality', { symbols });
+    return response.data;
+  }
+
+  async getRealTimeSystemStatus(): Promise<any> {
+    const response = await this.api.get('/realtime/system-status');
+    return response.data;
+  }
+
+  // AI Control Center Methods
+  async getAIControlStatus(): Promise<any> {
+    const response = await this.api.get('/ai/control-status');
+    return response.data;
+  }
+
+  // Enterprise Platform Methods
+  async getUserActivities(userIds: string[]): Promise<any[]> {
+    const response = await this.api.post('/enterprise/user-activities', { user_ids: userIds });
+    return response.data;
+  }
+
+  async getOrganizationStats(): Promise<any> {
+    const response = await this.api.get('/enterprise/organization-stats');
+    return response.data;
+  }
+
+  async getEnterpriseSystemMetrics(): Promise<any> {
+    const response = await this.api.get('/enterprise/system-metrics');
+    return response.data;
+  }
+
+  async getApiUsageData(): Promise<any[]> {
+    const response = await this.api.get('/enterprise/api-usage');
+    return response.data;
+  }
+
+  // Strategy Marketplace Methods
+  async getUserStrategiesWithSales(): Promise<any[]> {
+    const response = await this.api.get('/marketplace/user-strategies-sales');
+    return response.data;
+  }
+
+  async getStrategyBacktestMetrics(strategyId: string): Promise<any> {
+    const response = await this.api.get(`/marketplace/strategy/${strategyId}/backtest`);
+    return response.data;
+  }
+
+  async getStrategyPerformanceChart(strategyId: string): Promise<any[]> {
+    const response = await this.api.get(`/marketplace/strategy/${strategyId}/performance-chart`);
+    return response.data;
+  }
+
+  async getStrategyReviews(strategyId: string): Promise<any[]> {
+    const response = await this.api.get(`/marketplace/strategy/${strategyId}/reviews`);
     return response.data;
   }
 

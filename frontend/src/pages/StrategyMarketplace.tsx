@@ -116,11 +116,13 @@ const StrategyMarketplace: React.FC = () => {
       ]);
 
       setStrategies(strategiesData);
-      setMyStrategies(myStrategiesData.map(s => ({
+      // Load real user strategies with sales data
+      const realStrategiesData = await apiClient.getUserStrategiesWithSales();
+      setMyStrategies(realStrategiesData.map(s => ({
         ...s,
-        sales_count: Math.floor(Math.random() * 100),
-        revenue: Math.random() * 5000,
-        status: ['approved', 'pending', 'draft'][Math.floor(Math.random() * 3)] as any
+        sales_count: s.sales_count || 0,
+        revenue: s.revenue || 0,
+        status: s.status || 'draft'
       })));
       setMarketplaceStats(statsData);
 
@@ -138,48 +140,27 @@ const StrategyMarketplace: React.FC = () => {
     try {
       const strategyDetails = await apiClient.getStrategy(strategyId);
 
-      // Mock additional details
+      // Load real strategy details
+      const [backtestData, performanceData, reviewsData] = await Promise.all([
+        apiClient.getStrategyBacktestMetrics(strategyId),
+        apiClient.getStrategyPerformanceChart(strategyId),
+        apiClient.getStrategyReviews(strategyId)
+      ]);
+
       const detailedStrategy: StrategyDetails = {
         ...strategyDetails,
-        backtest_metrics: {
-          total_return: 23.45,
-          sharpe_ratio: 1.67,
-          max_drawdown: -8.23,
-          win_rate: 68.5,
-          profit_factor: 1.89,
-          total_trades: 247
+        backtest_metrics: backtestData || {
+          total_return: 0,
+          sharpe_ratio: 0,
+          max_drawdown: 0,
+          win_rate: 0,
+          profit_factor: 0,
+          total_trades: 0
         },
-        performance_chart: Array.from({ length: 30 }, (_, i) => ({
-          date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          value: 1000 + Math.random() * 500 + i * 10,
-          benchmark: 1000 + Math.random() * 200 + i * 5
-        })),
-        reviews: [
-          {
-            user: 'TradingPro',
-            rating: 5,
-            comment: 'Excelente estratégia! Retornos consistentes.',
-            date: '2024-01-10'
-          },
-          {
-            user: 'AlgoTrader',
-            rating: 4,
-            comment: 'Boa performance, mas poderia ter menos drawdown.',
-            date: '2024-01-08'
-          }
-        ],
-        code_preview: `# Strategy Preview
-def calculate_signal(data):
-    rsi = calculate_rsi(data, 14)
-    ma_short = data['close'].rolling(20).mean()
-    ma_long = data['close'].rolling(50).mean()
-
-    if rsi < 30 and ma_short > ma_long:
-        return 'BUY'
-    elif rsi > 70 and ma_short < ma_long:
-        return 'SELL'
-    return 'HOLD'`,
-        license_terms: 'Licença de uso pessoal. Não é permitida redistribuição comercial.'
+        performance_chart: performanceData || [],
+        reviews: reviewsData || [],
+        code_preview: strategyDetails.code_preview || 'Código não disponível',
+        license_terms: strategyDetails.license_terms || 'Termos não definidos'
       };
 
       setSelectedStrategy(detailedStrategy);
