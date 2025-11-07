@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -221,11 +221,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Add CORS middleware - MUST be before routes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
+        "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8080",  # Vite dev server
         "http://localhost:8081",  # Vite dev server
@@ -233,12 +233,13 @@ app.add_middleware(
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
         "http://127.0.0.1:8082",
-        "https://botderiv.roilabs.com.br",
+        "https://botderiv.roilabs.com.br",  # Production frontend
         "http://botderiv.roilabs.com.br"
-    ],  # Frontend URLs
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # --- Event Handlers ---
@@ -383,6 +384,17 @@ async def list_routes():
                 "name": getattr(route, 'name', '')
             })
     return {"routes": routes, "total": len(routes)}
+
+@app.get("/cors-test")
+async def cors_test(request: Request):
+    """Test CORS configuration - returns request headers and origin."""
+    return {
+        "status": "CORS is working",
+        "origin": request.headers.get("origin", "No origin header"),
+        "headers": dict(request.headers),
+        "method": request.method,
+        "url": str(request.url)
+    }
 
 @app.get("/settings")
 async def get_settings():
