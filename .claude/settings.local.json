@@ -21,7 +21,12 @@
       "WebSearch",
       "WebFetch(domain:api.deriv.com)",
       "Bash(curl:*)",
-      "WebFetch(domain:botderiv.roilabs.com.br)"
+      "WebFetch(domain:botderiv.roilabs.com.br)",
+      "Bash(cat:*)",
+      "Bash(C:Python313python.exe -m pip install websockets ujson)",
+      "Bash(.venvScriptspython.exe backendtest_simple_order.py)",
+      "Bash(C:UsersjeanzOneDriveDesktopJizreelsynth-bot-buddy-main.venvScriptspython.exe test_simple_order.py)",
+      "Bash(\"c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\.venv\\Scripts\\python.exe\" test_simple_order.py)"
     ],
     "deny": [],
     "ask": []

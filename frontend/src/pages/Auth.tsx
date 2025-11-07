@@ -6,26 +6,20 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
+import {
   TrendingUp,
   Shield,
-  AlertTriangle,
   CheckCircle2,
   Wifi,
   WifiOff,
   Loader2,
   LogIn,
-  Users,
-  ChevronDown,
-  ChevronUp,
   Key,
   Eye,
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import DerivOAuth from '@/components/DerivOAuth';
 
 interface DerivAccount {
   loginid: string;
@@ -272,77 +266,55 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* OAuth Authentication Component */}
-        <DerivOAuth
-          onAuthSuccess={handleOAuthSuccess}
-          onAuthError={handleOAuthError}
-        />
-
-        {/* Manual Login Option (Collapsible) */}
+        {/* Login with API Token */}
         <Card className="trading-card">
-          <CardContent className="pt-6">
-            <Collapsible open={showManualLogin} onOpenChange={setShowManualLogin}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between" size="sm">
-                  <span className="flex items-center">
-                    <Key className="h-4 w-4 mr-2" />
-                    Login Manual (Avançado)
-                  </span>
-                  {showManualLogin ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">
-                    <strong>Método Legacy:</strong> Use apenas se tiver problemas com OAuth.
-                    O método OAuth é mais seguro e recomendado.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">Token de API da Deriv</Label>
-                  <div className="relative">
-                    <Input
-                      id="apiKey"
-                      type={showKey ? "text" : "password"}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Cole seu token aqui..."
-                      className="pr-10"
-                      disabled={isValidating}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowKey(!showKey)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleManualLogin}
-                  disabled={isValidating || !apiKey.trim()}
-                  className="w-full"
-                  variant="outline"
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Key className="h-5 w-5 mr-2" />
+              Login com Token API
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">Token de API da Deriv</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Cole seu token aqui..."
+                  className="pr-10"
+                  disabled={isValidating}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {isValidating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Validando...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="h-4 w-4 mr-2" />
-                      Login com Token Manual
-                    </>
-                  )}
-                </Button>
-              </CollapsibleContent>
-            </Collapsible>
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleManualLogin}
+              disabled={isValidating || !apiKey.trim()}
+              className="w-full"
+            >
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Validando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Entrar
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 

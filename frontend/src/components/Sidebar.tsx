@@ -4,19 +4,11 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
-  GraduationCap,
   TrendingUp,
   Settings,
-  History,
-  BarChart3,
   Brain,
   Activity,
-  Shield,
-  Database,
-  Cpu,
-  Globe,
-  Store,
-  Building
+  Shield
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,79 +29,21 @@ const navItems: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    description: 'Métricas em tempo real'
-  },
-  {
-    title: 'Dados Tempo Real',
-    href: '/real-time-data',
-    icon: Database,
-    description: 'Market Data & Features',
-    badge: 'Phase 6',
-    badgeVariant: 'secondary'
-  },
-  {
-    title: 'AI Control Center',
-    href: '/ai-control-center',
-    icon: Cpu,
-    description: 'AI Ensemble & Learning',
-    badge: 'Phase 8',
-    badgeVariant: 'secondary'
-  },
-  {
-    title: 'Multi-Asset',
-    href: '/multi-asset-management',
-    icon: Globe,
-    description: 'Portfolio Multi-Ativos',
-    badge: 'Phase 9',
-    badgeVariant: 'secondary'
-  },
-  {
-    title: 'Marketplace',
-    href: '/strategy-marketplace',
-    icon: Store,
-    description: 'Strategy Marketplace',
-    badge: 'Phase 10',
-    badgeVariant: 'secondary'
-  },
-  {
-    title: 'Enterprise',
-    href: '/enterprise-platform',
-    icon: Building,
-    description: 'Plataforma Empresarial',
-    badge: 'Phase 10',
-    badgeVariant: 'secondary'
-  },
-  {
-    title: 'Treinamento',
-    href: '/training',
-    icon: GraduationCap,
-    description: 'IA/ML Configuration'
+    description: 'Visão geral do sistema'
   },
   {
     title: 'Trading',
     href: '/trading',
     icon: TrendingUp,
-    description: 'Execução Autônoma',
-    badge: 'AI',
+    description: 'Execução de ordens',
+    badge: 'Novo',
     badgeVariant: 'default'
-  },
-  {
-    title: 'Histórico',
-    href: '/history',
-    icon: History,
-    description: 'Trades executados'
-  },
-  {
-    title: 'Performance',
-    href: '/performance',
-    icon: BarChart3,
-    description: 'Análise de resultados'
   },
   {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,
-    description: 'Sistema e API'
+    description: 'API Token e configurações'
   }
 ];
 
@@ -215,11 +149,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false }) => {
         {!isCollapsed && (
           <div className="border-t px-4 py-3">
             <div className="text-xs text-muted-foreground">
-              <div className="font-medium mb-1">🤖 AI Trading Bot v2.1</div>
-              <div>Autonomous Trading System</div>
+              <div className="font-medium mb-1">Synth Bot Buddy</div>
+              <div>Trading System</div>
               <div className="mt-2 text-center">
                 <Badge variant="outline" className="text-xs">
-                  Phases 6-10 Integration
+                  Objetivo 1: Execução de Ordens
                 </Badge>
               </div>
             </div>

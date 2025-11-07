@@ -86,10 +86,10 @@ class DerivAPI:
         self.reconnect_delay = 5
         self.reconnect_attempts = 0
         
-    def _generate_request_id(self) -> str:
+    def _generate_request_id(self) -> int:
         """Gera ID único para requisições"""
         self.request_id_counter += 1
-        return f"req_{self.request_id_counter}_{uuid.uuid4().hex[:8]}"
+        return self.request_id_counter
     
     async def connect(self) -> bool:
         """Conecta ao WebSocket do Deriv"""
@@ -400,7 +400,27 @@ class DerivAPI:
         """16. Forget All - Cancelar todas as subscrições"""
         request = {"forget_all": types or ["ticks", "balance", "portfolio"]}
         return await self._send_request(request)
-    
+
+    async def switch_account(self, loginid: str) -> Dict[str, Any]:
+        """Switch to a different account using the same token
+
+        Deriv API doesn't support direct account switching via WebSocket.
+        The workaround is to:
+        1. Disconnect current session
+        2. Reconnect
+        3. Authorize with token (will use default account)
+
+        For now, we'll inform the user they need a token from the Demo account.
+        """
+        raise NotImplementedError(
+            "Account switching is not supported by Deriv WebSocket API.\n"
+            "To use a Demo account, generate a new token while logged into the Demo account:\n"
+            "1. Go to https://app.deriv.com/\n"
+            f"2. Switch to Demo account ({loginid})\n"
+            "3. Generate a new API token at https://app.deriv.com/account/api-token\n"
+            "4. Use the new token in this script"
+        )
+
     # =====================================================
     # MÉTODOS AUXILIARES E HANDLERS
     # =====================================================

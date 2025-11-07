@@ -2,6 +2,26 @@
 
 Esta pasta contém a documentação completa da API Deriv e guias para desenvolvedores do projeto Synth Bot Buddy.
 
+---
+
+## 🎯 **NOVO: Documentação do Objetivo 1**
+
+### 🚀 Executar Ordem na Deriv API
+
+**Status:** ✅ Documentação 100% completa | 🔲 Implementação pendente
+
+| Documento | Tipo | Para Quem | Tempo |
+|-----------|------|-----------|-------|
+| **[INDEX.md](./INDEX.md)** | Índice Completo | Todos | 5 min |
+| **[README-OBJETIVO-1.md](./README-OBJETIVO-1.md)** | Resumo Executivo | Todos | 5 min |
+| **[PLANO-EXECUCAO-ORDEM-DERIV.md](./PLANO-EXECUCAO-ORDEM-DERIV.md)** | Planejamento | PM, Tech Lead | 15 min |
+| **[ARQUITETURA-EXECUCAO-ORDEM.md](./ARQUITETURA-EXECUCAO-ORDEM.md)** | Arquitetura | Arquitetos, Devs | 20 min |
+| **[GUIA-RAPIDO-IMPLEMENTACAO.md](./GUIA-RAPIDO-IMPLEMENTACAO.md)** | Tutorial Prático | Desenvolvedores | 10 min + código |
+
+**👉 Começar agora:** Leia [INDEX.md](./INDEX.md) para navegação completa
+
+---
+
 ## 📋 Índice de Documentação
 
 ### 🔗 API Deriv

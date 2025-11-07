@@ -18,6 +18,8 @@ from contract_proposals_engine import (
     ContractProposalsEngine, ProposalRequest, ProposalResponse,
     get_proposals_engine, initialize_proposals_engine
 )
+from deriv_api import DerivAPI
+from models.order_models import OrderRequest, OrderResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -962,6 +964,166 @@ async def buy_contract(contract_type: str, amount: float = None, duration: int =
     except Exception as e:
         logger.error(f"Buy order error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Order Execution Endpoint (Objetivo 1) ---
+
+@app.post("/api/order/execute", response_model=OrderResponse)
+async def execute_order(order: OrderRequest):
+    """
+    Execute a trading order on Deriv API
+
+    This is a standalone endpoint that doesn't depend on the bot state.
+    It creates its own connection, executes the order, and returns the result.
+
+    Use this for manual order execution or testing.
+    """
+    logger.info(f"🚀 Executing order: {order.contract_type} {order.symbol} ${order.amount}")
+
+    # Create a new API client instance
+    api = DerivAPI(app_id=1089, demo=True)
+
+    try:
+        # 1. Connect to Deriv API
+        logger.info("Connecting to Deriv API...")
+        if not await api.connect():
+            return OrderResponse(
+                success=False,
+                error="Failed to connect to Deriv API",
+                error_code="ConnectionFailed"
+            )
+
+        logger.info("✅ Connected to Deriv API")
+
+        # 2. Authenticate
+        logger.info("Authenticating...")
+        auth_response = await api.authorize(order.token)
+
+        if 'error' in auth_response:
+            error_data = auth_response['error']
+            return OrderResponse(
+                success=False,
+                error=f"Authentication failed: {error_data.get('message', 'Unknown error')}",
+                error_code=error_data.get('code', 'AuthFailed'),
+                error_details=error_data
+            )
+
+        auth_data = auth_response.get('authorize', {})
+        loginid = auth_data.get('loginid')
+        balance = auth_data.get('balance')
+        currency = auth_data.get('currency', order.basis)
+
+        logger.info(f"✅ Authenticated - LoginID: {loginid}, Balance: {balance} {currency}")
+
+        # Check balance
+        if balance < order.amount:
+            return OrderResponse(
+                success=False,
+                error="Insufficient balance",
+                error_code="InsufficientBalance",
+                error_details={
+                    "required": order.amount,
+                    "available": balance,
+                    "currency": currency
+                }
+            )
+
+        # 3. Get proposal
+        logger.info("Getting proposal...")
+        proposal = await api.get_proposal(
+            contract_type=order.contract_type,
+            symbol=order.symbol,
+            amount=order.amount,
+            duration=order.duration,
+            duration_unit=order.duration_unit,
+            basis=order.basis,
+            currency=currency
+        )
+
+        if 'error' in proposal:
+            error_data = proposal['error']
+            return OrderResponse(
+                success=False,
+                error=f"Proposal failed: {error_data.get('message', 'Unknown error')}",
+                error_code=error_data.get('code', 'ProposalFailed'),
+                error_details=error_data
+            )
+
+        proposal_id = proposal.get('id')
+        ask_price = proposal.get('ask_price')
+        payout = proposal.get('payout')
+        potential_profit = payout - ask_price if (payout and ask_price) else 0
+
+        logger.info(f"✅ Proposal - Price: ${ask_price}, Payout: ${payout}, Profit: ${potential_profit:.2f}")
+
+        # 4. Execute buy
+        logger.info("Executing buy order...")
+        buy_response = await api.buy(
+            contract_type=order.contract_type,
+            symbol=order.symbol,
+            amount=order.amount,
+            duration=order.duration,
+            duration_unit=order.duration_unit,
+            basis=order.basis,
+            currency=currency
+        )
+
+        if 'error' in buy_response:
+            error_data = buy_response['error']
+            return OrderResponse(
+                success=False,
+                error=f"Buy failed: {error_data.get('message', 'Unknown error')}",
+                error_code=error_data.get('code', 'BuyFailed'),
+                error_details=error_data
+            )
+
+        # Extract buy data
+        buy_data = buy_response.get('buy', {})
+        contract_id = buy_data.get('contract_id')
+        buy_price = buy_data.get('buy_price')
+        longcode = buy_data.get('longcode')
+        payout_value = buy_data.get('payout')
+
+        logger.info(f"✅ Order executed - Contract ID: {contract_id}")
+
+        # 5. Disconnect
+        await api.disconnect()
+
+        # 6. Return success response
+        return OrderResponse(
+            success=True,
+            contract_id=contract_id,
+            buy_price=buy_price,
+            payout=payout_value,
+            potential_profit=payout_value - buy_price if (payout_value and buy_price) else None,
+            longcode=longcode,
+            status="active",
+            contract_url=f"https://app.deriv.com/contract/{contract_id}"
+        )
+
+    except asyncio.TimeoutError:
+        logger.error("Timeout during order execution")
+        return OrderResponse(
+            success=False,
+            error="Operation timed out",
+            error_code="Timeout"
+        )
+
+    except Exception as e:
+        logger.error(f"Error during order execution: {e}", exc_info=True)
+        return OrderResponse(
+            success=False,
+            error=f"Internal error: {str(e)}",
+            error_code="InternalError",
+            error_details={"exception": str(e)}
+        )
+
+    finally:
+        # Ensure disconnection
+        if api.websocket:
+            try:
+                await api.disconnect()
+            except:
+                pass
 
 # --- Capital Management Endpoints ---
 
