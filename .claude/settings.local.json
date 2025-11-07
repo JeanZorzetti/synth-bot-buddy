@@ -26,7 +26,12 @@
       "Bash(C:Python313python.exe -m pip install websockets ujson)",
       "Bash(.venvScriptspython.exe backendtest_simple_order.py)",
       "Bash(C:UsersjeanzOneDriveDesktopJizreelsynth-bot-buddy-main.venvScriptspython.exe test_simple_order.py)",
-      "Bash(\"c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\.venv\\Scripts\\python.exe\" test_simple_order.py)"
+      "Bash(\"c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\.venv\\Scripts\\python.exe\" test_simple_order.py)",
+      "Bash(\"c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\.venv\\Scripts\\python.exe\" main.py)",
+      "Bash(.venvScriptspython.exe -m pip install PyJWT cryptography)",
+      "Bash(\".venv\\Scripts\\python.exe\" -m pip install PyJWT cryptography)",
+      "Bash(\".venv\\Scripts\\python.exe\" -m pip install numpy pandas scikit-learn)",
+      "Bash(\"c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\.venv\\Scripts\\uvicorn.exe\" main:app --host 0.0.0.0 --port 8000 --reload)"
     ],
     "deny": [],
     "ask": []
