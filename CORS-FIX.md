@@ -2,38 +2,54 @@
 
 ## 📋 Mudanças Implementadas
 
-### 1. Melhorias no Middleware CORS
+### 1. **Middleware CORS Customizado** (SOLUÇÃO PRINCIPAL)
 
-**Arquivo**: `backend/main.py` (linhas 224-243)
+**Arquivo**: `backend/main.py` (linhas 225-265)
 
-**Alterações**:
-- ✅ Adicionado `expose_headers=["*"]` para expor headers na resposta
-- ✅ Especificados métodos HTTP explicitamente incluindo `OPTIONS`
-- ✅ Adicionado comentário indicando que CORS deve estar antes das rotas
+**O que foi feito**:
+- ✅ Criado `CustomCORSMiddleware` que intercepta TODAS as requisições
+- ✅ Trata requisições OPTIONS (preflight) MANUALMENTE retornando status 200
+- ✅ Adiciona headers CORS diretamente na resposta sem depender do middleware padrão
+- ✅ Valida origem contra whitelist antes de adicionar headers
 
+**Como funciona**:
 ```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://localhost:8081",
-        "http://localhost:8082",
-        "http://127.0.0.1:8080",
-        "http://127.0.0.1:8081",
-        "http://127.0.0.1:8082",
-        "https://botderiv.roilabs.com.br",  # Production frontend
-        "http://botderiv.roilabs.com.br"
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+
+        # Intercepta OPTIONS e retorna resposta imediata com headers CORS
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if origin in allowed_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+
+        # Para outras requisições, processa normalmente e adiciona headers CORS
+        response = await call_next(request)
+        if origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+        return response
 ```
 
-### 2. Endpoint de Teste CORS
+**Por que isso resolve**:
+- Garante que requisições OPTIONS sempre recebem headers CORS
+- Não depende de reverse proxy ou outro middleware
+- Funciona mesmo se houver interferência de CDN/Cloudflare
+
+### 2. Middleware CORS Padrão (Backup)
+
+**Arquivo**: `backend/main.py` (linhas 271-289)
+
+Mantido como camada adicional de segurança.
+
+### 3. Endpoint de Teste CORS
 
 **Novo endpoint**: `GET /cors-test`
 
