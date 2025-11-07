@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import os
@@ -221,19 +222,64 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware - MUST be before routes
+# Custom CORS middleware to ensure headers are always present
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # List of allowed origins
+        allowed_origins = [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://localhost:8081",
+            "http://localhost:8082",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
+            "https://botderiv.roilabs.com.br",
+            "http://botderiv.roilabs.com.br"
+        ]
+
+        # Get the origin from request headers
+        origin = request.headers.get("origin")
+
+        # Handle preflight OPTIONS request
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if origin in allowed_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+
+        # Process the request
+        response = await call_next(request)
+
+        # Add CORS headers to response
+        if origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+
+        return response
+
+# Add custom CORS middleware FIRST
+app.add_middleware(CustomCORSMiddleware)
+
+# Add standard CORS middleware as backup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://localhost:8080",  # Vite dev server
-        "http://localhost:8081",  # Vite dev server
-        "http://localhost:8082",  # Vite dev server
+        "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:8082",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
         "http://127.0.0.1:8082",
-        "https://botderiv.roilabs.com.br",  # Production frontend
+        "https://botderiv.roilabs.com.br",
         "http://botderiv.roilabs.com.br"
     ],
     allow_credentials=True,
