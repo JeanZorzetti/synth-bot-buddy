@@ -613,19 +613,8 @@ async def get_candlestick_patterns(symbol: str, timeframe: str = "1m", count: in
         detector = CandlestickPatterns()
         patterns = detector.detect_all_patterns(df, lookback=lookback)
 
-        # Converter para dict
-        patterns_list = []
-        for pattern in patterns:
-            patterns_list.append({
-                "name": pattern.name,
-                "type": pattern.pattern_type,
-                "signal": pattern.signal,
-                "confidence": pattern.confidence,
-                "success_rate": pattern.success_rate,
-                "candle_index": pattern.index,  # Corrigido: index, não candle_index
-                "interpretation": pattern.interpretation,
-                "candles": pattern.candles
-            })
+        # Converter para dict usando o método to_dict() da classe
+        patterns_list = [pattern.to_dict() for pattern in patterns]
 
         return {
             "symbol": symbol,
@@ -636,7 +625,7 @@ async def get_candlestick_patterns(symbol: str, timeframe: str = "1m", count: in
         }
 
     except Exception as e:
-        logger.error(f"Erro ao detectar padrões de candlestick: {e}")
+        logger.error(f"Erro ao detectar padrões de candlestick: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/patterns/support-resistance/{symbol}")
