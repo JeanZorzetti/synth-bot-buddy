@@ -396,31 +396,53 @@ async def cors_test(request: Request):
 technical_analysis = TechnicalAnalysis()
 
 @app.get("/api/indicators/{symbol}")
-async def get_indicators(symbol: str):
+async def get_indicators(symbol: str, timeframe: str = "1m", count: int = 500):
     """
     Retorna todos os indicadores técnicos calculados para um símbolo
 
     Args:
-        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V)
+        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V, R_100, BOOM1000)
+        timeframe: Timeframe dos candles (1m, 5m, 15m, 1h, etc.)
+        count: Número de candles para análise (padrão: 500)
 
     Returns:
         Dicionário com todos os indicadores calculados
     """
     try:
-        logger.info(f"Calculando indicadores para {symbol}")
+        logger.info(f"Calculando indicadores para {symbol} ({timeframe})")
 
-        # Por enquanto, usar dados de exemplo
-        # TODO: Integrar com Deriv API quando conexão estiver disponível
-        df = create_sample_dataframe(bars=500)
+        # Tentar buscar dados reais do Deriv
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                # Criar fetcher com API autenticada
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+
+                # Buscar candles reais
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+                logger.info(f"Dados reais carregados: {len(df)} candles de {symbol}")
+
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                logger.info("Usando dados sintéticos como fallback")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            logger.info("WebSocket não conectado, usando dados sintéticos")
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
 
         # Calcular indicadores
         indicators = technical_analysis.get_current_indicators(df)
 
         return {
             "symbol": symbol,
+            "timeframe": timeframe,
             "timestamp": datetime.now().isoformat(),
-            "indicators": indicators,
-            "note": "Usando dados de exemplo - Integração com Deriv API em desenvolvimento"
+            "data_source": data_source,
+            "candles_analyzed": len(df),
+            "indicators": indicators
         }
 
     except Exception as e:
@@ -428,34 +450,127 @@ async def get_indicators(symbol: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/signals/{symbol}")
-async def get_trading_signal(symbol: str):
+async def get_trading_signal(symbol: str, timeframe: str = "1m", count: int = 500):
     """
     Gera sinal de trading baseado em análise técnica
 
     Args:
-        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V)
+        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V, R_100, BOOM1000)
+        timeframe: Timeframe dos candles (1m, 5m, 15m, 1h, etc.)
+        count: Número de candles para análise (padrão: 500)
 
     Returns:
         TradingSignal com recomendação BUY/SELL/NEUTRAL
     """
     try:
-        logger.info(f"Gerando sinal de trading para {symbol}")
+        logger.info(f"Gerando sinal de trading para {symbol} ({timeframe})")
 
-        # Por enquanto, usar dados de exemplo
-        # TODO: Integrar com Deriv API quando conexão estiver disponível
-        df = create_sample_dataframe(bars=500)
+        # Tentar buscar dados reais do Deriv
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                # Criar fetcher com API autenticada
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+
+                # Buscar candles reais
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+                logger.info(f"Dados reais carregados: {len(df)} candles de {symbol}")
+
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                logger.info("Usando dados sintéticos como fallback")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            logger.info("WebSocket não conectado, usando dados sintéticos")
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
 
         # Gerar sinal
         signal = technical_analysis.generate_signal(df, symbol)
 
         # Converter para dicionário
         signal_dict = signal.to_dict()
-        signal_dict["note"] = "Usando dados de exemplo - Integração com Deriv API em desenvolvimento"
+        signal_dict["timeframe"] = timeframe
+        signal_dict["data_source"] = data_source
+        signal_dict["candles_analyzed"] = len(df)
 
         return signal_dict
 
     except Exception as e:
         logger.error(f"Erro ao gerar sinal para {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/signals/multi")
+async def get_multi_signals(symbols: str = "1HZ75V,1HZ100V,R_100", timeframe: str = "1m"):
+    """
+    Gera sinais para múltiplos símbolos simultaneamente
+
+    Args:
+        symbols: Símbolos separados por vírgula (ex: 1HZ75V,1HZ100V,R_100,BOOM1000)
+        timeframe: Timeframe dos candles
+
+    Returns:
+        Lista de sinais para cada símbolo
+    """
+    try:
+        symbol_list = [s.strip() for s in symbols.split(",")]
+        logger.info(f"Gerando sinais para {len(symbol_list)} símbolos: {symbol_list}")
+
+        results = []
+
+        for symbol in symbol_list:
+            try:
+                # Buscar dados
+                if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+                    try:
+                        deriv_api = DerivAPI(ws_manager.websocket)
+                        fetcher = MarketDataFetcher(deriv_api)
+                        df = await fetcher.fetch_candles(symbol, timeframe, 500)
+                        data_source = "deriv_api"
+                    except Exception:
+                        df = create_sample_dataframe(bars=500)
+                        data_source = "synthetic_fallback"
+                else:
+                    df = create_sample_dataframe(bars=500)
+                    data_source = "synthetic_no_connection"
+
+                # Gerar sinal
+                signal = technical_analysis.generate_signal(df, symbol)
+                signal_dict = signal.to_dict()
+                signal_dict["timeframe"] = timeframe
+                signal_dict["data_source"] = data_source
+
+                results.append(signal_dict)
+
+            except Exception as symbol_error:
+                logger.error(f"Erro ao processar {symbol}: {symbol_error}")
+                results.append({
+                    "symbol": symbol,
+                    "error": str(symbol_error),
+                    "signal_type": "ERROR"
+                })
+
+        # Resumo
+        buy_count = sum(1 for r in results if r.get("signal_type") == "BUY")
+        sell_count = sum(1 for r in results if r.get("signal_type") == "SELL")
+        neutral_count = sum(1 for r in results if r.get("signal_type") == "NEUTRAL")
+
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "timeframe": timeframe,
+            "total_symbols": len(results),
+            "summary": {
+                "buy_signals": buy_count,
+                "sell_signals": sell_count,
+                "neutral_signals": neutral_count
+            },
+            "signals": results
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar sinais múltiplos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/settings")
