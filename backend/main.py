@@ -28,6 +28,65 @@ from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Helper function to fetch candles from Deriv API
+async def fetch_deriv_candles(symbol: str, timeframe: str, count: int):
+    """
+    Fetch candles from Deriv API using authenticated WebSocket
+    Returns (df, data_source) tuple
+    """
+    import pandas as pd
+
+    if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+        try:
+            timeframe_map = {
+                '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
+                '1h': 3600, '4h': 14400, '1d': 86400
+            }
+            granularity = timeframe_map.get(timeframe, 60)
+
+            request = {
+                "ticks_history": symbol,
+                "adjust_start_time": 1,
+                "count": count,
+                "end": "latest",
+                "style": "candles",
+                "granularity": granularity
+            }
+
+            logger.info(f"Buscando {count} candles de {symbol} via Deriv API")
+            response = await ws_manager.send(request)
+
+            if 'error' in response:
+                raise Exception(f"Deriv API error: {response['error'].get('message', 'Unknown error')}")
+
+            candles = response.get('candles', [])
+            if not candles:
+                raise Exception(f"No candles returned for {symbol}")
+
+            # Converter para DataFrame
+            df = pd.DataFrame(candles)
+            df = df.rename(columns={'epoch': 'timestamp'})
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+            df['open'] = df['open'].astype(float)
+            df['high'] = df['high'].astype(float)
+            df['low'] = df['low'].astype(float)
+            df['close'] = df['close'].astype(float)
+
+            if 'volume' not in df.columns:
+                df['volume'] = 0
+
+            df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+            logger.info(f"✅ Dados reais carregados: {len(df)} candles de {symbol}")
+            return df, "deriv_api"
+
+        except Exception as e:
+            logger.warning(f"❌ Erro ao buscar dados do Deriv: {e}")
+            logger.info("Usando dados sintéticos como fallback")
+            return create_sample_dataframe(bars=count), "synthetic_fallback"
+    else:
+        logger.info("WebSocket não conectado, usando dados sintéticos")
+        return create_sample_dataframe(bars=count), "synthetic_no_connection"
+
 # Request models
 class ConnectRequest(BaseModel):
     api_token: str
@@ -411,27 +470,8 @@ async def get_indicators(symbol: str, timeframe: str = "1m", count: int = 500):
     try:
         logger.info(f"Calculando indicadores para {symbol} ({timeframe})")
 
-        # Tentar buscar dados reais do Deriv
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                # Criar fetcher com API autenticada
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-
-                # Buscar candles reais
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-                logger.info(f"Dados reais carregados: {len(df)} candles de {symbol}")
-
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                logger.info("Usando dados sintéticos como fallback")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            logger.info("WebSocket não conectado, usando dados sintéticos")
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        # Buscar dados (usa função auxiliar)
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         # Calcular indicadores
         indicators = technical_analysis.get_current_indicators(df)
@@ -536,27 +576,8 @@ async def get_trading_signal(symbol: str, timeframe: str = "1m", count: int = 50
     try:
         logger.info(f"Gerando sinal de trading para {symbol} ({timeframe})")
 
-        # Tentar buscar dados reais do Deriv
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                # Criar fetcher com API autenticada
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-
-                # Buscar candles reais
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-                logger.info(f"Dados reais carregados: {len(df)} candles de {symbol}")
-
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                logger.info("Usando dados sintéticos como fallback")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            logger.info("WebSocket não conectado, usando dados sintéticos")
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        # Buscar dados (usa função auxiliar)
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         # Gerar sinal
         signal = technical_analysis.generate_signal(df, symbol)
@@ -594,20 +615,8 @@ async def get_candlestick_patterns(symbol: str, timeframe: str = "1m", count: in
 
         logger.info(f"Detectando padrões de candlestick para {symbol} ({timeframe})")
 
-        # Buscar dados (mesma lógica de signals)
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        # Buscar dados
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         # Detectar padrões
         detector = CandlestickPatterns()
@@ -648,19 +657,7 @@ async def get_support_resistance(symbol: str, timeframe: str = "1m", count: int 
         logger.info(f"Detectando S/R para {symbol} ({timeframe})")
 
         # Buscar dados
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         # Detectar S/R (parâmetros mais lenientes para detectar níveis)
         detector = SupportResistanceDetector(window=10, min_touches=1, zone_width_pct=0.3)
@@ -696,19 +693,7 @@ async def get_chart_formations(symbol: str, timeframe: str = "1m", count: int = 
         logger.info(f"Detectando formações gráficas para {symbol} ({timeframe})")
 
         # Buscar dados
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         # Detectar formações (parâmetros mais restritivos para evitar falsos positivos)
         detector = ChartFormationDetector(tolerance_pct=1.5, min_bars=15)
@@ -767,19 +752,7 @@ async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500)
         logger.info(f"Análise completa de padrões para {symbol} ({timeframe})")
 
         # Buscar dados
-        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-            try:
-                deriv_api = DerivAPI(ws_manager.websocket)
-                fetcher = MarketDataFetcher(deriv_api)
-                df = await fetcher.fetch_candles(symbol, timeframe, count)
-                data_source = "deriv_api"
-            except Exception as deriv_error:
-                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
-                df = create_sample_dataframe(bars=count)
-                data_source = "synthetic_fallback"
-        else:
-            df = create_sample_dataframe(bars=count)
-            data_source = "synthetic_no_connection"
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
 
         current_price = df['close'].iloc[-1]
 
