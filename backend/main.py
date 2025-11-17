@@ -20,6 +20,8 @@ from contract_proposals_engine import (
 )
 from deriv_api import DerivAPI
 from models.order_models import OrderRequest, OrderResponse
+from analysis import TechnicalAnalysis
+from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -386,6 +388,74 @@ async def cors_test(request: Request):
         "method": request.method,
         "url": str(request.url)
     }
+
+# === ANÁLISE TÉCNICA - FASE 1 ===
+
+# Inicializar análise técnica
+technical_analysis = TechnicalAnalysis()
+
+@app.get("/api/indicators/{symbol}")
+async def get_indicators(symbol: str):
+    """
+    Retorna todos os indicadores técnicos calculados para um símbolo
+
+    Args:
+        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V)
+
+    Returns:
+        Dicionário com todos os indicadores calculados
+    """
+    try:
+        logger.info(f"Calculando indicadores para {symbol}")
+
+        # Por enquanto, usar dados de exemplo
+        # TODO: Integrar com Deriv API quando conexão estiver disponível
+        df = create_sample_dataframe(bars=500)
+
+        # Calcular indicadores
+        indicators = technical_analysis.get_current_indicators(df)
+
+        return {
+            "symbol": symbol,
+            "timestamp": datetime.now().isoformat(),
+            "indicators": indicators,
+            "note": "Usando dados de exemplo - Integração com Deriv API em desenvolvimento"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao calcular indicadores para {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/signals/{symbol}")
+async def get_trading_signal(symbol: str):
+    """
+    Gera sinal de trading baseado em análise técnica
+
+    Args:
+        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V)
+
+    Returns:
+        TradingSignal com recomendação BUY/SELL/NEUTRAL
+    """
+    try:
+        logger.info(f"Gerando sinal de trading para {symbol}")
+
+        # Por enquanto, usar dados de exemplo
+        # TODO: Integrar com Deriv API quando conexão estiver disponível
+        df = create_sample_dataframe(bars=500)
+
+        # Gerar sinal
+        signal = technical_analysis.generate_signal(df, symbol)
+
+        # Converter para dicionário
+        signal_dict = signal.to_dict()
+        signal_dict["note"] = "Usando dados de exemplo - Integração com Deriv API em desenvolvimento"
+
+        return signal_dict
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar sinal para {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/settings")
 async def get_settings():
