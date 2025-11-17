@@ -7,6 +7,7 @@ import logging
 import asyncio
 import time
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
 from enhanced_websocket_manager import EnhancedDerivWebSocket, ErrorType
