@@ -425,14 +425,14 @@ backend/
 - [x] ✅ Criar algoritmo de detecção de formações gráficas
 - [x] ✅ Identificar suporte/resistência automaticamente
 - [x] ✅ Calcular probabilidade de sucesso de cada padrão
-- [ ] ⏳ Integrar padrões com sistema de sinais (próximo passo)
+- [x] ✅ Integrar padrões com sistema de sinais
 
 ### 2.6 Entregáveis
 - ✅ Classe `CandlestickPatterns` com 15+ padrões
 - ✅ Detector de suporte/resistência dinâmico (`SupportResistanceDetector`)
 - ✅ Detector de formações gráficas (`ChartFormationDetector`)
 - ✅ 4 novos endpoints API para análise de padrões
-- ⏳ Integração com sistema de sinais (próximo)
+- ✅ **Integração com sistema de sinais** (COMPLETO!)
 - ⏳ Visualização de padrões no frontend (Fase 7)
 - ⏳ Estatísticas de efetividade por padrão (após backtesting)
 
@@ -462,10 +462,20 @@ backend/
 - Symmetrical Triangle (placeholder)
 
 **Suporte/Resistência:**
+
 - Detecção automática via pivot points
 - Clustering de níveis próximos
 - Cálculo de força (0-100) baseado em touches, volume, idade
 - Detecção de breakouts e bounces
+
+**Integração com Sistema de Sinais:**
+
+- Padrões de candlestick: 2+ padrões = 1 voto (peso 80%)
+- Breakouts: Voto FORTE (peso 100% da força do nível)
+- Bounces: Voto moderado (peso 70% da força do nível)
+- Formações gráficas: Confirmadas >60% confiança = 1 voto (peso 90%)
+- Sistema mantém requisito de 3+ votos para BUY/SELL
+- Logging detalhado mostra contribuição de cada padrão
 
 ### 2.7 🧪 Testes em Produção
 
