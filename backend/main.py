@@ -622,7 +622,7 @@ async def get_candlestick_patterns(symbol: str, timeframe: str = "1m", count: in
                 "signal": pattern.signal,
                 "confidence": pattern.confidence,
                 "success_rate": pattern.success_rate,
-                "candle_index": pattern.candle_index,
+                "candle_index": pattern.index,  # Corrigido: index, não candle_index
                 "interpretation": pattern.interpretation,
                 "candles": pattern.candles
             })
@@ -673,8 +673,8 @@ async def get_support_resistance(symbol: str, timeframe: str = "1m", count: int 
             df = create_sample_dataframe(bars=count)
             data_source = "synthetic_no_connection"
 
-        # Detectar S/R
-        detector = SupportResistanceDetector(window=20, min_touches=2)
+        # Detectar S/R (parâmetros mais lenientes para detectar níveis)
+        detector = SupportResistanceDetector(window=10, min_touches=1, zone_width_pct=0.3)
         analysis = detector.get_analysis_summary(df)
 
         analysis["symbol"] = symbol
@@ -721,8 +721,8 @@ async def get_chart_formations(symbol: str, timeframe: str = "1m", count: int = 
             df = create_sample_dataframe(bars=count)
             data_source = "synthetic_no_connection"
 
-        # Detectar formações
-        detector = ChartFormationDetector(tolerance_pct=2.0, min_bars=10)
+        # Detectar formações (parâmetros mais restritivos para evitar falsos positivos)
+        detector = ChartFormationDetector(tolerance_pct=1.5, min_bars=15)
         formations = detector.detect_all_formations(df, lookback=lookback)
 
         # Converter para dict
@@ -798,10 +798,11 @@ async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500)
         candlestick_detector = CandlestickPatterns()
         candlestick_patterns = candlestick_detector.detect_all_patterns(df, lookback=50)
 
-        sr_detector = SupportResistanceDetector(window=20, min_touches=2)
+        sr_detector = SupportResistanceDetector(window=10, min_touches=1, zone_width_pct=0.3)
         sr_analysis = sr_detector.get_analysis_summary(df)
 
-        chart_detector = ChartFormationDetector(tolerance_pct=2.0, min_bars=10)
+        # Parâmetros mais restritivos para evitar falsos positivos
+        chart_detector = ChartFormationDetector(tolerance_pct=1.5, min_bars=15)
         chart_formations = chart_detector.detect_all_formations(df, lookback=100)
 
         # Compilar análise
