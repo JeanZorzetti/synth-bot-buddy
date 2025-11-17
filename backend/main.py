@@ -35,6 +35,7 @@ async def fetch_deriv_candles(symbol: str, timeframe: str, count: int):
     Returns (df, data_source) tuple
     """
     import pandas as pd
+    global ws_manager  # Access global ws_manager instance
 
     if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
         try:
