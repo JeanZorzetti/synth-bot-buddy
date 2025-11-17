@@ -573,6 +573,293 @@ async def get_trading_signal(symbol: str, timeframe: str = "1m", count: int = 50
         logger.error(f"Erro ao gerar sinal para {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== PATTERN ANALYSIS ENDPOINTS ====================
+
+@app.get("/api/patterns/candlestick/{symbol}")
+async def get_candlestick_patterns(symbol: str, timeframe: str = "1m", count: int = 500, lookback: int = 50):
+    """
+    Detecta padrões de candlestick para um símbolo
+
+    Args:
+        symbol: Símbolo do ativo (ex: 1HZ75V, 1HZ100V, R_100, BOOM1000)
+        timeframe: Timeframe dos candles (1m, 5m, 15m, 1h, etc.)
+        count: Número de candles para buscar
+        lookback: Janela de análise para detecção de padrões
+
+    Returns:
+        Lista de padrões de candlestick detectados
+    """
+    try:
+        from analysis.patterns import CandlestickPatterns
+
+        logger.info(f"Detectando padrões de candlestick para {symbol} ({timeframe})")
+
+        # Buscar dados (mesma lógica de signals)
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
+
+        # Detectar padrões
+        detector = CandlestickPatterns()
+        patterns = detector.detect_all_patterns(df, lookback=lookback)
+
+        # Converter para dict
+        patterns_list = []
+        for pattern in patterns:
+            patterns_list.append({
+                "name": pattern.name,
+                "type": pattern.pattern_type,
+                "signal": pattern.signal,
+                "confidence": pattern.confidence,
+                "success_rate": pattern.success_rate,
+                "candle_index": pattern.candle_index,
+                "interpretation": pattern.interpretation,
+                "candles": pattern.candles
+            })
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "data_source": data_source,
+            "total_patterns": len(patterns_list),
+            "patterns": patterns_list
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao detectar padrões de candlestick: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/patterns/support-resistance/{symbol}")
+async def get_support_resistance(symbol: str, timeframe: str = "1m", count: int = 500, lookback: int = 100):
+    """
+    Detecta níveis de suporte e resistência para um símbolo
+
+    Args:
+        symbol: Símbolo do ativo
+        timeframe: Timeframe dos candles
+        count: Número de candles para buscar
+        lookback: Janela de análise
+
+    Returns:
+        Níveis de suporte e resistência detectados com breakouts/bounces
+    """
+    try:
+        from analysis.patterns import SupportResistanceDetector
+
+        logger.info(f"Detectando S/R para {symbol} ({timeframe})")
+
+        # Buscar dados
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
+
+        # Detectar S/R
+        detector = SupportResistanceDetector(window=20, min_touches=2)
+        analysis = detector.get_analysis_summary(df)
+
+        analysis["symbol"] = symbol
+        analysis["timeframe"] = timeframe
+        analysis["data_source"] = data_source
+
+        return analysis
+
+    except Exception as e:
+        logger.error(f"Erro ao detectar S/R: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/patterns/chart-formations/{symbol}")
+async def get_chart_formations(symbol: str, timeframe: str = "1m", count: int = 500, lookback: int = 100):
+    """
+    Detecta formações gráficas (Double Top/Bottom, Head & Shoulders, Triangles, etc.)
+
+    Args:
+        symbol: Símbolo do ativo
+        timeframe: Timeframe dos candles
+        count: Número de candles para buscar
+        lookback: Janela de análise
+
+    Returns:
+        Formações gráficas detectadas
+    """
+    try:
+        from analysis.patterns import ChartFormationDetector
+
+        logger.info(f"Detectando formações gráficas para {symbol} ({timeframe})")
+
+        # Buscar dados
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
+
+        # Detectar formações
+        detector = ChartFormationDetector(tolerance_pct=2.0, min_bars=10)
+        formations = detector.detect_all_formations(df, lookback=lookback)
+
+        # Converter para dict
+        formations_list = []
+        for formation in formations:
+            formations_list.append({
+                "name": formation.name,
+                "type": formation.formation_type,
+                "signal": formation.signal,
+                "confidence": formation.confidence,
+                "success_rate": formation.success_rate,
+                "status": formation.status,
+                "price_target": formation.price_target,
+                "stop_loss": formation.stop_loss,
+                "interpretation": formation.interpretation,
+                "key_points": formation.key_points
+            })
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "data_source": data_source,
+            "total_formations": len(formations_list),
+            "formations": formations_list
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao detectar formações gráficas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/patterns/all/{symbol}")
+async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500):
+    """
+    Retorna análise completa de todos os padrões para um símbolo
+
+    Inclui:
+    - Padrões de candlestick
+    - Níveis de suporte e resistência
+    - Formações gráficas
+    - Breakouts e bounces detectados
+
+    Args:
+        symbol: Símbolo do ativo
+        timeframe: Timeframe dos candles
+        count: Número de candles para buscar
+
+    Returns:
+        Análise completa de todos os padrões
+    """
+    try:
+        from analysis.patterns import CandlestickPatterns, SupportResistanceDetector, ChartFormationDetector
+
+        logger.info(f"Análise completa de padrões para {symbol} ({timeframe})")
+
+        # Buscar dados
+        if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
+            try:
+                deriv_api = DerivAPI(ws_manager.websocket)
+                fetcher = MarketDataFetcher(deriv_api)
+                df = await fetcher.fetch_candles(symbol, timeframe, count)
+                data_source = "deriv_api"
+            except Exception as deriv_error:
+                logger.warning(f"Erro ao buscar dados do Deriv: {deriv_error}")
+                df = create_sample_dataframe(bars=count)
+                data_source = "synthetic_fallback"
+        else:
+            df = create_sample_dataframe(bars=count)
+            data_source = "synthetic_no_connection"
+
+        current_price = df['close'].iloc[-1]
+
+        # Detectar todos os padrões
+        candlestick_detector = CandlestickPatterns()
+        candlestick_patterns = candlestick_detector.detect_all_patterns(df, lookback=50)
+
+        sr_detector = SupportResistanceDetector(window=20, min_touches=2)
+        sr_analysis = sr_detector.get_analysis_summary(df)
+
+        chart_detector = ChartFormationDetector(tolerance_pct=2.0, min_bars=10)
+        chart_formations = chart_detector.detect_all_formations(df, lookback=100)
+
+        # Compilar análise
+        candlestick_list = [{
+            "name": p.name,
+            "type": p.pattern_type,
+            "signal": p.signal,
+            "confidence": p.confidence
+        } for p in candlestick_patterns[:5]]  # Top 5
+
+        formations_list = [{
+            "name": f.name,
+            "type": f.formation_type,
+            "signal": f.signal,
+            "confidence": f.confidence,
+            "status": f.status
+        } for f in chart_formations[:5]]  # Top 5
+
+        # Determinar sinal geral baseado em padrões
+        buy_signals = sum(1 for p in candlestick_patterns if p.signal == 'BUY')
+        sell_signals = sum(1 for p in candlestick_patterns if p.signal == 'SELL')
+        buy_signals += sum(1 for f in chart_formations if f.signal == 'BUY')
+        sell_signals += sum(1 for f in chart_formations if f.signal == 'SELL')
+
+        if buy_signals > sell_signals and buy_signals >= 2:
+            overall_signal = "BUY"
+        elif sell_signals > buy_signals and sell_signals >= 2:
+            overall_signal = "SELL"
+        else:
+            overall_signal = "NEUTRAL"
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "current_price": current_price,
+            "data_source": data_source,
+            "overall_signal": overall_signal,
+            "candlestick_patterns": {
+                "total": len(candlestick_patterns),
+                "buy_signals": sum(1 for p in candlestick_patterns if p.signal == 'BUY'),
+                "sell_signals": sum(1 for p in candlestick_patterns if p.signal == 'SELL'),
+                "patterns": candlestick_list
+            },
+            "support_resistance": sr_analysis,
+            "chart_formations": {
+                "total": len(chart_formations),
+                "buy_signals": sum(1 for f in chart_formations if f.signal == 'BUY'),
+                "sell_signals": sum(1 for f in chart_formations if f.signal == 'SELL'),
+                "formations": formations_list
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Erro na análise completa de padrões: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== SETTINGS ENDPOINTS ====================
+
 @app.get("/settings")
 async def get_settings():
     """Get current bot settings"""

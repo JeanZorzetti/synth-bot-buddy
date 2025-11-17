@@ -421,27 +421,61 @@ backend/
 ```
 
 ### 2.5 Tarefas
-- [ ] Implementar reconhecimento de 15+ padrões de candlestick
-- [ ] Criar algoritmo de detecção de formações gráficas
-- [ ] Identificar suporte/resistência automaticamente
-- [ ] Calcular probabilidade de sucesso de cada padrão
-- [ ] Integrar padrões com sistema de sinais
+- [x] ✅ Implementar reconhecimento de 15+ padrões de candlestick
+- [x] ✅ Criar algoritmo de detecção de formações gráficas
+- [x] ✅ Identificar suporte/resistência automaticamente
+- [x] ✅ Calcular probabilidade de sucesso de cada padrão
+- [ ] ⏳ Integrar padrões com sistema de sinais (próximo passo)
 
 ### 2.6 Entregáveis
-- ✅ Classe `PatternRecognition` com 15+ padrões
-- ✅ Detector de suporte/resistência dinâmico
-- ✅ Aumentar confiança dos sinais em 15-20%
-- ✅ Visualização de padrões no gráfico
-- ✅ Estatísticas de efetividade por padrão
+- ✅ Classe `CandlestickPatterns` com 15+ padrões
+- ✅ Detector de suporte/resistência dinâmico (`SupportResistanceDetector`)
+- ✅ Detector de formações gráficas (`ChartFormationDetector`)
+- ✅ 4 novos endpoints API para análise de padrões
+- ⏳ Integração com sistema de sinais (próximo)
+- ⏳ Visualização de padrões no frontend (Fase 7)
+- ⏳ Estatísticas de efetividade por padrão (após backtesting)
+
+### ✅ FASE 2 IMPLEMENTADA (2025-11-17)
+
+**Arquivos criados:**
+
+- `backend/analysis/patterns/candlestick_patterns.py` - 15+ padrões de candlestick
+- `backend/analysis/patterns/support_resistance.py` - Detecção de S/R com breakouts/bounces
+- `backend/analysis/patterns/chart_formations.py` - Formações gráficas (Double Top/Bottom, H&S, Triangles)
+- Atualizados 4 novos endpoints em `backend/main.py`
+
+**Padrões Implementados:**
+
+**Candlestick (15+):**
+- Hammer, Shooting Star, Doji (Dragonfly, Gravestone)
+- Bullish/Bearish Engulfing
+- Piercing Pattern, Dark Cloud Cover
+- Bullish/Bearish Harami
+- Morning Star, Evening Star
+- Three White Soldiers, Three Black Crows
+
+**Formações Gráficas (7):**
+- Double Top, Double Bottom
+- Head and Shoulders, Inverse H&S
+- Ascending Triangle, Descending Triangle
+- Symmetrical Triangle (placeholder)
+
+**Suporte/Resistência:**
+- Detecção automática via pivot points
+- Clustering de níveis próximos
+- Cálculo de força (0-100) baseado em touches, volume, idade
+- Detecção de breakouts e bounces
 
 ### 2.7 🧪 Testes em Produção
 
 #### Como Testar
 
 **1. Detecção de Padrões de Candlestick**
+
 ```bash
 # Endpoint: GET /api/patterns/candlestick/{symbol}
-curl https://botderivapi.roilabs.com.br/api/patterns/candlestick/1HZ75V
+curl "https://botderivapi.roilabs.com.br/api/patterns/candlestick/1HZ75V?timeframe=5m"
 
 # Resultado esperado:
 {
@@ -465,45 +499,91 @@ curl https://botderivapi.roilabs.com.br/api/patterns/candlestick/1HZ75V
 }
 ```
 
-**2. Formações Gráficas**
+**2. Suporte e Resistência**
+
 ```bash
-# Endpoint: GET /api/patterns/chart/{symbol}
-curl https://botderivapi.roilabs.com.br/api/patterns/chart/1HZ75V?timeframe=1h
+# Endpoint: GET /api/patterns/support-resistance/{symbol}
+curl "https://botderivapi.roilabs.com.br/api/patterns/support-resistance/1HZ75V?timeframe=5m"
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "current_price": 102.78324,
+  "total_levels": 8,
+  "support_levels": 4,
+  "resistance_levels": 4,
+  "nearest_support": {
+    "price": 102.50,
+    "distance_pct": -0.28,
+    "strength": 75,
+    "touches": 5
+  },
+  "nearest_resistance": {
+    "price": 103.20,
+    "distance_pct": 0.41,
+    "strength": 82,
+    "touches": 6
+  },
+  "breakout_detected": null,
+  "bounce_detected": {
+    "type": "bullish_bounce",
+    "level_price": 102.50,
+    "interpretation": "Rejeição de suporte em 102.50 (força 75)"
+  }
+}
+```
+
+**3. Formações Gráficas**
+
+```bash
+# Endpoint: GET /api/patterns/chart-formations/{symbol}
+curl "https://botderivapi.roilabs.com.br/api/patterns/chart-formations/1HZ75V?timeframe=1h"
 
 # Resultado esperado:
 {
   "symbol": "1HZ75V",
   "timeframe": "1h",
+  "total_formations": 2,
   "formations": [
     {
-      "pattern": "Double Bottom",
+      "name": "Double Bottom",
       "type": "reversal_bullish",
+      "signal": "BUY",
+      "confidence": 85,
       "status": "confirmed",
-      "target_price": 12.80,
-      "stop_loss": 12.10,
-      "probability": 72
+      "price_target": 105.50,
+      "stop_loss": 102.00,
+      "interpretation": "Padrão de reversão bullish. Rompimento acima de 103.80 confirma.",
+      "key_points": [...]
     }
   ]
 }
 ```
 
-**3. Suporte e Resistência Dinâmica**
+**4. Análise Completa de Todos os Padrões**
+
 ```bash
-# Endpoint: GET /api/support-resistance/{symbol}
-curl https://botderivapi.roilabs.com.br/api/support-resistance/1HZ75V
+# Endpoint: GET /api/patterns/all/{symbol}
+curl "https://botderivapi.roilabs.com.br/api/patterns/all/1HZ75V?timeframe=5m"
 
 # Resultado esperado:
 {
-  "current_price": 12.35,
-  "key_levels": {
-    "strong_resistance": [12.50, 12.80],
-    "weak_resistance": [12.45, 12.60],
-    "strong_support": [12.15, 12.00],
-    "weak_support": [12.25, 12.10]
+  "symbol": "1HZ75V",
+  "current_price": 102.78324,
+  "overall_signal": "BUY",
+  "candlestick_patterns": {
+    "total": 5,
+    "buy_signals": 3,
+    "sell_signals": 1,
+    "patterns": [...]
   },
-  "nearest_support": 12.25,
-  "nearest_resistance": 12.45,
-  "zone_strength": "neutral"
+  "support_resistance": {...},
+  "chart_formations": {
+    "total": 2,
+    "buy_signals": 1,
+    "sell_signals": 0,
+    "formations": [...]
+  }
 }
 ```
 
