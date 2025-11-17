@@ -1,0 +1,38 @@
+{
+  "model_name": "random_forest_optimized_deep_trees",
+  "timestamp": "20251117_154636",
+  "metrics": {
+    "accuracy": 0.6209410587873192,
+    "precision": 0.2975551580202743,
+    "recall": 0.23361423220973782,
+    "f1_score": 0.26173616574875425,
+    "auc_roc": 0.5155900534334628,
+    "confusion_matrix": [
+      [
+        28786,
+        8246
+      ],
+      [
+        11459,
+        3493
+      ]
+    ],
+    "model_name": "RF - Deep Trees",
+    "test_samples": 51984
+  },
+  "metadata": {
+    "dataset": "R_100_1m_6months",
+    "train_samples": 207932,
+    "test_samples": 51984,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%",
+    "config": {
+      "name": "Deep Trees",
+      "n_estimators": 200,
+      "max_depth": 30,
+      "min_samples_split": 10,
+      "min_samples_leaf": 5
+    }
+  }
+}

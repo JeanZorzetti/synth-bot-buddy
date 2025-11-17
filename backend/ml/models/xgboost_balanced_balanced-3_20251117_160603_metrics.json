@@ -1,0 +1,77 @@
+{
+  "model_name": "xgboost_balanced_balanced-3",
+  "timestamp": "20251117_160603",
+  "metrics": {
+    "config": "Balanced-3",
+    "threshold": 0.3,
+    "accuracy": 0.41991766697445365,
+    "precision": 0.2952899038591011,
+    "recall": 0.733346709470305,
+    "f1": 0.42104252663914754,
+    "auc_roc": 0.5147224611230915,
+    "balanced_score": 0.5139463797232091
+  },
+  "metadata": {
+    "dataset": "R_100_1m_6months",
+    "train_samples": 207932,
+    "test_samples": 51984,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%",
+    "best_config": {
+      "name": "Balanced-3",
+      "max_depth": 6,
+      "learning_rate": 0.03,
+      "n_estimators": 350,
+      "min_child_weight": 2,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "gamma": 0,
+      "best_threshold": 0.3
+    },
+    "all_results": [
+      {
+        "config": "Balanced-1",
+        "threshold": 0.35,
+        "accuracy": 0.49184364419821486,
+        "precision": 0.29511009436659996,
+        "recall": 0.5521669341894061,
+        "f1": 0.38464405516213196,
+        "auc_roc": 0.5141945945900649,
+        "balanced_score": 0.5099406311955722
+      },
+      {
+        "config": "Balanced-2",
+        "threshold": 0.4,
+        "accuracy": 0.5140235457063712,
+        "precision": 0.29876263710527345,
+        "recall": 0.5119047619047619,
+        "f1": 0.37731384486455843,
+        "auc_roc": 0.5170455625785331,
+        "balanced_score": 0.5133879105658884
+      },
+      {
+        "config": "Balanced-3",
+        "threshold": 0.3,
+        "accuracy": 0.41991766697445365,
+        "precision": 0.2952899038591011,
+        "recall": 0.733346709470305,
+        "f1": 0.42104252663914754,
+        "auc_roc": 0.5147224611230915,
+        "balanced_score": 0.5139463797232091
+      },
+      {
+        "config": "Balanced-4",
+        "threshold": 0.4,
+        "accuracy": 0.5720606340412434,
+        "precision": 0.29981337139093206,
+        "recall": 0.36530230069555913,
+        "f1": 0.3293337353029846,
+        "auc_roc": 0.511680145783133,
+        "balanced_score": 0.5100331340375381
+      }
+    ],
+    "optimization": "balanced_accuracy_recall",
+    "optimal_threshold": 0.3
+  }
+}

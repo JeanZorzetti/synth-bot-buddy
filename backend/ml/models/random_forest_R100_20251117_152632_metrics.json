@@ -1,0 +1,31 @@
+{
+  "model_name": "random_forest_R100",
+  "timestamp": "20251117_152632",
+  "metrics": {
+    "accuracy": 0.6240542946150422,
+    "precision": 0.3247956403269755,
+    "recall": 0.21783625730994152,
+    "f1_score": 0.26077444760446294,
+    "auc_roc": 0.5243523826761401,
+    "confusion_matrix": [
+      [
+        5013,
+        1239
+      ],
+      [
+        2140,
+        596
+      ]
+    ],
+    "model_name": "Random Forest",
+    "test_samples": 8988
+  },
+  "metadata": {
+    "dataset": "R_100_1m",
+    "train_samples": 35948,
+    "test_samples": 8988,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%"
+  }
+}

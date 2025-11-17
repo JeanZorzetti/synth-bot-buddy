@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 from dataclasses import dataclass
 
-from deriv_api import DerivAPI, DerivAPIStatus, DerivTick, DerivBalance, DerivContract
+from deriv_api_legacy import DerivAPI, DerivAPIStatus, DerivTick, DerivBalance, DerivContract
 from enhanced_websocket_manager import ConnectionState
 
 logger = logging.getLogger(__name__)

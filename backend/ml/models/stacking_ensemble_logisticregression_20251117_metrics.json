@@ -1,0 +1,95 @@
+{
+  "meta_learner": "LogisticRegression",
+  "metrics": {
+    "meta_learner": "LogisticRegression",
+    "accuracy": 0.7123730378578024,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "auc_roc": 0.4821476539428945,
+    "confusion_matrix": [
+      [
+        37032,
+        0
+      ],
+      [
+        14952,
+        0
+      ]
+    ]
+  },
+  "metadata": {
+    "dataset": "R_100_1m_6months",
+    "train_samples": 207932,
+    "test_samples": 51984,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%",
+    "meta_learner": "LogisticRegression",
+    "base_models": [
+      "XGBoost",
+      "RandomForest"
+    ],
+    "all_results": [
+      {
+        "meta_learner": "LogisticRegression",
+        "accuracy": 0.7123730378578024,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "auc_roc": 0.4821476539428945,
+        "confusion_matrix": [
+          [
+            37032,
+            0
+          ],
+          [
+            14952,
+            0
+          ]
+        ]
+      },
+      {
+        "meta_learner": "XGBoost-Meta",
+        "accuracy": 0.7123730378578024,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "auc_roc": 0.4832635854045974,
+        "confusion_matrix": [
+          [
+            37032,
+            0
+          ],
+          [
+            14952,
+            0
+          ]
+        ]
+      },
+      {
+        "meta_learner": "RandomForest-Meta",
+        "accuracy": 0.7123730378578024,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "auc_roc": 0.48403431070879255,
+        "confusion_matrix": [
+          [
+            37032,
+            0
+          ],
+          [
+            14952,
+            0
+          ]
+        ]
+      }
+    ],
+    "comparison": {
+      "random_forest": 0.6209,
+      "xgboost": 0.6814,
+      "ensemble": 0.7123730378578024
+    }
+  }
+}

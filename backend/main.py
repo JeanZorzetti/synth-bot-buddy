@@ -19,74 +19,99 @@ from contract_proposals_engine import (
     ContractProposalsEngine, ProposalRequest, ProposalResponse,
     get_proposals_engine, initialize_proposals_engine
 )
-from deriv_api import DerivAPI
+from deriv_api_legacy import DerivAPI as DerivAPILegacy
 from models.order_models import OrderRequest, OrderResponse
 from analysis import TechnicalAnalysis
 from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
+from ml_predictor import get_ml_predictor, initialize_ml_predictor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global token storage for API authentication
+_api_token: Optional[str] = None
+_app_id: str = "99188"
+
 # Helper function to fetch candles from Deriv API
 async def fetch_deriv_candles(symbol: str, timeframe: str, count: int):
     """
-    Fetch candles from Deriv API using authenticated WebSocket
-    Returns (df, data_source) tuple
+    Fetch candles from Deriv API using official python-deriv-api library
+
+    Returns (df, data_source) tuple where data_source indicates origin of data.
     """
     import pandas as pd
-    global ws_manager  # Access global ws_manager instance
+    from deriv_api import DerivAPI
 
-    if ws_manager and ws_manager.state == ConnectionState.AUTHENTICATED:
-        try:
-            timeframe_map = {
-                '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
-                '1h': 3600, '4h': 14400, '1d': 86400
-            }
-            granularity = timeframe_map.get(timeframe, 60)
+    global _api_token
 
-            request = {
-                "ticks_history": symbol,
-                "adjust_start_time": 1,
-                "count": count,
-                "end": "latest",
-                "style": "candles",
-                "granularity": granularity
-            }
+    if not _api_token:
+        logger.warning("Token não disponível, usando dados sintéticos")
+        return create_sample_dataframe(bars=count), "synthetic_no_token"
 
-            logger.info(f"Buscando {count} candles de {symbol} via Deriv API")
-            response = await ws_manager.send(request)
+    try:
+        logger.info(f">> Buscando {count} candles de {symbol} via Deriv API...")
 
-            if 'error' in response:
-                raise Exception(f"Deriv API error: {response['error'].get('message', 'Unknown error')}")
+        # Map timeframe to granularity
+        timeframe_map = {
+            '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
+            '1h': 3600, '4h': 14400, '1d': 86400
+        }
+        granularity = timeframe_map.get(timeframe, 60)
 
-            candles = response.get('candles', [])
-            if not candles:
-                raise Exception(f"No candles returned for {symbol}")
+        # Create API instance
+        api = DerivAPI(app_id=int(_app_id))
 
-            # Converter para DataFrame
-            df = pd.DataFrame(candles)
-            df = df.rename(columns={'epoch': 'timestamp'})
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-            df['open'] = df['open'].astype(float)
-            df['high'] = df['high'].astype(float)
-            df['low'] = df['low'].astype(float)
-            df['close'] = df['close'].astype(float)
+        # Wait for connection
+        await api.connected
+        logger.info("[OK] DerivAPI conectado")
 
-            if 'volume' not in df.columns:
-                df['volume'] = 0
+        # Authorize
+        await api.authorize(_api_token)
+        logger.info("[OK] DerivAPI autenticado")
 
-            df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
-            logger.info(f"✅ Dados reais carregados: {len(df)} candles de {symbol}")
-            return df, "deriv_api"
+        # Request ticks_history
+        response = await api.ticks_history({
+            "ticks_history": symbol,
+            "adjust_start_time": 1,
+            "count": count,
+            "end": "latest",
+            "style": "candles",
+            "granularity": granularity
+        })
 
-        except Exception as e:
-            logger.warning(f"❌ Erro ao buscar dados do Deriv: {e}")
-            logger.info("Usando dados sintéticos como fallback")
-            return create_sample_dataframe(bars=count), "synthetic_fallback"
-    else:
-        logger.info("WebSocket não conectado, usando dados sintéticos")
-        return create_sample_dataframe(bars=count), "synthetic_no_connection"
+        if 'error' in response:
+            raise Exception(f"Deriv API error: {response['error']}")
+
+        candles = response.get('candles', [])
+        if not candles:
+            raise Exception(f"No candles returned for {symbol}")
+
+        # Convert to DataFrame
+        df = pd.DataFrame(candles)
+        df = df.rename(columns={'epoch': 'timestamp'})
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+        df['open'] = df['open'].astype(float)
+        df['high'] = df['high'].astype(float)
+        df['low'] = df['low'].astype(float)
+        df['close'] = df['close'].astype(float)
+
+        if 'volume' not in df.columns:
+            df['volume'] = 0
+
+        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+
+        logger.info(f"[OK] {len(df)} candles reais carregados de {symbol}")
+
+        # Clean up
+        await api.clear()
+
+        return df, "deriv_api"
+
+    except Exception as e:
+        logger.warning(f"[ERROR] Erro ao buscar dados: {e}")
+        logger.info("Usando dados sintéticos como fallback")
+        return create_sample_dataframe(bars=count), "synthetic_fallback"
 
 # Request models
 class ConnectRequest(BaseModel):
@@ -449,6 +474,149 @@ async def cors_test(request: Request):
         "method": request.method,
         "url": str(request.url)
     }
+
+# === MACHINE LEARNING - FASE 3 ===
+
+# Inicializar ML Predictor com threshold otimizado
+ml_predictor = None  # Lazy initialization
+
+@app.get("/api/ml/info")
+async def get_ml_info():
+    """
+    Retorna informações sobre o modelo ML configurado
+
+    Returns:
+        Dict com informações do modelo, threshold, e performance esperada
+    """
+    try:
+        global ml_predictor
+        if ml_predictor is None:
+            ml_predictor = get_ml_predictor(threshold=0.30)
+
+        return ml_predictor.get_model_info()
+
+    except Exception as e:
+        logger.error(f"Erro ao obter info do modelo ML: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ml/predict/{symbol}")
+async def get_ml_prediction(
+    symbol: str,
+    timeframe: str = "1m",
+    count: int = 200,
+    threshold: Optional[float] = None
+):
+    """
+    Faz previsão de movimento de preço usando ML
+
+    Args:
+        symbol: Símbolo do ativo (ex: R_100, 1HZ100V)
+        timeframe: Timeframe dos candles (1m, 5m, etc.)
+        count: Número de candles para análise (mínimo: 200)
+        threshold: Threshold customizado (None = usa 0.30)
+
+    Returns:
+        Dict com:
+        - prediction: "PRICE_UP" ou "NO_MOVE"
+        - confidence: float (0-1)
+        - signal_strength: "HIGH", "MEDIUM", "LOW"
+        - threshold_used: float
+        - model: nome do modelo
+    """
+    try:
+        global ml_predictor
+
+        # Inicializar ML predictor se necessário
+        if ml_predictor is None or (threshold and threshold != ml_predictor.threshold):
+            ml_predictor = get_ml_predictor(threshold=threshold or 0.30)
+
+        logger.info(f"Fazendo previsão ML para {symbol} ({timeframe})")
+
+        # Buscar dados
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, max(count, 200))
+
+        if len(df) < 200:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Dados insuficientes: {len(df)} candles (mínimo: 200)"
+            )
+
+        # Fazer previsão
+        prediction = ml_predictor.predict(df, return_confidence=True)
+
+        # Adicionar contexto
+        prediction["symbol"] = symbol
+        prediction["timeframe"] = timeframe
+        prediction["data_source"] = data_source
+        prediction["candles_analyzed"] = len(df)
+
+        return prediction
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro na previsão ML para {symbol}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ml/predict")
+async def post_ml_prediction(request: Request):
+    """
+    Faz previsão ML com dados customizados
+
+    Body:
+    {
+        "candles": [
+            {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "timestamp": "2025-01-01T00:00:00"},
+            ...
+        ],
+        "threshold": 0.30  // opcional
+    }
+
+    Returns:
+        Dict com prediction, confidence, signal_strength
+    """
+    try:
+        global ml_predictor
+
+        body = await request.json()
+        candles = body.get("candles", [])
+        threshold = body.get("threshold")
+
+        if not candles:
+            raise HTTPException(status_code=400, detail="Candles não fornecidos")
+
+        if len(candles) < 200:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Dados insuficientes: {len(candles)} candles (mínimo: 200)"
+            )
+
+        # Converter para DataFrame
+        import pandas as pd
+        df = pd.DataFrame(candles)
+
+        # Validar colunas
+        required_cols = ['open', 'high', 'low', 'close', 'timestamp']
+        if not all(col in df.columns for col in required_cols):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Colunas obrigatórias: {required_cols}"
+            )
+
+        # Inicializar ML predictor se necessário
+        if ml_predictor is None or (threshold and threshold != ml_predictor.threshold):
+            ml_predictor = get_ml_predictor(threshold=threshold or 0.30)
+
+        # Fazer previsão
+        prediction = ml_predictor.predict(df, return_confidence=True)
+
+        return prediction
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro na previsão ML com dados customizados: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # === ANÁLISE TÉCNICA - FASE 1 ===
 
@@ -1196,19 +1364,23 @@ async def get_status():
 @app.post("/connect")
 async def connect_to_deriv(request: ConnectRequest):
     """Connect to Deriv WebSocket API with provided token"""
-    global ws_manager
-    
+    global ws_manager, _api_token
+
     try:
+        # Store token for data fetching
+        _api_token = request.api_token
+        logger.info("[OK] Token armazenado para busca de dados")
+
         # Create new WebSocket manager with provided token
         app_id = os.getenv("DERIV_APP_ID", "99188")
         ws_manager = DerivWebSocketManager(app_id=app_id, api_token=request.api_token)
-        
+
         # Set up event handlers
         ws_manager.set_tick_handler(handle_tick_data)
         ws_manager.set_balance_handler(handle_balance_update)
         ws_manager.set_trade_handler(handle_trade_result)
         ws_manager.set_connection_handler(handle_connection_status)
-        
+
         # Connect
         logger.info(f"Attempting connection with token: {request.api_token[:10]}...")
         success = await ws_manager.connect()

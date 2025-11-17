@@ -1,0 +1,145 @@
+{
+  "model_name": "xgboost_improved_learning_rate",
+  "timestamp": "20251117_160409",
+  "metrics": {
+    "experiment": "learning_rate",
+    "config": "Muito lento",
+    "accuracy": 0.6814212065250846,
+    "precision": 0.29292149292149294,
+    "recall": 0.07611021936864633,
+    "f1": 0.12082603386951213,
+    "auc_roc": 0.5156189958728448
+  },
+  "metadata": {
+    "dataset": "R_100_1m_6months",
+    "train_samples": 207932,
+    "test_samples": 51984,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%",
+    "best_config": {
+      "experiment": "learning_rate",
+      "name": "Muito lento",
+      "lr": 0.01
+    },
+    "all_experiments": [
+      {
+        "experiment": "scale_pos_weight",
+        "config": "Sem balanceamento",
+        "accuracy": 0.5472453062480763,
+        "precision": 0.294778617194224,
+        "recall": 0.41231942215088285,
+        "f1": 0.34377962415658286,
+        "auc_roc": 0.5127831650754583
+      },
+      {
+        "experiment": "scale_pos_weight",
+        "config": "Balanceamento leve",
+        "accuracy": 0.5120806401969837,
+        "precision": 0.2932157610422625,
+        "recall": 0.493713215623328,
+        "f1": 0.3679226475279107,
+        "auc_roc": 0.5080829837159619
+      },
+      {
+        "experiment": "scale_pos_weight",
+        "config": "Balanceamento m\u00e9dio",
+        "accuracy": 0.4706832871652816,
+        "precision": 0.2952011475516724,
+        "recall": 0.6056046013911183,
+        "f1": 0.39692280717134965,
+        "auc_roc": 0.5105202258951841
+      },
+      {
+        "experiment": "scale_pos_weight",
+        "config": "Balanceamento natural",
+        "accuracy": 0.44290550938750384,
+        "precision": 0.2936723030695811,
+        "recall": 0.6667335473515249,
+        "f1": 0.4077467381078981,
+        "auc_roc": 0.5125707251683821
+      },
+      {
+        "experiment": "feature_scaling",
+        "config": "StandardScaler",
+        "accuracy": 0.557113727300708,
+        "precision": 0.2973027274097142,
+        "recall": 0.39586677367576245,
+        "f1": 0.33957717793522846,
+        "auc_roc": 0.514348937410544
+      },
+      {
+        "experiment": "learning_rate",
+        "config": "Muito lento",
+        "accuracy": 0.6814212065250846,
+        "precision": 0.29292149292149294,
+        "recall": 0.07611021936864633,
+        "f1": 0.12082603386951213,
+        "auc_roc": 0.5156189958728448
+      },
+      {
+        "experiment": "learning_rate",
+        "config": "Lento",
+        "accuracy": 0.5765043090181594,
+        "precision": 0.2939975500204165,
+        "recall": 0.33707865168539325,
+        "f1": 0.31406761177753545,
+        "auc_roc": 0.5136750032595123
+      },
+      {
+        "experiment": "learning_rate",
+        "config": "M\u00e9dio",
+        "accuracy": 0.570040781779009,
+        "precision": 0.29718765418562576,
+        "recall": 0.3625601926163724,
+        "f1": 0.326635133913777,
+        "auc_roc": 0.5149280056301141
+      },
+      {
+        "experiment": "learning_rate",
+        "config": "Padr\u00e3o",
+        "accuracy": 0.5267582333025547,
+        "precision": 0.2945360078361228,
+        "recall": 0.46254681647940077,
+        "f1": 0.35989904509145787,
+        "auc_roc": 0.512964202738314
+      },
+      {
+        "experiment": "max_depth",
+        "config": "Raso",
+        "accuracy": 0.6537203755001539,
+        "precision": 0.2947906851527797,
+        "recall": 0.14646869983948635,
+        "f1": 0.19570171127295474,
+        "auc_roc": 0.5098384698537299
+      },
+      {
+        "experiment": "max_depth",
+        "config": "M\u00e9dio",
+        "accuracy": 0.5953562634656817,
+        "precision": 0.2981617891034574,
+        "recall": 0.3004949170679508,
+        "f1": 0.29932380666866526,
+        "auc_roc": 0.513910327298092
+      },
+      {
+        "experiment": "max_depth",
+        "config": "Profundo",
+        "accuracy": 0.5670975684826101,
+        "precision": 0.29323184755229437,
+        "recall": 0.35814606741573035,
+        "f1": 0.32245438670440174,
+        "auc_roc": 0.5120349798551737
+      },
+      {
+        "experiment": "max_depth",
+        "config": "Muito profundo",
+        "accuracy": 0.5625,
+        "precision": 0.29275948289620685,
+        "recall": 0.36804440877474587,
+        "f1": 0.3261133663219651,
+        "auc_roc": 0.5129212952174979
+      }
+    ]
+  }
+}

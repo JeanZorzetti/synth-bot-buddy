@@ -1,0 +1,2654 @@
+{
+  "0.25": {
+    "threshold": 0.25,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.33793214285714285,
+        "std": 0.03080973644310963,
+        "min": 0.2864,
+        "max": 0.39565
+      },
+      "precision": {
+        "mean": 0.30133368678524547,
+        "std": 0.011042101693869199
+      },
+      "recall": {
+        "mean": 0.9818888098362921,
+        "std": 0.018519722619837718
+      },
+      "f1_score": {
+        "mean": 0.4610458532432951,
+        "std": 0.013783661447839907
+      },
+      "trading": {
+        "total_profit": -7644.9,
+        "avg_profit_per_window": -546.0642857142857,
+        "std_profit": 200.23033381991004,
+        "best_window_profit": -220.5,
+        "worst_window_profit": -886.1999999999998,
+        "avg_sharpe": -1.111594653427637,
+        "max_drawdown": 904.4999999997755,
+        "avg_drawdown": 614.3142857142477
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.25,
+        "accuracy": 0.36625,
+        "precision": 0.3072647220693451,
+        "recall": 0.9844824545935461,
+        "f1_score": 0.46835283754876056,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            1742,
+            12587
+          ],
+          [
+            88,
+            5583
+          ]
+        ],
+        "trading": {
+          "total_trades": 18170,
+          "winning_trades": 5583,
+          "losing_trades": 12587,
+          "win_rate": 0.3072647220693451,
+          "total_profit": -426.3000000000002,
+          "avg_profit_per_trade": -0.023461750137589443,
+          "max_drawdown": 513.9000000000298,
+          "sharpe_ratio": -0.8963748904304799
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.25,
+        "accuracy": 0.33285,
+        "precision": 0.30153813848495986,
+        "recall": 0.9934278796264269,
+        "f1_score": 0.4626474970802626,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            913,
+            13305
+          ],
+          [
+            38,
+            5744
+          ]
+        ],
+        "trading": {
+          "total_trades": 19049,
+          "winning_trades": 5744,
+          "losing_trades": 13305,
+          "win_rate": 0.30153813848495986,
+          "total_profit": -545.0999999999999,
+          "avg_profit_per_trade": -0.02861567536353614,
+          "max_drawdown": 601.8000000000063,
+          "sharpe_ratio": -1.0992501312170806
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.25,
+        "accuracy": 0.333,
+        "precision": 0.30865994386110823,
+        "recall": 0.9933087989294078,
+        "f1_score": 0.4709708121827411,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            722,
+            13300
+          ],
+          [
+            40,
+            5938
+          ]
+        ],
+        "trading": {
+          "total_trades": 19238,
+          "winning_trades": 5938,
+          "losing_trades": 13300,
+          "win_rate": 0.30865994386110823,
+          "total_profit": -427.2000000000003,
+          "avg_profit_per_trade": -0.022206050525002612,
+          "max_drawdown": 600.3000000000534,
+          "sharpe_ratio": -0.8491593505966853
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.25,
+        "accuracy": 0.3818,
+        "precision": 0.3197312902509438,
+        "recall": 0.9810902896081771,
+        "f1_score": 0.48228791558495937,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            1877,
+            12253
+          ],
+          [
+            111,
+            5759
+          ]
+        ],
+        "trading": {
+          "total_trades": 18012,
+          "winning_trades": 5759,
+          "losing_trades": 12253,
+          "win_rate": 0.3197312902509438,
+          "total_profit": -220.5,
+          "avg_profit_per_trade": -0.012241838774150566,
+          "max_drawdown": 376.80000000005697,
+          "sharpe_ratio": -0.4623789370484487
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.25,
+        "accuracy": 0.39565,
+        "precision": 0.3185109172795166,
+        "recall": 0.9767482517482518,
+        "f1_score": 0.4803748764025622,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            2326,
+            11954
+          ],
+          [
+            133,
+            5587
+          ]
+        ],
+        "trading": {
+          "total_trades": 17541,
+          "winning_trades": 5587,
+          "losing_trades": 11954,
+          "win_rate": 0.3185109172795166,
+          "total_profit": -234.0,
+          "avg_profit_per_trade": -0.013340174448435094,
+          "max_drawdown": 306.9000000000559,
+          "sharpe_ratio": -0.5063824868845338
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.25,
+        "accuracy": 0.3598,
+        "precision": 0.30777596519847744,
+        "recall": 0.9870945238925707,
+        "f1_score": 0.46924224838335266,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            1536,
+            12730
+          ],
+          [
+            74,
+            5660
+          ]
+        ],
+        "trading": {
+          "total_trades": 18390,
+          "winning_trades": 5660,
+          "losing_trades": 12730,
+          "win_rate": 0.30777596519847744,
+          "total_profit": -423.0,
+          "avg_profit_per_trade": -0.02300163132137031,
+          "max_drawdown": 481.20000000006695,
+          "sharpe_ratio": -0.8783844723788743
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.25,
+        "accuracy": 0.3409,
+        "precision": 0.30451824778854814,
+        "recall": 0.9910360282709878,
+        "f1_score": 0.46588330632090763,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            1069,
+            13130
+          ],
+          [
+            52,
+            5749
+          ]
+        ],
+        "trading": {
+          "total_trades": 18879,
+          "winning_trades": 5749,
+          "losing_trades": 13130,
+          "win_rate": 0.30451824778854814,
+          "total_profit": -489.5999999999999,
+          "avg_profit_per_trade": -0.025933576990306684,
+          "max_drawdown": 549.3000000000385,
+          "sharpe_ratio": -0.9933927777488366
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.25,
+        "accuracy": 0.32065,
+        "precision": 0.29620213759468716,
+        "recall": 0.9961612284069098,
+        "f1_score": 0.45662867426514697,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            704,
+            13565
+          ],
+          [
+            22,
+            5709
+          ]
+        ],
+        "trading": {
+          "total_trades": 19274,
+          "winning_trades": 5709,
+          "losing_trades": 13565,
+          "win_rate": 0.29620213759468716,
+          "total_profit": -644.0999999999999,
+          "avg_profit_per_trade": -0.03341807616478157,
+          "max_drawdown": 676.7999999999428,
+          "sharpe_ratio": -1.290431100104326
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.25,
+        "accuracy": 0.3523,
+        "precision": 0.3039025442000862,
+        "recall": 0.9929552659387109,
+        "f1_score": 0.4653735039207594,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            1408,
+            12914
+          ],
+          [
+            40,
+            5638
+          ]
+        ],
+        "trading": {
+          "total_trades": 18552,
+          "winning_trades": 5638,
+          "losing_trades": 12914,
+          "win_rate": 0.3039025442000862,
+          "total_profit": -491.4000000000001,
+          "avg_profit_per_trade": -0.026487710219922387,
+          "max_drawdown": 583.2000000000195,
+          "sharpe_ratio": -1.0151999408954215
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.25,
+        "accuracy": 0.34635,
+        "precision": 0.30257925846319184,
+        "recall": 0.9835807860262009,
+        "f1_score": 0.4627902198479556,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            1296,
+            12979
+          ],
+          [
+            94,
+            5631
+          ]
+        ],
+        "trading": {
+          "total_trades": 18610,
+          "winning_trades": 5631,
+          "losing_trades": 12979,
+          "win_rate": 0.30257925846319184,
+          "total_profit": -515.0999999999999,
+          "avg_profit_per_trade": -0.027678667383127346,
+          "max_drawdown": 540.3000000000734,
+          "sharpe_ratio": -1.064094206623644
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.25,
+        "accuracy": 0.3099,
+        "precision": 0.294526543432367,
+        "recall": 0.9826490293763958,
+        "f1_score": 0.45321289913636004,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            478,
+            13701
+          ],
+          [
+            101,
+            5720
+          ]
+        ],
+        "trading": {
+          "total_trades": 19421,
+          "winning_trades": 5720,
+          "losing_trades": 13701,
+          "win_rate": 0.294526543432367,
+          "total_profit": -678.3000000000002,
+          "avg_profit_per_trade": -0.03492611091086969,
+          "max_drawdown": 775.4999999998665,
+          "sharpe_ratio": -1.3509185240259765
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.25,
+        "accuracy": 0.2864,
+        "precision": 0.28380281690140846,
+        "recall": 0.9940098661028893,
+        "f1_score": 0.44154014712787604,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            86,
+            14238
+          ],
+          [
+            34,
+            5642
+          ]
+        ],
+        "trading": {
+          "total_trades": 19880,
+          "winning_trades": 5642,
+          "losing_trades": 14238,
+          "win_rate": 0.28380281690140846,
+          "total_profit": -886.1999999999998,
+          "avg_profit_per_trade": -0.04457746478873238,
+          "max_drawdown": 904.4999999997755,
+          "sharpe_ratio": -1.7434788333582638
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.25,
+        "accuracy": 0.2931,
+        "precision": 0.2848435179019618,
+        "recall": 0.9693219452675614,
+        "f1_score": 0.4403008709422011,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            301,
+            13962
+          ],
+          [
+            176,
+            5561
+          ]
+        ],
+        "trading": {
+          "total_trades": 19523,
+          "winning_trades": 5561,
+          "losing_trades": 13962,
+          "win_rate": 0.2848435179019618,
+          "total_profit": -851.9999999999995,
+          "avg_profit_per_trade": -0.043640833888234365,
+          "max_drawdown": 854.0999999996616,
+          "sharpe_ratio": -1.7049423442457428
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.25,
+        "accuracy": 0.3121,
+        "precision": 0.2848155715668351,
+        "recall": 0.9205769899200557,
+        "f1_score": 0.43503613666228647,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            945,
+            13301
+          ],
+          [
+            457,
+            5297
+          ]
+        ],
+        "trading": {
+          "total_trades": 18598,
+          "winning_trades": 5297,
+          "losing_trades": 13301,
+          "win_rate": 0.2848155715668351,
+          "total_profit": -812.0999999999999,
+          "avg_profit_per_trade": -0.04366598558984837,
+          "max_drawdown": 835.7999999998211,
+          "sharpe_ratio": -1.707937152428607
+        }
+      }
+    ]
+  },
+  "0.3": {
+    "threshold": 0.3,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.6257892857142858,
+        "std": 0.12971612023757803,
+        "min": 0.3287,
+        "max": 0.72595
+      },
+      "precision": {
+        "mean": 0.43011853940649875,
+        "std": 0.08064287217464554
+      },
+      "recall": {
+        "mean": 0.5403004923141361,
+        "std": 0.15127249225769307
+      },
+      "f1_score": {
+        "mean": 0.45737481315642337,
+        "std": 0.04832817445120493
+      },
+      "trading": {
+        "total_profit": 5832.0,
+        "avg_profit_per_window": 416.57142857142856,
+        "std_profit": 577.9289210232536,
+        "best_window_profit": 982.1999999999999,
+        "worst_window_profit": -753.5999999999999,
+        "avg_sharpe": 3.0501830603701388,
+        "max_drawdown": 764.3999999998347,
+        "avg_drawdown": 178.75714285713005
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.3,
+        "accuracy": 0.72595,
+        "precision": 0.5158916025426564,
+        "recall": 0.5438194321989067,
+        "f1_score": 0.5294875096574814,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            11435,
+            2894
+          ],
+          [
+            2587,
+            3084
+          ]
+        ],
+        "trading": {
+          "total_trades": 5978,
+          "winning_trades": 3084,
+          "losing_trades": 2894,
+          "win_rate": 0.5158916025426564,
+          "total_profit": 982.1999999999999,
+          "avg_profit_per_trade": 0.16430244228839075,
+          "max_drawdown": 26.399999999989973,
+          "sharpe_ratio": 5.7963724676404
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.3,
+        "accuracy": 0.7029,
+        "precision": 0.4871671478986205,
+        "recall": 0.5252507782774126,
+        "f1_score": 0.5054926764314248,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            11021,
+            3197
+          ],
+          [
+            2745,
+            3037
+          ]
+        ],
+        "trading": {
+          "total_trades": 6234,
+          "winning_trades": 3037,
+          "losing_trades": 3197,
+          "win_rate": 0.4871671478986205,
+          "total_profit": 863.1000000000001,
+          "avg_profit_per_trade": 0.13845043310875843,
+          "max_drawdown": 26.400000000002507,
+          "sharpe_ratio": 4.888144367744464
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.3,
+        "accuracy": 0.66825,
+        "precision": 0.44996191926885,
+        "recall": 0.49414519906323184,
+        "f1_score": 0.47101969225863033,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            10411,
+            3611
+          ],
+          [
+            3024,
+            2954
+          ]
+        ],
+        "trading": {
+          "total_trades": 6565,
+          "winning_trades": 2954,
+          "losing_trades": 3611,
+          "win_rate": 0.44996191926885,
+          "total_profit": 689.0999999999999,
+          "avg_profit_per_trade": 0.10496572734196495,
+          "max_drawdown": 46.50000000000176,
+          "sharpe_ratio": 3.7189148772618275
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.3,
+        "accuracy": 0.69555,
+        "precision": 0.4786508091245857,
+        "recall": 0.4182282793867121,
+        "f1_score": 0.44640421856532414,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            11456,
+            2674
+          ],
+          [
+            3415,
+            2455
+          ]
+        ],
+        "trading": {
+          "total_trades": 5129,
+          "winning_trades": 2455,
+          "losing_trades": 2674,
+          "win_rate": 0.4786508091245857,
+          "total_profit": 670.8000000000001,
+          "avg_profit_per_trade": 0.13078572821212714,
+          "max_drawdown": 46.4999999999996,
+          "sharpe_ratio": 4.620827669977025
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.3,
+        "accuracy": 0.71425,
+        "precision": 0.5005850690381465,
+        "recall": 0.37395104895104897,
+        "f1_score": 0.4280996697688382,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            12146,
+            2134
+          ],
+          [
+            3581,
+            2139
+          ]
+        ],
+        "trading": {
+          "total_trades": 4273,
+          "winning_trades": 2139,
+          "losing_trades": 2134,
+          "win_rate": 0.5005850690381465,
+          "total_profit": 643.1999999999999,
+          "avg_profit_per_trade": 0.15052656213433183,
+          "max_drawdown": 31.200000000001182,
+          "sharpe_ratio": 5.313803520264086
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.3,
+        "accuracy": 0.70395,
+        "precision": 0.47503337783711613,
+        "recall": 0.31025462155563305,
+        "f1_score": 0.37535605021626756,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            12300,
+            1966
+          ],
+          [
+            3955,
+            1779
+          ]
+        ],
+        "trading": {
+          "total_trades": 3745,
+          "winning_trades": 1779,
+          "losing_trades": 1966,
+          "win_rate": 0.47503337783711613,
+          "total_profit": 477.5999999999999,
+          "avg_profit_per_trade": 0.12753004005340451,
+          "max_drawdown": 31.199999999999584,
+          "sharpe_ratio": 4.508432170376698
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.3,
+        "accuracy": 0.676,
+        "precision": 0.4408845551105694,
+        "recall": 0.4364764695742113,
+        "f1_score": 0.4386694386694387,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            10988,
+            3211
+          ],
+          [
+            3269,
+            2532
+          ]
+        ],
+        "trading": {
+          "total_trades": 5743,
+          "winning_trades": 2532,
+          "losing_trades": 3211,
+          "win_rate": 0.4408845551105694,
+          "total_profit": 555.9000000000001,
+          "avg_profit_per_trade": 0.09679609959951246,
+          "max_drawdown": 38.400000000001455,
+          "sharpe_ratio": 3.4411561378988256
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.3,
+        "accuracy": 0.67995,
+        "precision": 0.4516315333525845,
+        "recall": 0.5458035246902809,
+        "f1_score": 0.4942719443786047,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            10471,
+            3798
+          ],
+          [
+            2603,
+            3128
+          ]
+        ],
+        "trading": {
+          "total_trades": 6926,
+          "winning_trades": 3128,
+          "losing_trades": 3798,
+          "win_rate": 0.4516315333525845,
+          "total_profit": 737.4000000000001,
+          "avg_profit_per_trade": 0.10646838001732603,
+          "max_drawdown": 38.39999999999992,
+          "sharpe_ratio": 3.775581710609969
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.3,
+        "accuracy": 0.71215,
+        "precision": 0.494050308781443,
+        "recall": 0.5776681930257133,
+        "f1_score": 0.5325972233498417,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            10963,
+            3359
+          ],
+          [
+            2398,
+            3280
+          ]
+        ],
+        "trading": {
+          "total_trades": 6639,
+          "winning_trades": 3280,
+          "losing_trades": 3359,
+          "win_rate": 0.494050308781443,
+          "total_profit": 960.3000000000001,
+          "avg_profit_per_trade": 0.1446452779032987,
+          "max_drawdown": 45.89999999998872,
+          "sharpe_ratio": 5.100556297938143
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.3,
+        "accuracy": 0.70435,
+        "precision": 0.4853216739537789,
+        "recall": 0.542882096069869,
+        "f1_score": 0.5124907247093742,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            10979,
+            3296
+          ],
+          [
+            2617,
+            3108
+          ]
+        ],
+        "trading": {
+          "total_trades": 6404,
+          "winning_trades": 3108,
+          "losing_trades": 3296,
+          "win_rate": 0.4853216739537789,
+          "total_profit": 876.0,
+          "avg_profit_per_trade": 0.136789506558401,
+          "max_drawdown": 45.90000000000174,
+          "sharpe_ratio": 4.825030634834126
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.3,
+        "accuracy": 0.62515,
+        "precision": 0.37694566813509545,
+        "recall": 0.4409895207009105,
+        "f1_score": 0.4064602960969044,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            9936,
+            4243
+          ],
+          [
+            3254,
+            2567
+          ]
+        ],
+        "trading": {
+          "total_trades": 6810,
+          "winning_trades": 2567,
+          "losing_trades": 4243,
+          "win_rate": 0.37694566813509545,
+          "total_profit": 267.3000000000002,
+          "avg_profit_per_trade": 0.03925110132158593,
+          "max_drawdown": 177.9000000000072,
+          "sharpe_ratio": 1.4256599016603062
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.3,
+        "accuracy": 0.42155,
+        "precision": 0.289790968110152,
+        "recall": 0.7156448202959831,
+        "f1_score": 0.4125323719088001,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            4369,
+            9955
+          ],
+          [
+            1614,
+            4062
+          ]
+        ],
+        "trading": {
+          "total_trades": 14017,
+          "winning_trades": 4062,
+          "losing_trades": 9955,
+          "win_rate": 0.289790968110152,
+          "total_profit": -549.3000000000002,
+          "avg_profit_per_trade": -0.03918812870086325,
+          "max_drawdown": 572.4000000000008,
+          "sharpe_ratio": -1.5228647274070315
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.3,
+        "accuracy": 0.3287,
+        "precision": 0.28692567754807957,
+        "recall": 0.9023880076695137,
+        "f1_score": 0.43540790580319594,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            1397,
+            12866
+          ],
+          [
+            560,
+            5177
+          ]
+        ],
+        "trading": {
+          "total_trades": 18043,
+          "winning_trades": 5177,
+          "losing_trades": 12866,
+          "win_rate": 0.28692567754807957,
+          "total_profit": -753.5999999999999,
+          "avg_profit_per_trade": -0.041766890206728365,
+          "max_drawdown": 764.3999999998347,
+          "sharpe_ratio": -1.6281025279213779
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.3,
+        "accuracy": 0.40235,
+        "precision": 0.288819240989303,
+        "recall": 0.7367049009384776,
+        "f1_score": 0.41495766237580145,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            3808,
+            10438
+          ],
+          [
+            1515,
+            4239
+          ]
+        ],
+        "trading": {
+          "total_trades": 14677,
+          "winning_trades": 4239,
+          "losing_trades": 10438,
+          "win_rate": 0.288819240989303,
+          "total_profit": -588.0,
+          "avg_profit_per_trade": -0.04006268310962731,
+          "max_drawdown": 611.0999999999917,
+          "sharpe_ratio": -1.5609496556955185
+        }
+      }
+    ]
+  },
+  "0.35": {
+    "threshold": 0.35,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.6735571428571427,
+        "std": 0.10021296048405912,
+        "min": 0.4248,
+        "max": 0.7421
+      },
+      "precision": {
+        "mean": 0.7004648884174168,
+        "std": 0.24946182886395013
+      },
+      "recall": {
+        "mean": 0.1588157512266183,
+        "std": 0.20284596693340945
+      },
+      "f1_score": {
+        "mean": 0.16245984051605378,
+        "std": 0.12461003209113831
+      },
+      "trading": {
+        "total_profit": 608.7,
+        "avg_profit_per_window": 43.478571428571435,
+        "std_profit": 286.2480522168826,
+        "best_window_profit": 351.9,
+        "worst_window_profit": -569.3999999999996,
+        "avg_sharpe": 18.177648916241058,
+        "max_drawdown": 569.3999999999892,
+        "avg_drawdown": 102.53571428571763
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.35,
+        "accuracy": 0.7421,
+        "precision": 0.845222072678331,
+        "recall": 0.1107388467642391,
+        "f1_score": 0.19582164016214532,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            14214,
+            115
+          ],
+          [
+            5043,
+            628
+          ]
+        ],
+        "trading": {
+          "total_trades": 743,
+          "winning_trades": 628,
+          "losing_trades": 115,
+          "win_rate": 0.845222072678331,
+          "total_profit": 342.3,
+          "avg_profit_per_trade": 0.460699865410498,
+          "max_drawdown": 3.6000000000000085,
+          "sharpe_ratio": 22.44502270992532
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.35,
+        "accuracy": 0.735,
+        "precision": 0.8442857142857143,
+        "recall": 0.10221376686267727,
+        "f1_score": 0.18235112619561863,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            14109,
+            109
+          ],
+          [
+            5191,
+            591
+          ]
+        ],
+        "trading": {
+          "total_trades": 700,
+          "winning_trades": 591,
+          "losing_trades": 109,
+          "win_rate": 0.8442857142857143,
+          "total_profit": 321.9,
+          "avg_profit_per_trade": 0.4598571428571428,
+          "max_drawdown": 2.7000000000001023,
+          "sharpe_ratio": 22.34751470445909
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.35,
+        "accuracy": 0.7171,
+        "precision": 0.8389830508474576,
+        "recall": 0.0662428905988625,
+        "f1_score": 0.12279069767441861,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            13946,
+            76
+          ],
+          [
+            5582,
+            396
+          ]
+        ],
+        "trading": {
+          "total_trades": 472,
+          "winning_trades": 396,
+          "losing_trades": 76,
+          "win_rate": 0.8389830508474576,
+          "total_profit": 214.79999999999998,
+          "avg_profit_per_trade": 0.45508474576271185,
+          "max_drawdown": 2.6999999999999744,
+          "sharpe_ratio": 21.805792921378536
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.35,
+        "accuracy": 0.71055,
+        "precision": 0.8648648648648649,
+        "recall": 0.016354344122657582,
+        "f1_score": 0.032101655241598394,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            14115,
+            15
+          ],
+          [
+            5774,
+            96
+          ]
+        ],
+        "trading": {
+          "total_trades": 111,
+          "winning_trades": 96,
+          "losing_trades": 15,
+          "win_rate": 0.8648648648648649,
+          "total_profit": 53.099999999999994,
+          "avg_profit_per_trade": 0.4783783783783783,
+          "max_drawdown": 2.09999999999998,
+          "sharpe_ratio": 24.530682541766293
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.35,
+        "accuracy": 0.7186,
+        "precision": 0.8709677419354839,
+        "recall": 0.01888111888111888,
+        "f1_score": 0.03696098562628337,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            14264,
+            16
+          ],
+          [
+            5612,
+            108
+          ]
+        ],
+        "trading": {
+          "total_trades": 124,
+          "winning_trades": 108,
+          "losing_trades": 16,
+          "win_rate": 0.8709677419354839,
+          "total_profit": 60.0,
+          "avg_profit_per_trade": 0.4838709677419355,
+          "max_drawdown": 2.09999999999998,
+          "sharpe_ratio": 25.321668900130895
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.35,
+        "accuracy": 0.71465,
+        "precision": 0.9655172413793104,
+        "recall": 0.004883153121730032,
+        "f1_score": 0.009717161200763491,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            14265,
+            1
+          ],
+          [
+            5706,
+            28
+          ]
+        ],
+        "trading": {
+          "total_trades": 29,
+          "winning_trades": 28,
+          "losing_trades": 1,
+          "win_rate": 0.9655172413793104,
+          "total_profit": 16.5,
+          "avg_profit_per_trade": 0.5689655172413793,
+          "max_drawdown": 0.2999999999999998,
+          "sharpe_ratio": 53.97255818503546
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.35,
+        "accuracy": 0.7162,
+        "precision": 0.8531073446327684,
+        "recall": 0.02602999482847785,
+        "f1_score": 0.050518568082970894,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            14173,
+            26
+          ],
+          [
+            5650,
+            151
+          ]
+        ],
+        "trading": {
+          "total_trades": 177,
+          "winning_trades": 151,
+          "losing_trades": 26,
+          "win_rate": 0.8531073446327684,
+          "total_profit": 82.8,
+          "avg_profit_per_trade": 0.46779661016949153,
+          "max_drawdown": 1.8000000000000043,
+          "sharpe_ratio": 23.216528153175314
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.35,
+        "accuracy": 0.72265,
+        "precision": 0.8898305084745762,
+        "recall": 0.03664281975222474,
+        "f1_score": 0.07038712921065862,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            14243,
+            26
+          ],
+          [
+            5521,
+            210
+          ]
+        ],
+        "trading": {
+          "total_trades": 236,
+          "winning_trades": 210,
+          "losing_trades": 26,
+          "win_rate": 0.8898305084745762,
+          "total_profit": 118.2,
+          "avg_profit_per_trade": 0.5008474576271187,
+          "max_drawdown": 1.8000000000000043,
+          "sharpe_ratio": 28.1387801067532
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.35,
+        "accuracy": 0.7413,
+        "precision": 0.802158273381295,
+        "recall": 0.11782317717506165,
+        "f1_score": 0.20546683046683048,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            14157,
+            165
+          ],
+          [
+            5009,
+            669
+          ]
+        ],
+        "trading": {
+          "total_trades": 834,
+          "winning_trades": 669,
+          "losing_trades": 165,
+          "win_rate": 0.802158273381295,
+          "total_profit": 351.9,
+          "avg_profit_per_trade": 0.42194244604316544,
+          "max_drawdown": 7.500000000000284,
+          "sharpe_ratio": 18.664042185308205
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.35,
+        "accuracy": 0.7379,
+        "precision": 0.7785467128027682,
+        "recall": 0.11790393013100436,
+        "f1_score": 0.20479368932038836,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            14083,
+            192
+          ],
+          [
+            5050,
+            675
+          ]
+        ],
+        "trading": {
+          "total_trades": 867,
+          "winning_trades": 675,
+          "losing_trades": 192,
+          "win_rate": 0.7785467128027682,
+          "total_profit": 347.4,
+          "avg_profit_per_trade": 0.4006920415224913,
+          "max_drawdown": 7.500000000000284,
+          "sharpe_ratio": 17.004203239030534
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.35,
+        "accuracy": 0.70275,
+        "precision": 0.39419795221843,
+        "recall": 0.039683903109431366,
+        "f1_score": 0.0721086311846418,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            13824,
+            355
+          ],
+          [
+            5590,
+            231
+          ]
+        ],
+        "trading": {
+          "total_trades": 586,
+          "winning_trades": 231,
+          "losing_trades": 355,
+          "win_rate": 0.39419795221843,
+          "total_profit": 32.099999999999994,
+          "avg_profit_per_trade": 0.05477815699658702,
+          "max_drawdown": 35.69999999999989,
+          "sharpe_ratio": 1.9984585739521554
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.35,
+        "accuracy": 0.5688,
+        "precision": 0.2876080691642651,
+        "recall": 0.35165609584214236,
+        "f1_score": 0.31642358909321494,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            9380,
+            4944
+          ],
+          [
+            3680,
+            1996
+          ]
+        ],
+        "trading": {
+          "total_trades": 6940,
+          "winning_trades": 1996,
+          "losing_trades": 4944,
+          "win_rate": 0.2876080691642651,
+          "total_profit": -285.60000000000014,
+          "avg_profit_per_trade": -0.041152737752161404,
+          "max_drawdown": 315.30000000002485,
+          "sharpe_ratio": -1.602079114957627
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.35,
+        "accuracy": 0.4248,
+        "precision": 0.2864864864864865,
+        "recall": 0.6743942827261635,
+        "f1_score": 0.40214114956865193,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            4627,
+            9636
+          ],
+          [
+            1868,
+            3869
+          ]
+        ],
+        "trading": {
+          "total_trades": 13505,
+          "winning_trades": 3869,
+          "losing_trades": 9636,
+          "win_rate": 0.2864864864864865,
+          "total_profit": -569.3999999999996,
+          "avg_profit_per_trade": -0.042162162162162134,
+          "max_drawdown": 569.3999999999892,
+          "sharpe_ratio": -1.644073094874491
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.35,
+        "accuracy": 0.4774,
+        "precision": 0.2847324046920821,
+        "recall": 0.5399721932568647,
+        "f1_score": 0.37285491419656785,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            6441,
+            7805
+          ],
+          [
+            2647,
+            3107
+          ]
+        ],
+        "trading": {
+          "total_trades": 10912,
+          "winning_trades": 3107,
+          "losing_trades": 7805,
+          "win_rate": 0.2847324046920821,
+          "total_profit": -477.3000000000002,
+          "avg_profit_per_trade": -0.04374083577712612,
+          "max_drawdown": 483.0000000000324,
+          "sharpe_ratio": -1.71201518370814
+        }
+      }
+    ]
+  },
+  "0.4": {
+    "threshold": 0.4,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.6858107142857142,
+        "std": 0.06165953227943241,
+        "min": 0.5361,
+        "max": 0.72555
+      },
+      "precision": {
+        "mean": 0.6953363295298515,
+        "std": 0.3650967311790923
+      },
+      "recall": {
+        "mean": 0.08518517256958037,
+        "std": 0.1450325019484656
+      },
+      "f1_score": {
+        "mean": 0.0889026205948599,
+        "std": 0.1182566359803077
+      },
+      "trading": {
+        "total_profit": -135.60000000000002,
+        "avg_profit_per_window": -9.685714285714287,
+        "std_profit": 131.2663913962903,
+        "best_window_profit": 119.69999999999999,
+        "worst_window_profit": -303.9000000000001,
+        "avg_sharpe": 5035812650801854.0,
+        "max_drawdown": 312.300000000026,
+        "avg_drawdown": 54.600000000003895
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.4,
+        "accuracy": 0.72555,
+        "precision": 0.8823529411764706,
+        "recall": 0.037030506083583145,
+        "f1_score": 0.07107801658487053,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            14301,
+            28
+          ],
+          [
+            5461,
+            210
+          ]
+        ],
+        "trading": {
+          "total_trades": 238,
+          "winning_trades": 210,
+          "losing_trades": 28,
+          "win_rate": 0.8823529411764706,
+          "total_profit": 117.6,
+          "avg_profit_per_trade": 0.4941176470588235,
+          "max_drawdown": 1.5000000000000036,
+          "sharpe_ratio": 27.617224898803848
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.4,
+        "accuracy": 0.72055,
+        "precision": 0.9406392694063926,
+        "recall": 0.03562781044621238,
+        "f1_score": 0.06865522412931178,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            14205,
+            13
+          ],
+          [
+            5576,
+            206
+          ]
+        ],
+        "trading": {
+          "total_trades": 219,
+          "winning_trades": 206,
+          "losing_trades": 13,
+          "win_rate": 0.9406392694063926,
+          "total_profit": 119.69999999999999,
+          "avg_profit_per_trade": 0.5465753424657533,
+          "max_drawdown": 1.4999999999999858,
+          "sharpe_ratio": 40.69311312630123
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.4,
+        "accuracy": 0.70875,
+        "precision": 0.9421965317919075,
+        "recall": 0.027266644362663097,
+        "f1_score": 0.052999512274426924,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            14012,
+            10
+          ],
+          [
+            5815,
+            163
+          ]
+        ],
+        "trading": {
+          "total_trades": 173,
+          "winning_trades": 163,
+          "losing_trades": 10,
+          "win_rate": 0.9421965317919075,
+          "total_profit": 94.8,
+          "avg_profit_per_trade": 0.5479768786127167,
+          "max_drawdown": 1.5000000000000036,
+          "sharpe_ratio": 41.28109004207287
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.4,
+        "accuracy": 0.7072,
+        "precision": 1.0,
+        "recall": 0.002385008517887564,
+        "f1_score": 0.004758667573079538,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            14130,
+            0
+          ],
+          [
+            5856,
+            14
+          ]
+        ],
+        "trading": {
+          "total_trades": 14,
+          "winning_trades": 14,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 8.4,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 3.5250688555612804e+16
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.4,
+        "accuracy": 0.7147,
+        "precision": 1.0,
+        "recall": 0.0024475524475524478,
+        "f1_score": 0.004883153121730032,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            14280,
+            0
+          ],
+          [
+            5706,
+            14
+          ]
+        ],
+        "trading": {
+          "total_trades": 14,
+          "winning_trades": 14,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 8.4,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 3.5250688555612804e+16
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.4,
+        "accuracy": 0.7133,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            14266,
+            0
+          ],
+          [
+            5734,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.4,
+        "accuracy": 0.71145,
+        "precision": 0.96875,
+        "recall": 0.005343906223064989,
+        "f1_score": 0.010629178810217728,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            14198,
+            1
+          ],
+          [
+            5770,
+            31
+          ]
+        ],
+        "trading": {
+          "total_trades": 32,
+          "winning_trades": 31,
+          "losing_trades": 1,
+          "win_rate": 0.96875,
+          "total_profit": 18.299999999999997,
+          "avg_profit_per_trade": 0.5718749999999999,
+          "max_drawdown": 0.2999999999999998,
+          "sharpe_ratio": 56.99941520167846
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.4,
+        "accuracy": 0.7152,
+        "precision": 0.972972972972973,
+        "recall": 0.006281626243238528,
+        "f1_score": 0.012482662968099861,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            14268,
+            1
+          ],
+          [
+            5695,
+            36
+          ]
+        ],
+        "trading": {
+          "total_trades": 37,
+          "winning_trades": 36,
+          "losing_trades": 1,
+          "win_rate": 0.972972972972973,
+          "total_profit": 21.299999999999997,
+          "avg_profit_per_trade": 0.5756756756756756,
+          "max_drawdown": 0.2999999999999998,
+          "sharpe_ratio": 61.71547617899421
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.4,
+        "accuracy": 0.7238,
+        "precision": 0.9753086419753086,
+        "recall": 0.027826699542092288,
+        "f1_score": 0.05410958904109589,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            14318,
+            4
+          ],
+          [
+            5520,
+            158
+          ]
+        ],
+        "trading": {
+          "total_trades": 162,
+          "winning_trades": 158,
+          "losing_trades": 4,
+          "win_rate": 0.9753086419753086,
+          "total_profit": 93.6,
+          "avg_profit_per_trade": 0.5777777777777777,
+          "max_drawdown": 0.3000000000000007,
+          "sharpe_ratio": 65.45772204863376
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.4,
+        "accuracy": 0.7212,
+        "precision": 0.9745222929936306,
+        "recall": 0.026724890829694325,
+        "f1_score": 0.05202312138728324,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            14271,
+            4
+          ],
+          [
+            5572,
+            153
+          ]
+        ],
+        "trading": {
+          "total_trades": 157,
+          "winning_trades": 153,
+          "losing_trades": 4,
+          "win_rate": 0.9745222929936306,
+          "total_profit": 90.6,
+          "avg_profit_per_trade": 0.5770700636942675,
+          "max_drawdown": 0.3000000000000007,
+          "sharpe_ratio": 64.37963064592152
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.4,
+        "accuracy": 0.7077,
+        "precision": 0.1951219512195122,
+        "recall": 0.001374334306820134,
+        "f1_score": 0.002729443875810304,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            14146,
+            33
+          ],
+          [
+            5813,
+            8
+          ]
+        ],
+        "trading": {
+          "total_trades": 41,
+          "winning_trades": 8,
+          "losing_trades": 33,
+          "win_rate": 0.1951219512195122,
+          "total_profit": -5.1000000000000005,
+          "avg_profit_per_trade": -0.12439024390243904,
+          "max_drawdown": 9.9,
+          "sharpe_ratio": -6.614950926316524
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.4,
+        "accuracy": 0.64945,
+        "precision": 0.29518257134090214,
+        "recall": 0.16948555320648345,
+        "f1_score": 0.2153329602686066,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            12027,
+            2297
+          ],
+          [
+            4714,
+            962
+          ]
+        ],
+        "trading": {
+          "total_trades": 3259,
+          "winning_trades": 962,
+          "losing_trades": 2297,
+          "win_rate": 0.29518257134090214,
+          "total_profit": -111.90000000000009,
+          "avg_profit_per_trade": -0.034335685793188124,
+          "max_drawdown": 131.399999999998,
+          "sharpe_ratio": -1.3355744183508413
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.4,
+        "accuracy": 0.5361,
+        "precision": 0.29405606606955914,
+        "recall": 0.4406484225204811,
+        "f1_score": 0.352727780103251,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            8194,
+            6069
+          ],
+          [
+            3209,
+            2528
+          ]
+        ],
+        "trading": {
+          "total_trades": 8597,
+          "winning_trades": 2528,
+          "losing_trades": 6069,
+          "win_rate": 0.29405606606955914,
+          "total_profit": -303.9000000000001,
+          "avg_profit_per_trade": -0.03534954053739678,
+          "max_drawdown": 305.1000000000306,
+          "sharpe_ratio": -1.3672508665944725
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.4,
+        "accuracy": 0.5464,
+        "precision": 0.2936053744712615,
+        "recall": 0.41014946124435175,
+        "f1_score": 0.3422273781902552,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            8568,
+            5678
+          ],
+          [
+            3394,
+            2360
+          ]
+        ],
+        "trading": {
+          "total_trades": 8038,
+          "winning_trades": 2360,
+          "losing_trades": 5678,
+          "win_rate": 0.2936053744712615,
+          "total_profit": -287.39999999999986,
+          "avg_profit_per_trade": -0.035755162975864625,
+          "max_drawdown": 312.300000000026,
+          "sharpe_ratio": -1.3879971813144514
+        }
+      }
+    ]
+  },
+  "0.45": {
+    "threshold": 0.45,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.6981035714285714,
+        "std": 0.0331418620925135,
+        "min": 0.6146,
+        "max": 0.72175
+      },
+      "precision": {
+        "mean": 0.5587406017994961,
+        "std": 0.4405737813793689
+      },
+      "recall": {
+        "mean": 0.046726683459630096,
+        "std": 0.08817350303328239
+      },
+      "f1_score": {
+        "mean": 0.05773171667165243,
+        "std": 0.09526052841688855
+      },
+      "trading": {
+        "total_profit": -29.099999999999994,
+        "avg_profit_per_window": -2.0785714285714283,
+        "std_profit": 54.31532510089879,
+        "best_window_profit": 66.89999999999999,
+        "worst_window_profit": -127.79999999999995,
+        "avg_sharpe": 7650341559987754.0,
+        "max_drawdown": 194.69999999999726,
+        "avg_drawdown": 29.0571428571425
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.45,
+        "accuracy": 0.72175,
+        "precision": 0.9491525423728814,
+        "recall": 0.019749603244577675,
+        "f1_score": 0.03869407496977025,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            14323,
+            6
+          ],
+          [
+            5559,
+            112
+          ]
+        ],
+        "trading": {
+          "total_trades": 118,
+          "winning_trades": 112,
+          "losing_trades": 6,
+          "win_rate": 0.9491525423728814,
+          "total_profit": 65.4,
+          "avg_profit_per_trade": 0.5542372881355933,
+          "max_drawdown": 0.3000000000000007,
+          "sharpe_ratio": 48.96988870724543
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.45,
+        "accuracy": 0.7164,
+        "precision": 0.9741379310344828,
+        "recall": 0.01954341058457281,
+        "f1_score": 0.03831807392336385,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            14215,
+            3
+          ],
+          [
+            5669,
+            113
+          ]
+        ],
+        "trading": {
+          "total_trades": 116,
+          "winning_trades": 113,
+          "losing_trades": 3,
+          "win_rate": 0.9741379310344828,
+          "total_profit": 66.89999999999999,
+          "avg_profit_per_trade": 0.5767241379310344,
+          "max_drawdown": 0.5999999999999943,
+          "sharpe_ratio": 63.79720474545382
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.45,
+        "accuracy": 0.7053,
+        "precision": 0.9772727272727273,
+        "recall": 0.014386082301773169,
+        "f1_score": 0.02835476425980877,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            14020,
+            2
+          ],
+          [
+            5892,
+            86
+          ]
+        ],
+        "trading": {
+          "total_trades": 88,
+          "winning_trades": 86,
+          "losing_trades": 2,
+          "win_rate": 0.9772727272727273,
+          "total_profit": 51.0,
+          "avg_profit_per_trade": 0.5795454545454546,
+          "max_drawdown": 0.6000000000000014,
+          "sharpe_ratio": 68.18107379272791
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.45,
+        "accuracy": 0.7065,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            14130,
+            0
+          ],
+          [
+            5870,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.45,
+        "accuracy": 0.714,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            14280,
+            0
+          ],
+          [
+            5720,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.45,
+        "accuracy": 0.7133,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            14266,
+            0
+          ],
+          [
+            5734,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.45,
+        "accuracy": 0.7103,
+        "precision": 1.0,
+        "recall": 0.0012066885019824168,
+        "f1_score": 0.0024104683195592287,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            14199,
+            0
+          ],
+          [
+            5794,
+            7
+          ]
+        ],
+        "trading": {
+          "total_trades": 7,
+          "winning_trades": 7,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 4.2,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 9.397923683648288e+16
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.45,
+        "accuracy": 0.7138,
+        "precision": 1.0,
+        "recall": 0.001221427325074158,
+        "f1_score": 0.0024398745207389336,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            14269,
+            0
+          ],
+          [
+            5724,
+            7
+          ]
+        ],
+        "trading": {
+          "total_trades": 7,
+          "winning_trades": 7,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 4.2,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 9.397923683648288e+16
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.45,
+        "accuracy": 0.71795,
+        "precision": 1.0,
+        "recall": 0.006516379006692497,
+        "f1_score": 0.01294838145231846,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            14322,
+            0
+          ],
+          [
+            5641,
+            37
+          ]
+        ],
+        "trading": {
+          "total_trades": 37,
+          "winning_trades": 37,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 22.2,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 1.2109144593413304e+16
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.45,
+        "accuracy": 0.7156,
+        "precision": 1.0,
+        "recall": 0.006462882096069869,
+        "f1_score": 0.012842762929538355,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            14275,
+            0
+          ],
+          [
+            5688,
+            37
+          ]
+        ],
+        "trading": {
+          "total_trades": 37,
+          "winning_trades": 37,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 22.2,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 1.2109144593413304e+16
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.45,
+        "accuracy": 0.70875,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            14175,
+            4
+          ],
+          [
+            5821,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 4,
+          "winning_trades": 0,
+          "losing_trades": 4,
+          "win_rate": 0.0,
+          "total_profit": -1.2,
+          "avg_profit_per_trade": -0.3,
+          "max_drawdown": 0.8999999999999999,
+          "sharpe_ratio": -1.0507198101996402e+17
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.45,
+        "accuracy": 0.69235,
+        "precision": 0.30935251798561153,
+        "recall": 0.06818181818181818,
+        "f1_score": 0.11173668254655696,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            13460,
+            864
+          ],
+          [
+            5289,
+            387
+          ]
+        ],
+        "trading": {
+          "total_trades": 1251,
+          "winning_trades": 387,
+          "losing_trades": 864,
+          "win_rate": 0.30935251798561153,
+          "total_profit": -27.0,
+          "avg_profit_per_trade": -0.02158273381294964,
+          "max_drawdown": 50.09999999999937,
+          "sharpe_ratio": -0.8149071755675825
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.45,
+        "accuracy": 0.62285,
+        "precision": 0.3074626865671642,
+        "recall": 0.2513508802510023,
+        "f1_score": 0.27658962309389085,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            11015,
+            3248
+          ],
+          [
+            4295,
+            1442
+          ]
+        ],
+        "trading": {
+          "total_trades": 4690,
+          "winning_trades": 1442,
+          "losing_trades": 3248,
+          "win_rate": 0.3074626865671642,
+          "total_profit": -109.20000000000005,
+          "avg_profit_per_trade": -0.023283582089552248,
+          "max_drawdown": 159.59999999999837,
+          "sharpe_ratio": -0.8876911011063601
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.45,
+        "accuracy": 0.6146,
+        "precision": 0.30499001996007985,
+        "recall": 0.26555439694125826,
+        "f1_score": 0.2839093273875883,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            10764,
+            3482
+          ],
+          [
+            4226,
+            1528
+          ]
+        ],
+        "trading": {
+          "total_trades": 5010,
+          "winning_trades": 1528,
+          "losing_trades": 3482,
+          "win_rate": 0.30499001996007985,
+          "total_profit": -127.79999999999995,
+          "avg_profit_per_trade": -0.025508982035928135,
+          "max_drawdown": 194.69999999999726,
+          "sharpe_ratio": -0.9821750163644735
+        }
+      }
+    ]
+  },
+  "0.5": {
+    "threshold": 0.5,
+    "summary": {
+      "n_windows": 14,
+      "accuracy": {
+        "mean": 0.7043892857142858,
+        "std": 0.019168754138025823,
+        "min": 0.65365,
+        "max": 0.7195
+      },
+      "precision": {
+        "mean": 0.4178906196241904,
+        "std": 0.4451357516747014
+      },
+      "recall": {
+        "mean": 0.022712888588131926,
+        "std": 0.04639480773987873
+      },
+      "f1_score": {
+        "mean": 0.03309490681778963,
+        "std": 0.06292240030836055
+      },
+      "trading": {
+        "total_profit": -79.50000000000003,
+        "avg_profit_per_window": -5.678571428571431,
+        "std_profit": 38.50924153594134,
+        "best_window_profit": 38.4,
+        "worst_window_profit": -98.70000000000005,
+        "avg_sharpe": 1.5350310236440156e+16,
+        "max_drawdown": 118.19999999999771,
+        "avg_drawdown": 17.52857142857119
+      }
+    },
+    "windows": [
+      {
+        "window": 1,
+        "threshold": 0.5,
+        "accuracy": 0.7195,
+        "precision": 0.9841269841269841,
+        "recall": 0.010932816081819785,
+        "f1_score": 0.021625392396232995,
+        "auc_roc": 0.7442125812851599,
+        "confusion_matrix": [
+          [
+            14328,
+            1
+          ],
+          [
+            5609,
+            62
+          ]
+        ],
+        "trading": {
+          "total_trades": 63,
+          "winning_trades": 62,
+          "losing_trades": 1,
+          "win_rate": 0.9841269841269841,
+          "total_profit": 36.9,
+          "avg_profit_per_trade": 0.5857142857142857,
+          "max_drawdown": 0.3000000000000007,
+          "sharpe_ratio": 81.9784057931931
+        }
+      },
+      {
+        "window": 2,
+        "threshold": 0.5,
+        "accuracy": 0.7141,
+        "precision": 1.0,
+        "recall": 0.011068834313386372,
+        "f1_score": 0.02189531303455354,
+        "auc_roc": 0.725255428649474,
+        "confusion_matrix": [
+          [
+            14218,
+            0
+          ],
+          [
+            5718,
+            64
+          ]
+        ],
+        "trading": {
+          "total_trades": 64,
+          "winning_trades": 64,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 38.4,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 1.1628610474673444e+16
+        }
+      },
+      {
+        "window": 3,
+        "threshold": 0.5,
+        "accuracy": 0.70405,
+        "precision": 1.0,
+        "recall": 0.009869521579123453,
+        "f1_score": 0.01954613218486003,
+        "auc_roc": 0.6801668161951117,
+        "confusion_matrix": [
+          [
+            14022,
+            0
+          ],
+          [
+            5919,
+            59
+          ]
+        ],
+        "trading": {
+          "total_trades": 59,
+          "winning_trades": 59,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 35.4,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 1.1441418947525442e+16
+        }
+      },
+      {
+        "window": 4,
+        "threshold": 0.5,
+        "accuracy": 0.7065,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6984696376190426,
+        "confusion_matrix": [
+          [
+            14130,
+            0
+          ],
+          [
+            5870,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 5,
+        "threshold": 0.5,
+        "accuracy": 0.714,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.719282720955515,
+        "confusion_matrix": [
+          [
+            14280,
+            0
+          ],
+          [
+            5720,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 6,
+        "threshold": 0.5,
+        "accuracy": 0.7133,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6900441147325339,
+        "confusion_matrix": [
+          [
+            14266,
+            0
+          ],
+          [
+            5734,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 7,
+        "threshold": 0.5,
+        "accuracy": 0.70995,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6707747105780215,
+        "confusion_matrix": [
+          [
+            14199,
+            0
+          ],
+          [
+            5801,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 8,
+        "threshold": 0.5,
+        "accuracy": 0.71345,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.7035561165104438,
+        "confusion_matrix": [
+          [
+            14269,
+            0
+          ],
+          [
+            5731,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 9,
+        "threshold": 0.5,
+        "accuracy": 0.7164,
+        "precision": 1.0,
+        "recall": 0.0010567101091933778,
+        "f1_score": 0.00211118930330753,
+        "auc_roc": 0.7441030480009447,
+        "confusion_matrix": [
+          [
+            14322,
+            0
+          ],
+          [
+            5672,
+            6
+          ]
+        ],
+        "trading": {
+          "total_trades": 6,
+          "winning_trades": 6,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 3.5999999999999996,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 9.59171569439816e+16
+        }
+      },
+      {
+        "window": 10,
+        "threshold": 0.5,
+        "accuracy": 0.71405,
+        "precision": 1.0,
+        "recall": 0.0010480349344978166,
+        "f1_score": 0.0020938754144128424,
+        "auc_roc": 0.718876803891128,
+        "confusion_matrix": [
+          [
+            14275,
+            0
+          ],
+          [
+            5719,
+            6
+          ]
+        ],
+        "trading": {
+          "total_trades": 6,
+          "winning_trades": 6,
+          "losing_trades": 0,
+          "win_rate": 1.0,
+          "total_profit": 3.5999999999999996,
+          "avg_profit_per_trade": 0.6,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 9.59171569439816e+16
+        }
+      },
+      {
+        "window": 11,
+        "threshold": 0.5,
+        "accuracy": 0.70895,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "auc_roc": 0.6030426144318503,
+        "confusion_matrix": [
+          [
+            14179,
+            0
+          ],
+          [
+            5821,
+            0
+          ]
+        ],
+        "trading": {
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "win_rate": 0.0,
+          "total_profit": 0.0,
+          "avg_profit_per_trade": 0.0,
+          "max_drawdown": 0.0,
+          "sharpe_ratio": 0.0
+        }
+      },
+      {
+        "window": 12,
+        "threshold": 0.5,
+        "accuracy": 0.71,
+        "precision": 0.27697841726618705,
+        "recall": 0.013565891472868217,
+        "f1_score": 0.02586496472959355,
+        "auc_roc": 0.5124352447210327,
+        "confusion_matrix": [
+          [
+            14123,
+            201
+          ],
+          [
+            5599,
+            77
+          ]
+        ],
+        "trading": {
+          "total_trades": 278,
+          "winning_trades": 77,
+          "losing_trades": 201,
+          "win_rate": 0.27697841726618705,
+          "total_profit": -14.100000000000001,
+          "avg_profit_per_trade": -0.05071942446043166,
+          "max_drawdown": 21.600000000000016,
+          "sharpe_ratio": -1.9614465904716263
+        }
+      },
+      {
+        "window": 13,
+        "threshold": 0.5,
+        "accuracy": 0.66355,
+        "precision": 0.2943615257048093,
+        "recall": 0.12375806170472373,
+        "f1_score": 0.17425450975579826,
+        "auc_roc": 0.5057472591111344,
+        "confusion_matrix": [
+          [
+            12561,
+            1702
+          ],
+          [
+            5027,
+            710
+          ]
+        ],
+        "trading": {
+          "total_trades": 2412,
+          "winning_trades": 710,
+          "losing_trades": 1702,
+          "win_rate": 0.2943615257048093,
+          "total_profit": -84.59999999999997,
+          "avg_profit_per_trade": -0.03507462686567163,
+          "max_drawdown": 105.29999999999892,
+          "sharpe_ratio": -1.3530193399433308
+        }
+      },
+      {
+        "window": 14,
+        "threshold": 0.5,
+        "accuracy": 0.65365,
+        "precision": 0.2950017476406851,
+        "recall": 0.14668057003823426,
+        "f1_score": 0.195937318630296,
+        "auc_roc": 0.5025297638871586,
+        "confusion_matrix": [
+          [
+            12229,
+            2017
+          ],
+          [
+            4910,
+            844
+          ]
+        ],
+        "trading": {
+          "total_trades": 2861,
+          "winning_trades": 844,
+          "losing_trades": 2017,
+          "win_rate": 0.2950017476406851,
+          "total_profit": -98.70000000000005,
+          "avg_profit_per_trade": -0.03449842712338345,
+          "max_drawdown": 118.19999999999771,
+          "sharpe_ratio": -1.330565848264016
+        }
+      }
+    ]
+  }
+}
