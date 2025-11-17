@@ -145,6 +145,9 @@ class TechnicalAnalysis:
         Returns:
             TradingSignal com recomendação
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         # Calcular todos os indicadores
         indicators = self.calculate_all_indicators(df)
 
@@ -158,30 +161,55 @@ class TechnicalAnalysis:
         buy_strength = 0
         sell_strength = 0
 
+        logger.info(f"\n{'='*60}")
+        logger.info(f"ANÁLISE DE SINAIS PARA {symbol}")
+        logger.info(f"Preço atual: {current_price:.5f}")
+        logger.info(f"{'='*60}")
+
         # === ANÁLISE DE TENDÊNCIA ===
         if 'ema_9' in indicators and 'ema_21' in indicators:
             crossover = self.trend.detect_crossover(
                 indicators['ema_9'],
                 indicators['ema_21']
             )
+            logger.info(f"\n[TENDÊNCIA - EMA Crossover]")
+            logger.info(f"  EMA 9: {indicators['ema_9'].iloc[-1]:.5f}")
+            logger.info(f"  EMA 21: {indicators['ema_21'].iloc[-1]:.5f}")
+            logger.info(f"  Sinal: {crossover['signal']}")
+            logger.info(f"  Strength: {crossover['strength']:.2f}")
+
             if crossover['signal'] == 'BUY':
                 buy_signals.append(crossover['description'])
                 buy_strength += crossover['strength']
+                logger.info(f"  ✓ VOTO BUY adicionado")
             elif crossover['signal'] == 'SELL':
                 sell_signals.append(crossover['description'])
                 sell_strength += crossover['strength']
+                logger.info(f"  ✓ VOTO SELL adicionado")
+            else:
+                logger.info(f"  - NEUTRAL")
 
         # === ANÁLISE DE RSI ===
         if 'rsi' in indicators:
             rsi_current = indicators['rsi'].iloc[-1]
             rsi_interp = self.momentum.interpret_rsi(rsi_current)
 
+            logger.info(f"\n[RSI]")
+            logger.info(f"  Valor: {rsi_current:.2f}")
+            logger.info(f"  Sinal: {rsi_interp['signal']}")
+            logger.info(f"  Condição: {rsi_interp['condition']}")
+            logger.info(f"  Strength: {rsi_interp['strength']:.2f}")
+
             if rsi_interp['signal'] == 'BUY':
                 buy_signals.append(rsi_interp['description'])
                 buy_strength += rsi_interp['strength']
+                logger.info(f"  ✓ VOTO BUY adicionado")
             elif rsi_interp['signal'] == 'SELL':
                 sell_signals.append(rsi_interp['description'])
                 sell_strength += rsi_interp['strength']
+                logger.info(f"  ✓ VOTO SELL adicionado")
+            else:
+                logger.info(f"  - NEUTRAL")
 
         # === ANÁLISE DE MACD ===
         if 'histogram' in indicators:
@@ -194,12 +222,23 @@ class TechnicalAnalysis:
                 macd_line, signal_line, histogram, prev_histogram
             )
 
+            logger.info(f"\n[MACD]")
+            logger.info(f"  MACD Line: {macd_line:.5f}")
+            logger.info(f"  Signal Line: {signal_line:.5f}")
+            logger.info(f"  Histogram: {histogram:.5f} (anterior: {prev_histogram:.5f})")
+            logger.info(f"  Sinal: {macd_interp['signal']}")
+            logger.info(f"  Strength: {macd_interp['strength']:.2f}")
+
             if macd_interp['signal'] == 'BUY':
                 buy_signals.append(macd_interp['description'])
                 buy_strength += macd_interp['strength']
+                logger.info(f"  ✓ VOTO BUY adicionado")
             elif macd_interp['signal'] == 'SELL':
                 sell_signals.append(macd_interp['description'])
                 sell_strength += macd_interp['strength']
+                logger.info(f"  ✓ VOTO SELL adicionado")
+            else:
+                logger.info(f"  - NEUTRAL")
 
         # === ANÁLISE DE BOLLINGER BANDS ===
         if 'bb_upper' in indicators:
@@ -212,12 +251,26 @@ class TechnicalAnalysis:
                 current_price, bb_upper, bb_middle, bb_lower, bb_width
             )
 
+            logger.info(f"\n[BOLLINGER BANDS]")
+            logger.info(f"  Preço: {current_price:.5f}")
+            logger.info(f"  Upper: {bb_upper:.5f}")
+            logger.info(f"  Middle: {bb_middle:.5f}")
+            logger.info(f"  Lower: {bb_lower:.5f}")
+            logger.info(f"  Width: {bb_width:.5f}")
+            logger.info(f"  Sinal: {bb_interp['signal']}")
+            logger.info(f"  Condição: {bb_interp['condition']}")
+            logger.info(f"  Strength: {bb_interp['strength']:.2f}")
+
             if bb_interp['signal'] == 'BUY':
                 buy_signals.append(bb_interp['description'])
                 buy_strength += bb_interp['strength']
+                logger.info(f"  ✓ VOTO BUY adicionado")
             elif bb_interp['signal'] == 'SELL':
                 sell_signals.append(bb_interp['description'])
                 sell_strength += bb_interp['strength']
+                logger.info(f"  ✓ VOTO SELL adicionado")
+            else:
+                logger.info(f"  - NEUTRAL")
 
         # === ANÁLISE DE STOCHASTIC ===
         if 'k_percent' in indicators:
@@ -230,26 +283,58 @@ class TechnicalAnalysis:
                 k_current, d_current, k_prev, d_prev
             )
 
+            logger.info(f"\n[STOCHASTIC]")
+            logger.info(f"  %K: {k_current:.2f} (anterior: {k_prev:.2f})")
+            logger.info(f"  %D: {d_current:.2f} (anterior: {d_prev:.2f})")
+            logger.info(f"  Sinal: {stoch_interp['signal']}")
+            logger.info(f"  Strength: {stoch_interp['strength']:.2f}")
+
             if stoch_interp['signal'] == 'BUY':
                 buy_signals.append(stoch_interp['description'])
                 buy_strength += stoch_interp['strength']
+                logger.info(f"  ✓ VOTO BUY adicionado")
             elif stoch_interp['signal'] == 'SELL':
                 sell_signals.append(stoch_interp['description'])
                 sell_strength += stoch_interp['strength']
+                logger.info(f"  ✓ VOTO SELL adicionado")
+            else:
+                logger.info(f"  - NEUTRAL")
 
         # === DECISÃO FINAL ===
         total_signals = len(buy_signals) + len(sell_signals)
+
+        logger.info(f"\n{'='*60}")
+        logger.info(f"RESUMO DOS VOTOS:")
+        logger.info(f"  BUY signals: {len(buy_signals)} (strength total: {buy_strength:.2f})")
+        for signal in buy_signals:
+            logger.info(f"    • {signal}")
+        logger.info(f"  SELL signals: {len(sell_signals)} (strength total: {sell_strength:.2f})")
+        for signal in sell_signals:
+            logger.info(f"    • {signal}")
+        logger.info(f"  Total signals: {total_signals}")
+        logger.info(f"{'='*60}")
 
         # Calcular ATR para stop loss
         atr_value = indicators['atr'].iloc[-1] if 'atr' in indicators else current_price * 0.015
 
         # Determinar sinal e calcular níveis
+        logger.info(f"\n{'='*60}")
+        logger.info(f"DECISÃO FINAL:")
+        logger.info(f"  Requisitos para BUY: >= 3 sinais BUY E buy_strength > sell_strength")
+        logger.info(f"  Requisitos para SELL: >= 3 sinais SELL E sell_strength > buy_strength")
+        logger.info(f"  BUY signals: {len(buy_signals)} | BUY strength: {buy_strength:.2f}")
+        logger.info(f"  SELL signals: {len(sell_signals)} | SELL strength: {sell_strength:.2f}")
+
         if len(buy_signals) >= 3 and buy_strength > sell_strength:
             # SINAL DE COMPRA
             signal_type = 'BUY'
             strength = min(buy_strength / len(buy_signals), 100)
             confidence = min((len(buy_signals) / total_signals * 100), 100) if total_signals > 0 else 0
             reason = "Confluência de indicadores: " + "; ".join(buy_signals)
+
+            logger.info(f"  ✓✓✓ SINAL: BUY")
+            logger.info(f"  Strength: {strength:.2f}")
+            logger.info(f"  Confidence: {confidence:.2f}%")
 
             # Níveis de preço
             entry_price = current_price
@@ -264,6 +349,10 @@ class TechnicalAnalysis:
             strength = min(sell_strength / len(sell_signals), 100)
             confidence = min((len(sell_signals) / total_signals * 100), 100) if total_signals > 0 else 0
             reason = "Confluência de indicadores: " + "; ".join(sell_signals)
+
+            logger.info(f"  ✓✓✓ SINAL: SELL")
+            logger.info(f"  Strength: {strength:.2f}")
+            logger.info(f"  Confidence: {confidence:.2f}%")
 
             # Níveis de preço
             entry_price = current_price
@@ -281,6 +370,16 @@ class TechnicalAnalysis:
             entry_price = current_price
             stop_loss = current_price
             take_profit = current_price
+
+            logger.info(f"  ⊘ SINAL: NEUTRAL")
+            if len(buy_signals) < 3 and len(sell_signals) < 3:
+                logger.info(f"  Motivo: Menos de 3 sinais em ambas direções")
+            elif len(buy_signals) >= 3 and buy_strength <= sell_strength:
+                logger.info(f"  Motivo: {len(buy_signals)} sinais BUY, mas sell_strength >= buy_strength")
+            elif len(sell_signals) >= 3 and sell_strength <= buy_strength:
+                logger.info(f"  Motivo: {len(sell_signals)} sinais SELL, mas buy_strength >= sell_strength")
+
+        logger.info(f"{'='*60}\n")
 
         # Preparar resumo dos indicadores
         indicator_summary = {
