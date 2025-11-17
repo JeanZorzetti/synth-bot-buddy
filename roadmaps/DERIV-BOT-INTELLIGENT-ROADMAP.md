@@ -162,6 +162,144 @@ backend/
 - ✅ Dashboard de indicadores no frontend
 - ✅ Relatório de backtesting (win rate, profit factor)
 
+### 1.6 🧪 Testes em Produção
+
+#### Como Testar
+
+**1. Testar Cálculo de Indicadores**
+```bash
+# Endpoint: GET /api/indicators/{symbol}
+curl https://botderivapi.roilabs.com.br/api/indicators/1HZ75V
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "timestamp": "2025-11-07T20:00:00Z",
+  "indicators": {
+    "sma_20": 12.45,
+    "sma_50": 12.38,
+    "ema_9": 12.47,
+    "ema_21": 12.43,
+    "rsi_14": 45.2,
+    "macd": {
+      "macd_line": 0.023,
+      "signal_line": 0.015,
+      "histogram": 0.008
+    },
+    "bollinger": {
+      "upper": 12.65,
+      "middle": 12.45,
+      "lower": 12.25,
+      "width": 0.40
+    },
+    "atr_14": 0.15
+  }
+}
+```
+
+**2. Testar Geração de Sinais**
+```bash
+# Endpoint: GET /api/signals/1HZ75V
+curl https://botderivapi.roilabs.com.br/api/signals/1HZ75V
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "signal_type": "BUY",
+  "strength": 75,
+  "confidence": 82,
+  "timestamp": "2025-11-07T20:01:00Z",
+  "indicators_confirming": [
+    "RSI < 30 (sobrevenda)",
+    "Preço toca banda inferior Bollinger",
+    "MACD cruza acima signal line",
+    "EMA 9 > EMA 21 (tendência de alta)"
+  ],
+  "entry_price": 12.30,
+  "stop_loss": 12.15,
+  "take_profit": 12.60,
+  "risk_reward_ratio": 2.0
+}
+```
+
+**3. Testar Dashboard de Indicadores**
+```
+1. Acessar: https://botderiv.roilabs.com.br/dashboard/indicators
+2. Selecionar símbolo: VIX 75
+3. Visualizar gráfico com indicadores sobrepostos
+4. Verificar sinais marcados no gráfico
+```
+
+**4. Backtesting em Dados Históricos**
+```bash
+# Endpoint: POST /api/backtest
+curl -X POST https://botderivapi.roilabs.com.br/api/backtest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "1HZ75V",
+    "start_date": "2025-10-01",
+    "end_date": "2025-11-01",
+    "strategy": "technical_indicators",
+    "initial_capital": 1000
+  }'
+
+# Resultado esperado:
+{
+  "summary": {
+    "total_trades": 45,
+    "winning_trades": 28,
+    "losing_trades": 17,
+    "win_rate": 62.2,
+    "total_return": 156.50,
+    "roi": 15.65,
+    "max_drawdown": 8.3,
+    "sharpe_ratio": 1.65,
+    "profit_factor": 1.82
+  },
+  "trades": [...],
+  "equity_curve": [...]
+}
+```
+
+#### ✅ Critérios de Aceitação
+
+| Critério | Resultado Esperado | Status |
+|----------|-------------------|--------|
+| **Indicadores calculados corretamente** | Valores coerentes com bibliotecas padrão (ta-lib) | ⏳ |
+| **Sinais gerados com lógica correta** | Confluência de 3+ indicadores | ⏳ |
+| **Score de confiança preciso** | 70%+ para sinais com alta confluência | ⏳ |
+| **API response time** | < 200ms para calcular indicadores | ⏳ |
+| **Dashboard renderiza gráficos** | Visualização clara de indicadores e sinais | ⏳ |
+| **Backtesting win rate** | > 55% em dados históricos | ⏳ |
+| **Backtesting sharpe ratio** | > 1.3 em dados históricos | ⏳ |
+
+#### 📊 Validação Manual
+
+Após implementação, validar manualmente:
+
+1. **Comparar indicadores** com TradingView ou MT5
+   - RSI, MACD, Bollinger devem dar valores idênticos
+
+2. **Verificar sinais** contra análise manual
+   - Pelo menos 80% dos sinais fazem sentido visualmente
+
+3. **Testar em diferentes mercados**
+   - VIX 75, BOOM 1000, CRASH 1000
+   - Verificar se indicadores se adaptam à volatilidade
+
+4. **Monitorar por 1 semana** em paper trading
+   - Registrar todos os sinais gerados
+   - Calcular win rate real vs esperado
+
+#### 🚀 Critério para Avançar para Fase 2
+
+- ✅ Todos os indicadores funcionando corretamente
+- ✅ Sistema de sinais gerando alertas coerentes
+- ✅ Backtesting mostrando win rate > 55%
+- ✅ API respondendo em < 200ms
+- ✅ Dashboard funcional e responsivo
+- ✅ 1 semana de paper trading com resultados positivos
+
 ---
 
 ## **FASE 2: Análise de Candles e Padrões** 📊
@@ -259,6 +397,103 @@ backend/
 - ✅ Aumentar confiança dos sinais em 15-20%
 - ✅ Visualização de padrões no gráfico
 - ✅ Estatísticas de efetividade por padrão
+
+### 2.7 🧪 Testes em Produção
+
+#### Como Testar
+
+**1. Detecção de Padrões de Candlestick**
+```bash
+# Endpoint: GET /api/patterns/candlestick/{symbol}
+curl https://botderivapi.roilabs.com.br/api/patterns/candlestick/1HZ75V
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "timestamp": "2025-11-07T20:05:00Z",
+  "patterns_detected": [
+    {
+      "name": "Bullish Engulfing",
+      "type": "reversal_bullish",
+      "confidence": 85,
+      "candles": [
+        {"open": 12.30, "high": 12.35, "low": 12.25, "close": 12.28},
+        {"open": 12.27, "high": 12.45, "low": 12.26, "close": 12.43}
+      ],
+      "interpretation": "Forte reversão de alta esperada",
+      "success_rate_historical": 68
+    }
+  ],
+  "support_levels": [12.15, 12.00, 11.85],
+  "resistance_levels": [12.50, 12.65, 12.80]
+}
+```
+
+**2. Formações Gráficas**
+```bash
+# Endpoint: GET /api/patterns/chart/{symbol}
+curl https://botderivapi.roilabs.com.br/api/patterns/chart/1HZ75V?timeframe=1h
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "timeframe": "1h",
+  "formations": [
+    {
+      "pattern": "Double Bottom",
+      "type": "reversal_bullish",
+      "status": "confirmed",
+      "target_price": 12.80,
+      "stop_loss": 12.10,
+      "probability": 72
+    }
+  ]
+}
+```
+
+**3. Suporte e Resistência Dinâmica**
+```bash
+# Endpoint: GET /api/support-resistance/{symbol}
+curl https://botderivapi.roilabs.com.br/api/support-resistance/1HZ75V
+
+# Resultado esperado:
+{
+  "current_price": 12.35,
+  "key_levels": {
+    "strong_resistance": [12.50, 12.80],
+    "weak_resistance": [12.45, 12.60],
+    "strong_support": [12.15, 12.00],
+    "weak_support": [12.25, 12.10]
+  },
+  "nearest_support": 12.25,
+  "nearest_resistance": 12.45,
+  "zone_strength": "neutral"
+}
+```
+
+#### ✅ Critérios de Aceitação
+
+| Critério | Resultado Esperado | Status |
+|----------|-------------------|--------|
+| **15+ padrões detectados corretamente** | Validação manual vs TradingView | ⏳ |
+| **Padrões aumentam confiança dos sinais** | +15-20% no score quando padrão confirma | ⏳ |
+| **Suporte/resistência precisos** | Alinhados com zonas visíveis no gráfico | ⏳ |
+| **Taxa de sucesso de padrões** | > 60% para padrões de alta confiança | ⏳ |
+| **Visualização no dashboard** | Padrões marcados claramente no gráfico | ⏳ |
+
+#### 📊 Validação Manual
+
+1. **Comparar padrões** com análise manual em TradingView
+2. **Verificar suporte/resistência** coincidem com níveis óbvios
+3. **Testar em 50+ candles** e validar detecção
+4. **Calcular win rate** de trades baseados em padrões
+
+#### 🚀 Critério para Avançar para Fase 3
+
+- ✅ 15+ padrões funcionando
+- ✅ Win rate com padrões > 60%
+- ✅ Confiança dos sinais aumentou 15%+
+- ✅ Visualização clara no dashboard
 
 ---
 
@@ -465,6 +700,167 @@ class EnsemblePredictor:
 - ✅ Backtesting report com métricas completas
 - ✅ API de previsão: `/api/ml/predict`
 - ✅ Dashboard de performance dos modelos
+
+### 3.7 🧪 Testes em Produção - Machine Learning
+
+#### Como Testar
+
+**1. Previsão de Movimento de Preço**
+```bash
+# Endpoint: POST /api/ml/predict
+curl -X POST https://botderivapi.roilabs.com.br/api/ml/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "1HZ75V",
+    "timeframe": "15m"
+  }'
+
+# Resultado esperado:
+{
+  "symbol": "1HZ75V",
+  "timestamp": "2025-11-07T20:10:00Z",
+  "prediction": {
+    "direction": "UP",
+    "probability": 0.78,
+    "confidence": 82,
+    "expected_movement": 0.85,  // %
+    "time_horizon": "15min"
+  },
+  "models": {
+    "random_forest": {"prob": 0.75, "vote": "UP"},
+    "xgboost": {"prob": 0.82, "vote": "UP"},
+    "lstm": {"prob": 0.76, "vote": "UP"}
+  },
+  "features_used": {
+    "rsi_14": 45.2,
+    "macd_histogram": 0.008,
+    "volatility_5m": 0.12,
+    "trend_strength": 0.65
+  }
+}
+```
+
+**2. Métricas de Performance dos Modelos**
+```bash
+# Endpoint: GET /api/ml/metrics
+curl https://botderivapi.roilabs.com.br/api/ml/metrics
+
+# Resultado esperado:
+{
+  "random_forest": {
+    "accuracy": 0.72,
+    "precision": 0.70,
+    "recall": 0.68,
+    "f1_score": 0.69,
+    "last_retrain": "2025-11-01T00:00:00Z",
+    "training_samples": 50000
+  },
+  "xgboost": {
+    "accuracy": 0.75,
+    "precision": 0.73,
+    "recall": 0.71,
+    "f1_score": 0.72
+  },
+  "lstm": {
+    "accuracy": 0.71,
+    "precision": 0.69,
+    "recall": 0.70,
+    "f1_score": 0.695
+  },
+  "ensemble": {
+    "accuracy": 0.78,
+    "precision": 0.76,
+    "recall": 0.74,
+    "f1_score": 0.75
+  }
+}
+```
+
+**3. Backtesting Walk-Forward**
+```bash
+# Endpoint: POST /api/ml/backtest/walkforward
+curl -X POST https://botderivapi.roilabs.com.br/api/ml/backtest/walkforward \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "1HZ75V",
+    "start_date": "2025-09-01",
+    "end_date": "2025-11-01",
+    "train_window": 30,
+    "test_window": 7
+  }'
+
+# Resultado esperado:
+{
+  "summary": {
+    "total_periods": 8,
+    "avg_accuracy": 0.74,
+    "avg_profit_per_period": 12.5,
+    "best_period": {"period": 3, "accuracy": 0.82, "profit": 18.3},
+    "worst_period": {"period": 6, "accuracy": 0.65, "profit": 4.2},
+    "consistency_score": 0.68
+  },
+  "periods": [...]
+}
+```
+
+**4. Feature Importance**
+```bash
+# Endpoint: GET /api/ml/features/importance
+curl https://botderivapi.roilabs.com.br/api/ml/features/importance
+
+# Resultado esperado:
+{
+  "features": [
+    {"name": "rsi_14", "importance": 0.15},
+    {"name": "macd_histogram", "importance": 0.12},
+    {"name": "bollinger_width", "importance": 0.11},
+    {"name": "volume_ratio", "importance": 0.09},
+    {"name": "ema_diff_9_21", "importance": 0.08}
+  ],
+  "top_5_combined_importance": 0.55
+}
+```
+
+#### ✅ Critérios de Aceitação
+
+| Critério | Resultado Esperado | Status |
+|----------|-------------------|--------|
+| **Ensemble accuracy** | > 70% em dados de teste | ⏳ |
+| **Precision** | > 68% (evitar falsos positivos) | ⏳ |
+| **Recall** | > 65% (capturar oportunidades) | ⏳ |
+| **Walk-forward consistency** | < 15% variação entre períodos | ⏳ |
+| **Tempo de previsão** | < 500ms por previsão | ⏳ |
+| **Retreinamento automático** | Semanal sem interrupção | ⏳ |
+
+#### 📊 Validação em Produção
+
+1. **Monitorar previsões vs realidade** por 2 semanas
+   - Registrar cada previsão
+   - Comparar com movimento real do preço
+   - Calcular accuracy real
+
+2. **Testar em diferentes condições de mercado**
+   - Alta volatilidade
+   - Baixa volatilidade
+   - Tendência forte
+   - Mercado lateral
+
+3. **Validar ensemble vs modelos individuais**
+   - Confirmar que ensemble supera modelos individuais
+   - Verificar diversidade nas previsões
+
+4. **A/B Testing**
+   - 50% dos trades com ML
+   - 50% dos trades só com análise técnica
+   - Comparar resultados após 1 mês
+
+#### 🚀 Critério para Avançar para Fase 4
+
+- ✅ Ensemble com 70%+ accuracy validado
+- ✅ Walk-forward mostra consistência
+- ✅ ML melhora win rate em 5-10%
+- ✅ Retreinamento automático funcionando
+- ✅ 2 semanas de monitoramento positivo
 
 ---
 
