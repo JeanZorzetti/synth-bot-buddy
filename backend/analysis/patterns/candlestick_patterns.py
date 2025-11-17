@@ -71,9 +71,9 @@ class CandlestickPatterns:
             'upper_shadow': float(upper_shadow),
             'lower_shadow': float(lower_shadow),
             'total_range': float(total_range),
-            'is_bullish': is_bullish,
-            'is_bearish': is_bearish,
-            'is_doji': is_doji,
+            'is_bullish': bool(is_bullish),  # Converter numpy.bool para Python bool
+            'is_bearish': bool(is_bearish),  # Converter numpy.bool para Python bool
+            'is_doji': bool(is_doji),        # Converter numpy.bool para Python bool
             'body_pct': float(body / total_range) if total_range > 0 else 0
         }
 
