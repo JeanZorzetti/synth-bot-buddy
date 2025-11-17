@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from .indicators import TrendIndicators, MomentumIndicators, VolatilityIndicators
+from .patterns import CandlestickPatterns, SupportResistanceDetector, ChartFormationDetector
 
 
 class TradingSignal:
@@ -57,6 +58,11 @@ class TechnicalAnalysis:
         self.trend = TrendIndicators()
         self.momentum = MomentumIndicators()
         self.volatility = VolatilityIndicators()
+
+        # Detectores de padrões (Fase 2)
+        self.candlestick_detector = CandlestickPatterns()
+        self.sr_detector = SupportResistanceDetector(window=10, min_touches=1, zone_width_pct=0.3)
+        self.chart_detector = ChartFormationDetector(tolerance_pct=1.5, min_bars=15)
 
     def calculate_all_indicators(self, df: pd.DataFrame) -> Dict:
         """
@@ -299,6 +305,161 @@ class TechnicalAnalysis:
                 logger.info(f"  ✓ VOTO SELL adicionado")
             else:
                 logger.info(f"  - NEUTRAL")
+
+        # === ANÁLISE DE PADRÕES (FASE 2) ===
+        logger.info(f"\n{'='*60}")
+        logger.info(f"ANÁLISE DE PADRÕES")
+        logger.info(f"{'='*60}")
+
+        # Detectar padrões de candlestick
+        try:
+            candlestick_patterns = self.candlestick_detector.detect_all_patterns(df, lookback=50)
+
+            logger.info(f"\n[PADRÕES DE CANDLESTICK]")
+            logger.info(f"  Total detectado: {len(candlestick_patterns)}")
+
+            # Contar votos por tipo
+            pattern_buy = [p for p in candlestick_patterns if p.signal == 'BUY']
+            pattern_sell = [p for p in candlestick_patterns if p.signal == 'SELL']
+
+            logger.info(f"  BUY patterns: {len(pattern_buy)}")
+            logger.info(f"  SELL patterns: {len(pattern_sell)}")
+
+            # Top 3 padrões mais confiantes
+            top_patterns = sorted(candlestick_patterns, key=lambda p: p.confidence, reverse=True)[:3]
+            for p in top_patterns:
+                logger.info(f"    • {p.name} ({p.signal}) - Confiança: {p.confidence:.0f}%")
+
+            # Adicionar votos se houver confluência (2+ padrões na mesma direção)
+            if len(pattern_buy) >= 2:
+                avg_confidence = sum(p.confidence for p in pattern_buy[:3]) / min(len(pattern_buy), 3)
+                pattern_desc = f"{len(pattern_buy)} padrões de candlestick bullish detectados"
+                buy_signals.append(pattern_desc)
+                buy_strength += avg_confidence * 0.8  # 80% do peso de um indicador técnico
+                logger.info(f"  ✓ VOTO BUY adicionado (candlestick patterns)")
+
+            if len(pattern_sell) >= 2:
+                avg_confidence = sum(p.confidence for p in pattern_sell[:3]) / min(len(pattern_sell), 3)
+                pattern_desc = f"{len(pattern_sell)} padrões de candlestick bearish detectados"
+                sell_signals.append(pattern_desc)
+                sell_strength += avg_confidence * 0.8
+                logger.info(f"  ✓ VOTO SELL adicionado (candlestick patterns)")
+
+        except Exception as e:
+            logger.warning(f"  Erro ao detectar padrões de candlestick: {e}")
+
+        # Detectar níveis de suporte/resistência e breakouts
+        try:
+            sr_analysis = self.sr_detector.get_analysis_summary(df)
+
+            logger.info(f"\n[SUPORTE E RESISTÊNCIA]")
+            logger.info(f"  Níveis detectados: {sr_analysis['total_levels']}")
+            logger.info(f"  Suportes: {sr_analysis['support_levels']}")
+            logger.info(f"  Resistências: {sr_analysis['resistance_levels']}")
+
+            # Breakout detectado?
+            if sr_analysis['breakout_detected']:
+                breakout = sr_analysis['breakout_detected']
+                logger.info(f"\n  🚀 BREAKOUT DETECTADO:")
+                logger.info(f"    Tipo: {breakout['type']}")
+                logger.info(f"    Nível: {breakout['level_price']:.5f}")
+                logger.info(f"    Força do nível: {breakout['level_strength']:.0f}")
+
+                # Breakout bullish = voto BUY com alto peso
+                if breakout['type'] == 'bullish_breakout':
+                    breakout_strength = breakout['level_strength']
+                    buy_signals.append(f"Breakout bullish em {breakout['level_price']:.5f}")
+                    buy_strength += breakout_strength
+                    logger.info(f"  ✓✓ VOTO BUY FORTE adicionado (breakout)")
+
+                # Breakdown bearish = voto SELL com alto peso
+                elif breakout['type'] == 'bearish_breakdown':
+                    breakout_strength = breakout['level_strength']
+                    sell_signals.append(f"Breakdown bearish em {breakout['level_price']:.5f}")
+                    sell_strength += breakout_strength
+                    logger.info(f"  ✓✓ VOTO SELL FORTE adicionado (breakdown)")
+
+            # Bounce detectado?
+            if sr_analysis['bounce_detected']:
+                bounce = sr_analysis['bounce_detected']
+                logger.info(f"\n  ↩️  BOUNCE DETECTADO:")
+                logger.info(f"    Tipo: {bounce['type']}")
+                logger.info(f"    Nível: {bounce['level_price']:.5f}")
+                logger.info(f"    Força do nível: {bounce['level_strength']:.0f}")
+
+                # Bounce bullish em suporte = voto BUY
+                if bounce['type'] == 'bullish_bounce':
+                    bounce_strength = bounce['level_strength'] * 0.7  # 70% do peso de breakout
+                    buy_signals.append(f"Rejeição de suporte em {bounce['level_price']:.5f}")
+                    buy_strength += bounce_strength
+                    logger.info(f"  ✓ VOTO BUY adicionado (bounce)")
+
+                # Bounce bearish em resistência = voto SELL
+                elif bounce['type'] == 'bearish_bounce':
+                    bounce_strength = bounce['level_strength'] * 0.7
+                    sell_signals.append(f"Rejeição de resistência em {bounce['level_price']:.5f}")
+                    sell_strength += bounce_strength
+                    logger.info(f"  ✓ VOTO SELL adicionado (bounce)")
+
+            # Informar níveis próximos (contexto)
+            if sr_analysis['nearest_support']:
+                ns = sr_analysis['nearest_support']
+                logger.info(f"  Suporte mais próximo: {ns['price']:.5f} ({ns['distance_pct']:.2f}%)")
+
+            if sr_analysis['nearest_resistance']:
+                nr = sr_analysis['nearest_resistance']
+                logger.info(f"  Resistência mais próxima: {nr['price']:.5f} ({nr['distance_pct']:.2f}%)")
+
+        except Exception as e:
+            logger.warning(f"  Erro ao detectar S/R: {e}")
+
+        # Detectar formações gráficas
+        try:
+            chart_formations = self.chart_detector.detect_all_formations(df, lookback=100)
+
+            logger.info(f"\n[FORMAÇÕES GRÁFICAS]")
+            logger.info(f"  Total detectado: {len(chart_formations)}")
+
+            # Filtrar apenas formações confirmadas ou completed
+            relevant_formations = [f for f in chart_formations if f.status in ['confirmed', 'completed']]
+            logger.info(f"  Confirmadas/Completed: {len(relevant_formations)}")
+
+            # Contar por tipo
+            formation_buy = [f for f in relevant_formations if f.signal == 'BUY']
+            formation_sell = [f for f in relevant_formations if f.signal == 'SELL']
+
+            logger.info(f"  BUY formations: {len(formation_buy)}")
+            logger.info(f"  SELL formations: {len(formation_sell)}")
+
+            # Top 2 formações mais confiantes
+            top_formations = sorted(relevant_formations, key=lambda f: f.confidence, reverse=True)[:2]
+            for f in top_formations:
+                logger.info(f"    • {f.name} ({f.status}) - {f.signal} - Confiança: {f.confidence:.0f}%")
+
+            # Adicionar votos para formações confirmadas de alta confiança
+            if formation_buy:
+                # Pegar as top 2 formações BUY
+                top_buy_formations = sorted(formation_buy, key=lambda f: f.confidence, reverse=True)[:2]
+                for f in top_buy_formations:
+                    if f.confidence >= 60:  # Apenas formações com >60% confiança
+                        formation_desc = f"Formação {f.name} ({f.status})"
+                        buy_signals.append(formation_desc)
+                        buy_strength += f.confidence * 0.9  # 90% do peso de um indicador
+                        logger.info(f"  ✓ VOTO BUY adicionado ({f.name})")
+
+            if formation_sell:
+                top_sell_formations = sorted(formation_sell, key=lambda f: f.confidence, reverse=True)[:2]
+                for f in top_sell_formations:
+                    if f.confidence >= 60:
+                        formation_desc = f"Formação {f.name} ({f.status})"
+                        sell_signals.append(formation_desc)
+                        sell_strength += f.confidence * 0.9
+                        logger.info(f"  ✓ VOTO SELL adicionado ({f.name})")
+
+        except Exception as e:
+            logger.warning(f"  Erro ao detectar formações gráficas: {e}")
+
+        logger.info(f"{'='*60}")
 
         # === DECISÃO FINAL ===
         total_signals = len(buy_signals) + len(sell_signals)
