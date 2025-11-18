@@ -1073,9 +1073,36 @@ class EnsemblePredictor:
 - ✅ **Documentação extensiva** (210+ páginas em 7 documentos)
 - [ ] ⏳ Dashboard de performance dos modelos (próxima fase)
 
-### 3.7 🧪 Testes em Produção - Machine Learning
+### 3.7 ✅ Testes de Endpoints ML Completados (2025-11-17)
 
-#### Como Testar
+**Status**: Todos os 3 endpoints testados com sucesso em servidor local.
+
+**Resultados dos Testes**:
+
+| Endpoint | Status | Tempo | Validação |
+|----------|--------|-------|-----------|
+| GET /api/ml/info | ✅ 200 OK | ~200ms | 6/6 campos OK |
+| GET /api/ml/predict/{symbol} | ✅ 200 OK | ~500ms | 8/8 campos OK |
+| POST /api/ml/predict | ✅ 400 OK | ~100ms | Validação OK |
+
+**Dependências Instaladas**:
+
+- xgboost 3.1.1 ✅
+- scikit-learn 1.7.2 ✅
+- pandas-ta 0.4.71b0 ✅
+- python-deriv-api 0.1.6 ✅
+
+**Documentação Completa**:
+
+- 📄 [TESTES_ENDPOINTS_ML.md](../backend/ml/TESTES_ENDPOINTS_ML.md) - Relatório detalhado de testes
+- 📄 [DEPLOY_PRODUCTION_ML.md](../DEPLOY_PRODUCTION_ML.md) - Guia completo de deploy
+
+**Servidor de Teste**: <http://127.0.0.1:8001>
+**Pronto para Deploy**: ✅ SIM
+
+### 3.8 🧪 Testes em Produção - Machine Learning
+
+#### Como Testar em Produção
 
 **1. Previsão de Movimento de Preço**
 ```bash

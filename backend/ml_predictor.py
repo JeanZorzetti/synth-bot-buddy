@@ -14,6 +14,17 @@ from typing import Dict, Optional, Tuple
 from datetime import datetime
 import sys
 
+# Importar dependências ML necessárias para unpickle
+try:
+    import xgboost as xgb
+    import sklearn
+    logger_import = logging.getLogger(__name__)
+    logger_import.info("XGBoost e scikit-learn importados com sucesso")
+except ImportError as e:
+    logger_import = logging.getLogger(__name__)
+    logger_import.error(f"Erro ao importar dependências ML: {e}")
+    raise
+
 # Adicionar ml ao path
 ml_path = Path(__file__).parent / "ml"
 if str(ml_path) not in sys.path:
