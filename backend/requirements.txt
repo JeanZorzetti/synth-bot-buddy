@@ -31,6 +31,6 @@ python-deriv-api==0.1.6
 # Machine Learning dependencies (Phase 3)
 xgboost==3.1.1
 scikit-learn==1.7.2
-pandas-ta==0.4.71b0
+# pandas-ta removed (requires Python 3.12+, using manual calculations instead)
 numba==0.61.2
 joblib==1.5.2
