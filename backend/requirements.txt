@@ -26,3 +26,11 @@ pytest-asyncio==0.21.1
 websocket-client>=1.6.0
 aiofiles>=23.2.0
 ujson>=5.8.0
+python-deriv-api==0.1.6
+
+# Machine Learning dependencies (Phase 3)
+xgboost==3.1.1
+scikit-learn==1.7.2
+pandas-ta==0.4.71b0
+numba==0.61.2
+joblib==1.5.2
