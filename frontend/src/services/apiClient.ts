@@ -164,7 +164,7 @@ class APIClient {
 
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -610,7 +610,7 @@ class APIClient {
 
   // WebSocket Connections
   connectWebSocket(endpoint: string, onMessage: (data: any) => void): WebSocket {
-    const wsUrl = (process.env.REACT_APP_WS_URL || 'ws://localhost:8000') + endpoint;
+    const wsUrl = (import.meta.env.VITE_WS_URL || 'ws://localhost:8000') + endpoint;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
