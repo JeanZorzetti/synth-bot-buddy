@@ -19,9 +19,34 @@ import {
   RefreshCw,
   BarChart3,
   LineChart,
-  PieChart
+  PieChart,
+  Play,
+  Pause,
+  Settings,
+  DollarSign,
+  Shield,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface MLModelInfo {
   model_path: string;
@@ -63,6 +88,22 @@ const MLMonitoring = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Trading execution states
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<string | null>(null);
+
+  // Trading settings
+  const [tradeSettings, setTradeSettings] = useState({
+    symbol: 'R_100',
+    amount: 10,
+    stopLossPercent: 5,
+    takeProfitPercent: 10,
+    paperTrading: true, // Sempre começar com paper trading
+    autoTrade: false,
+  });
 
   // Calcular estatísticas do histórico
   const stats = {
@@ -129,6 +170,68 @@ const MLMonitoring = () => {
     setIsRefreshing(true);
     await Promise.all([loadModelInfo(), loadLastPrediction()]);
     setIsRefreshing(false);
+  };
+
+  // Execute trade function
+  const handleExecuteTrade = async () => {
+    if (!lastPrediction) return;
+
+    setIsExecuting(true);
+    setExecutionResult(null);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+      const response = await fetch(`${apiUrl}/api/ml/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prediction: lastPrediction.prediction,
+          confidence: lastPrediction.confidence,
+          symbol: tradeSettings.symbol,
+          amount: tradeSettings.amount,
+          stop_loss_percent: tradeSettings.stopLossPercent,
+          take_profit_percent: tradeSettings.takeProfitPercent,
+          paper_trading: tradeSettings.paperTrading,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setExecutionResult(
+        tradeSettings.paperTrading
+          ? `✅ Paper Trade Executado: ${result.message || 'Trade simulado registrado'}`
+          : `✅ Trade Real Executado: ${result.message || 'Trade enviado para Deriv API'}`
+      );
+
+      // Refresh predictions to show updated history
+      await loadLastPrediction();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      setExecutionResult(`❌ Erro: ${errorMessage}`);
+      console.error('Error executing trade:', err);
+    } finally {
+      setIsExecuting(false);
+      setShowConfirmDialog(false);
+    }
+  };
+
+  const handleTradeClick = () => {
+    if (!lastPrediction) {
+      setExecutionResult('❌ Nenhuma previsão disponível');
+      return;
+    }
+
+    if (lastPrediction.confidence < 0.6) {
+      setExecutionResult('⚠️ Confidence muito baixo (< 60%). Aumente a confidence mínima ou aguarde um sinal melhor.');
+      return;
+    }
+
+    setShowConfirmDialog(true);
   };
 
   useEffect(() => {
@@ -387,6 +490,282 @@ const MLMonitoring = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Quick Actions & Trade Execution */}
+      {lastPrediction && (
+        <Card className="border-emerald-200 bg-emerald-50/30">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Play className="h-5 w-5 text-emerald-600" />
+                Quick Actions
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettingsPanel(!showSettingsPanel)}
+                className="gap-1"
+              >
+                <Settings className="h-4 w-4" />
+                Configurar
+                {showSettingsPanel ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </div>
+            <CardDescription>
+              Execute trades baseados na previsão do modelo ML
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Execution Result Alert */}
+            {executionResult && (
+              <Alert className={executionResult.includes('✅') ? 'border-green-500 bg-green-50' : 'border-orange-500 bg-orange-50'}>
+                <AlertDescription>{executionResult}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={handleTradeClick}
+                disabled={!lastPrediction || isExecuting || lastPrediction.confidence < 0.6}
+                size="lg"
+                className="gap-2 flex-1 min-w-[200px]"
+              >
+                {isExecuting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Executando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    {tradeSettings.paperTrading ? 'Execute Paper Trade' : 'Execute Real Trade'}
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2"
+                onClick={() => {
+                  setExecutionResult('🧪 Backtesting feature coming soon!');
+                }}
+              >
+                <BarChart3 className="h-4 w-4" />
+                Run Backtest
+              </Button>
+            </div>
+
+            {/* Trade Settings Panel (Collapsible) */}
+            {showSettingsPanel && (
+              <div className="border rounded-lg p-4 space-y-4 bg-white">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configurações de Trade
+                </h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Symbol Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="symbol">Símbolo</Label>
+                    <Select
+                      value={tradeSettings.symbol}
+                      onValueChange={(value) =>
+                        setTradeSettings({ ...tradeSettings, symbol: value })
+                      }
+                    >
+                      <SelectTrigger id="symbol">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="R_100">Volatility 100 Index (R_100)</SelectItem>
+                        <SelectItem value="R_75">Volatility 75 Index (R_75)</SelectItem>
+                        <SelectItem value="R_50">Volatility 50 Index (R_50)</SelectItem>
+                        <SelectItem value="R_25">Volatility 25 Index (R_25)</SelectItem>
+                        <SelectItem value="R_10">Volatility 10 Index (R_10)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount ($)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={tradeSettings.amount}
+                      onChange={(e) =>
+                        setTradeSettings({ ...tradeSettings, amount: parseFloat(e.target.value) })
+                      }
+                    />
+                  </div>
+
+                  {/* Stop Loss */}
+                  <div className="space-y-2">
+                    <Label htmlFor="stopLoss">Stop Loss (%)</Label>
+                    <Input
+                      id="stopLoss"
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={tradeSettings.stopLossPercent}
+                      onChange={(e) =>
+                        setTradeSettings({ ...tradeSettings, stopLossPercent: parseFloat(e.target.value) })
+                      }
+                    />
+                  </div>
+
+                  {/* Take Profit */}
+                  <div className="space-y-2">
+                    <Label htmlFor="takeProfit">Take Profit (%)</Label>
+                    <Input
+                      id="takeProfit"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={tradeSettings.takeProfitPercent}
+                      onChange={(e) =>
+                        setTradeSettings({ ...tradeSettings, takeProfitPercent: parseFloat(e.target.value) })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Safety Switches */}
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-blue-600" />
+                        Paper Trading Mode
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Simula trades sem usar dinheiro real
+                      </p>
+                    </div>
+                    <Switch
+                      checked={tradeSettings.paperTrading}
+                      onCheckedChange={(checked) =>
+                        setTradeSettings({ ...tradeSettings, paperTrading: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-orange-600" />
+                        Auto-Trade
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Executa automaticamente quando confidence {'>'} 70%
+                      </p>
+                    </div>
+                    <Switch
+                      checked={tradeSettings.autoTrade}
+                      onCheckedChange={(checked) =>
+                        setTradeSettings({ ...tradeSettings, autoTrade: checked })
+                      }
+                      disabled={!tradeSettings.paperTrading}
+                    />
+                  </div>
+                </div>
+
+                {!tradeSettings.paperTrading && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Atenção!</AlertTitle>
+                    <AlertDescription>
+                      Você está em modo REAL. Trades executados usarão dinheiro real da sua conta Deriv.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {tradeSettings.paperTrading ? (
+                <>
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  Confirmar Paper Trade
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  Confirmar Trade REAL
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Revise os detalhes do trade antes de executar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Previsão</p>
+                <p className="font-semibold">{lastPrediction?.prediction}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Confidence</p>
+                <p className="font-semibold">{((lastPrediction?.confidence || 0) * 100).toFixed(1)}%</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Símbolo</p>
+                <p className="font-semibold">{tradeSettings.symbol}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Amount</p>
+                <p className="font-semibold">${tradeSettings.amount}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Stop Loss</p>
+                <p className="font-semibold">{tradeSettings.stopLossPercent}%</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Take Profit</p>
+                <p className="font-semibold">{tradeSettings.takeProfitPercent}%</p>
+              </div>
+            </div>
+
+            {tradeSettings.paperTrading ? (
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  Este é um paper trade (simulação). Nenhum dinheiro real será usado.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>ATENÇÃO:</strong> Este trade usará dinheiro real da sua conta Deriv!
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleExecuteTrade} disabled={isExecuting}>
+              {isExecuting ? 'Executando...' : 'Confirmar Trade'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Statistics from History */}
       <div className="grid md:grid-cols-4 gap-4">

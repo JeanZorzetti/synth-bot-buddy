@@ -618,6 +618,101 @@ async def post_ml_prediction(request: Request):
         logger.error(f"Erro na previsão ML com dados customizados: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/api/ml/execute")
+async def execute_ml_trade(request: Request):
+    """
+    Executa um trade baseado na previsão ML
+
+    Body:
+    {
+        "prediction": "PRICE_UP" | "NO_MOVE",
+        "confidence": 0.75,
+        "symbol": "R_100",
+        "amount": 10,
+        "stop_loss_percent": 5,
+        "take_profit_percent": 10,
+        "paper_trading": true
+    }
+
+    Returns:
+        Dict com resultado da execução
+    """
+    try:
+        body = await request.json()
+
+        prediction = body.get("prediction")
+        confidence = body.get("confidence")
+        symbol = body.get("symbol", "R_100")
+        amount = body.get("amount", 10)
+        stop_loss_percent = body.get("stop_loss_percent", 5)
+        take_profit_percent = body.get("take_profit_percent", 10)
+        paper_trading = body.get("paper_trading", True)
+
+        # Validações
+        if not prediction:
+            raise HTTPException(status_code=400, detail="Prediction é obrigatório")
+
+        if confidence is None or confidence < 0 or confidence > 1:
+            raise HTTPException(status_code=400, detail="Confidence inválido (deve estar entre 0 e 1)")
+
+        if confidence < 0.6:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Confidence muito baixo ({confidence:.2f}). Mínimo recomendado: 0.60"
+            )
+
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount deve ser maior que 0")
+
+        # Paper Trading (simulação)
+        if paper_trading:
+            logger.info(f"[PAPER TRADE] Simulando trade: {prediction} | Confidence: {confidence:.2%} | Symbol: {symbol} | Amount: ${amount}")
+
+            # Simular resultado
+            result = {
+                "status": "paper_trade_executed",
+                "message": f"Paper trade simulado com sucesso",
+                "trade_details": {
+                    "type": "paper_trading",
+                    "prediction": prediction,
+                    "confidence": confidence,
+                    "symbol": symbol,
+                    "amount": amount,
+                    "stop_loss_percent": stop_loss_percent,
+                    "take_profit_percent": take_profit_percent,
+                    "timestamp": datetime.now().isoformat(),
+                    "contract_type": "CALL" if prediction == "PRICE_UP" else "PUT",
+                },
+                "note": "Este é um trade simulado. Nenhum dinheiro real foi usado."
+            }
+
+            return result
+
+        # Real Trading (requer token Deriv API)
+        global _api_token
+
+        if not _api_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Token Deriv API não configurado. Configure em /settings para trading real."
+            )
+
+        # TODO: Implementar integração com Deriv API real
+        # Por enquanto, retornar erro informativo
+        logger.warning("[REAL TRADE] Tentativa de execução real, mas integração ainda não implementada")
+
+        raise HTTPException(
+            status_code=501,
+            detail="Trading real ainda não implementado. Use paper_trading=true para simular trades."
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao executar trade ML: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 # === ANÁLISE TÉCNICA - FASE 1 ===
 
 # Inicializar análise técnica
