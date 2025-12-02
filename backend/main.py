@@ -656,10 +656,11 @@ async def execute_ml_trade(request: Request):
         if confidence is None or confidence < 0 or confidence > 1:
             raise HTTPException(status_code=400, detail="Confidence inválido (deve estar entre 0 e 1)")
 
-        if confidence < 0.6:
+        # Validar confidence apenas para real trading
+        if not paper_trading and confidence < 0.6:
             raise HTTPException(
                 status_code=400,
-                detail=f"Confidence muito baixo ({confidence:.2f}). Mínimo recomendado: 0.60"
+                detail=f"Confidence muito baixo ({confidence:.2f}). Mínimo 0.60 para real trading. Use paper_trading=true para testar."
             )
 
         if amount <= 0:
