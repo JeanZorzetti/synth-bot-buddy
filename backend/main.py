@@ -24,6 +24,7 @@ from models.order_models import OrderRequest, OrderResponse
 from analysis import TechnicalAnalysis
 from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 from ml_predictor import get_ml_predictor, initialize_ml_predictor
+from backtesting import Backtester, BacktestResult
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1092,6 +1093,97 @@ async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500)
     except Exception as e:
         logger.error(f"Erro na análise completa de padrões: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== BACKTESTING ENDPOINT ====================
+
+@app.post("/api/backtest/{symbol}")
+async def run_backtest(
+    symbol: str,
+    request: Request,
+    timeframe: str = "1m",
+    count: int = 1000,
+    initial_balance: float = 1000.0,
+    position_size_percent: float = 10.0,
+    stop_loss_percent: float = 2.0,
+    take_profit_percent: float = 4.0
+):
+    """
+    Executa backtest de indicadores técnicos em dados históricos
+
+    Args:
+        symbol: Símbolo do ativo
+        timeframe: Timeframe dos candles
+        count: Número de candles históricos
+        initial_balance: Saldo inicial em USD
+        position_size_percent: % do saldo para cada trade
+        stop_loss_percent: % de stop loss
+        take_profit_percent: % de take profit
+
+    Returns:
+        Relatório completo de backtesting com métricas de performance
+    """
+    try:
+        global tech_analysis, _api_token
+
+        # Check for token in header
+        token_from_header = request.headers.get('X-API-Token')
+        if token_from_header:
+            _api_token = token_from_header
+
+        logger.info(f"[BACKTEST] Iniciando backtest para {symbol} ({timeframe}) com {count} candles")
+
+        # Buscar dados históricos
+        df, data_source = await fetch_deriv_candles(symbol, timeframe, count)
+
+        if len(df) < 200:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Dados insuficientes para backtest: {len(df)} candles (mínimo: 200)"
+            )
+
+        # Inicializar backtester
+        if tech_analysis is None:
+            tech_analysis = TechnicalAnalysis()
+
+        backtester = Backtester(tech_analysis)
+
+        # Executar backtest
+        result = backtester.run_backtest(
+            df=df,
+            symbol=symbol,
+            initial_balance=initial_balance,
+            position_size_percent=position_size_percent,
+            stop_loss_percent=stop_loss_percent,
+            take_profit_percent=take_profit_percent
+        )
+
+        # Preparar resposta
+        response = result.to_dict()
+        response['metadata'] = {
+            'symbol': symbol,
+            'timeframe': timeframe,
+            'data_source': data_source,
+            'candles_analyzed': len(df),
+            'backtest_period': f"{df.index[0]} to {df.index[-1]}" if hasattr(df.index[0], 'isoformat') else f"{len(df)} candles",
+            'parameters': {
+                'initial_balance': initial_balance,
+                'position_size_percent': position_size_percent,
+                'stop_loss_percent': stop_loss_percent,
+                'take_profit_percent': take_profit_percent
+            }
+        }
+
+        logger.info(f"[BACKTEST] Completo: Win Rate {result.win_rate:.2f}%, Profit Factor {result.profit_factor:.2f}")
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro no backtesting para {symbol}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ==================== SETTINGS ENDPOINTS ====================
 
