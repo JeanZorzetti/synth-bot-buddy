@@ -148,14 +148,8 @@ class Backtester:
             current_candle = df.iloc[i]
             historical_data = df.iloc[:i+1]
 
-            # Calcular indicadores até este ponto
-            indicators = self.ta.calculate_all_indicators(historical_data)
-
-            if indicators is None:
-                continue
-
-            # Gerar sinal
-            signal = self.ta.generate_signal(symbol, historical_data, indicators)
+            # Gerar sinal (já calcula indicadores internamente)
+            signal = self.ta.generate_signal(historical_data, symbol)
 
             # Se não há posição aberta, procurar entrada
             if open_position is None:
