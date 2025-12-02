@@ -48,6 +48,14 @@ const navItems: NavItem[] = [
     badgeVariant: 'secondary'
   },
   {
+    title: 'Análise Técnica',
+    href: '/technical-analysis',
+    icon: Activity,
+    description: 'Indicadores e Backtesting',
+    badge: 'Fase 1.4',
+    badgeVariant: 'secondary'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,
