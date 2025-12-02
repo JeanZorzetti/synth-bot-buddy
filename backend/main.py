@@ -1143,10 +1143,10 @@ async def run_backtest(
             )
 
         # Inicializar backtester
-        if tech_analysis is None:
-            tech_analysis = TechnicalAnalysis()
+        if technical_analysis is None:
+            technical_analysis = TechnicalAnalysis()
 
-        backtester = Backtester(tech_analysis)
+        backtester = Backtester(technical_analysis)
 
         # Executar backtest
         result = backtester.run_backtest(
