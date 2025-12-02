@@ -226,9 +226,9 @@ const MLMonitoring = () => {
       return;
     }
 
+    // Apenas aviso, não bloqueia mais
     if (lastPrediction.confidence < 0.6) {
-      setExecutionResult('⚠️ Confidence muito baixo (< 60%). Aumente a confidence mínima ou aguarde um sinal melhor.');
-      return;
+      console.warn(`⚠️ Confidence baixo: ${(lastPrediction.confidence * 100).toFixed(1)}%`);
     }
 
     setShowConfirmDialog(true);
@@ -524,37 +524,50 @@ const MLMonitoring = () => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={handleTradeClick}
-                disabled={!lastPrediction || isExecuting || lastPrediction.confidence < 0.6}
-                size="lg"
-                className="gap-2 flex-1 min-w-[200px]"
-              >
-                {isExecuting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Executando...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    {tradeSettings.paperTrading ? 'Execute Paper Trade' : 'Execute Real Trade'}
-                  </>
-                )}
-              </Button>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={handleTradeClick}
+                  disabled={!lastPrediction || isExecuting}
+                  size="lg"
+                  className="gap-2"
+                >
+                  {isExecuting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Executando...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" />
+                      {tradeSettings.paperTrading ? 'Execute Paper Trade' : 'Execute Real Trade'}
+                    </>
+                  )}
+                </Button>
 
-              <Button
-                variant="outline"
-                size="lg"
-                className="gap-2"
-                onClick={() => {
-                  setExecutionResult('🧪 Backtesting feature coming soon!');
-                }}
-              >
-                <BarChart3 className="h-4 w-4" />
-                Run Backtest
-              </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => {
+                    setExecutionResult('🧪 Backtesting feature coming soon!');
+                  }}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Run Backtest
+                </Button>
+              </div>
+
+              {/* Confidence Warning */}
+              {lastPrediction && lastPrediction.confidence < 0.6 && (
+                <Alert className="border-orange-500 bg-orange-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    ⚠️ Confidence baixo ({(lastPrediction.confidence * 100).toFixed(1)}%).
+                    Recomendado: {'>'} 60% para trades. Você pode executar mesmo assim em modo paper trading.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             {/* Trade Settings Panel (Collapsible) */}
