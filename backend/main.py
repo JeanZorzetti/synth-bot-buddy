@@ -1124,7 +1124,7 @@ async def run_backtest(
         Relatório completo de backtesting com métricas de performance
     """
     try:
-        global tech_analysis, _api_token
+        global technical_analysis, _api_token
 
         # Check for token in header
         token_from_header = request.headers.get('X-API-Token')
