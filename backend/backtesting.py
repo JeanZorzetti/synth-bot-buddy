@@ -144,7 +144,7 @@ class Backtester:
         logger.info(f"Iniciando backtest para {symbol} com {len(df)} candles")
 
         # Iterar sobre os candles
-        for i in range(100, len(df) - 1):  # Precisa de 100 candles para indicadores
+        for i in range(200, len(df) - 1):  # Precisa de 200 candles para indicadores
             current_candle = df.iloc[i]
             historical_data = df.iloc[:i+1]
 
