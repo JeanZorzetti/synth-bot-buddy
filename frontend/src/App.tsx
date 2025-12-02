@@ -11,6 +11,7 @@ import Trading from "./pages/Trading";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
+import MLMonitoring from "./pages/MLMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,11 @@ const App = () => (
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/ml-monitoring" element={
+            <ProtectedRoute>
+              <MLMonitoring />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

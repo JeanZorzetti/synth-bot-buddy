@@ -40,6 +40,14 @@ const navItems: NavItem[] = [
     badgeVariant: 'default'
   },
   {
+    title: 'ML Monitoring',
+    href: '/ml-monitoring',
+    icon: Brain,
+    description: 'Monitoramento do modelo ML',
+    badge: 'Fase 7',
+    badgeVariant: 'secondary'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,
