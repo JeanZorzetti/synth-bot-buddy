@@ -155,9 +155,9 @@ backend/
 - [x] ✅ Integrar com Deriv API para dados reais
 - [x] ✅ Implementar logging detalhado para debugging
 - [x] ✅ Criar endpoints REST API funcionais
-- [ ] ⏳ Testar em dados históricos (backtesting) - Fase 1.7
-- [ ] ⏳ Criar visualização de indicadores no frontend - Fase 7
-- [ ] ⏳ Validar sinais manualmente antes de automatizar
+- [x] ✅ Testar em dados históricos (backtesting) - **IMPLEMENTADO 02/12/2024** ✨
+- [x] ✅ Criar visualização de indicadores no frontend - **IMPLEMENTADO 02/12/2024** ✨
+- [ ] ⏳ Validar sinais manualmente antes de automatizar - **Interface criada, endpoints pendentes**
 
 ### 1.5 Entregáveis
 
@@ -170,8 +170,8 @@ backend/
 - [x] ✅ Suporte múltiplos timeframes (1m, 5m, 15m, 1h, 4h, 1d)
 - [x] ✅ Logging detalhado de análise de sinais
 - [x] ✅ Documentação completa de testes
-- [ ] ⏳ Dashboard de indicadores no frontend
-- [ ] ⏳ Relatório de backtesting (win rate, profit factor)
+- [x] ✅ Dashboard de indicadores no frontend - **Página /technical-analysis criada**
+- [x] ✅ Relatório de backtesting (win rate, profit factor) - **Sistema completo implementado**
 
 ### 1.6 🧪 Testes em Produção
 
