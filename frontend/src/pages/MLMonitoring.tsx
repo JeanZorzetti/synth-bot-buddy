@@ -139,8 +139,21 @@ const MLMonitoring = () => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
 
+      // Get token from localStorage
+      const token = localStorage.getItem('deriv_api_key') || localStorage.getItem('deriv_primary_token');
+
       // Fazer previsão para R_100 (padrão)
-      const response = await fetch(`${apiUrl}/api/ml/predict/R_100?timeframe=1m&count=200`);
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['X-API-Token'] = token;
+      }
+
+      const response = await fetch(`${apiUrl}/api/ml/predict/R_100?timeframe=1m&count=200`, {
+        headers
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);

@@ -502,6 +502,7 @@ async def get_ml_info():
 @app.get("/api/ml/predict/{symbol}")
 async def get_ml_prediction(
     symbol: str,
+    request: Request,
     timeframe: str = "1m",
     count: int = 200,
     threshold: Optional[float] = None
@@ -524,7 +525,13 @@ async def get_ml_prediction(
         - model: nome do modelo
     """
     try:
-        global ml_predictor
+        global ml_predictor, _api_token
+
+        # Check for token in header
+        token_from_header = request.headers.get('X-API-Token')
+        if token_from_header:
+            _api_token = token_from_header
+            logger.info(f"[OK] Token recebido via header: {token_from_header[:10]}...")
 
         # Inicializar ML predictor se necessário
         if ml_predictor is None or (threshold and threshold != ml_predictor.threshold):
