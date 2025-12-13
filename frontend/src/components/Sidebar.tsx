@@ -56,6 +56,14 @@ const navItems: NavItem[] = [
     badgeVariant: 'secondary'
   },
   {
+    title: 'Risk Management',
+    href: '/risk-management',
+    icon: Shield,
+    description: 'Gestão de Risco Inteligente',
+    badge: 'Fase 4',
+    badgeVariant: 'default'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,
