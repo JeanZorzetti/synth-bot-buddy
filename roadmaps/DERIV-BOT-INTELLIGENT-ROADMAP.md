@@ -1453,16 +1453,18 @@ def check_correlation(active_positions, new_symbol):
 
 - [x] Integrar backtesting com RiskManager (validar trades) ✅
 - [x] Gráficos de equity curve no dashboard ✅
-- [ ] ML para ajuste dinâmico de Kelly Criterion
+- [x] ML para ajuste dinâmico de Kelly Criterion ✅
 - [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
 
 - ✅ Classe `RiskManager` completa (600+ linhas)
+- ✅ Classe `KellyMLPredictor` (420+ linhas) - ML para Kelly dinâmico
 - ✅ Position sizing automático (Kelly Criterion + Fixed Fractional)
+- ✅ Position sizing com ML (Random Forest prevê win_rate/avg_win/loss)
 - ✅ Stop loss e take profit dinâmicos (ATR + Trailing + Partial TP)
 - ✅ Limites de risco configuráveis (diário/semanal/drawdown)
-- ✅ 7 API REST endpoints de risk management
+- ✅ 10 API REST endpoints de risk management (7 básicos + 3 ML)
 - ✅ Documentação completa (950+ linhas)
 - ✅ Relatório de testes (7/7 endpoints validados)
 
@@ -1528,11 +1530,35 @@ def check_correlation(active_positions, new_symbol):
 **Arquivos Criados:**
 
 - `backend/risk_manager.py` (600+ linhas)
+- `backend/kelly_ml_predictor.py` (420+ linhas) - ML para Kelly dinâmico
 - `backend/backtesting_with_risk.py` (400+ linhas) - Backtesting com validação de RiskManager
 - `backend/RISK_MANAGEMENT_DOCS.md` (950+ linhas)
 - `backend/TESTES_RISK_MANAGEMENT.md` (600+ linhas)
 - `backend/TESTES_EQUITY_CHARTS.md` (427 linhas) - Testes dos gráficos de equity curve
 - `frontend/src/pages/RiskManagement.tsx` (600+ linhas) - Dashboard com gráficos interativos
+
+**Kelly ML Features (Machine Learning):**
+
+- **Extração de Features (9 features)**:
+  - consecutive_wins/losses, recent_win_rate, volatility
+  - hour_of_day, day_of_week, total_trades
+  - avg_position_size, sharpe_ratio
+
+- **Modelos Treinados**:
+  - RandomForestClassifier → Prevê win_rate (probabilidade de win)
+  - RandomForestRegressor → Prevê avg_win (apenas em wins)
+  - RandomForestRegressor → Prevê avg_loss (apenas em losses)
+
+- **Endpoints ML**:
+  - `POST /api/risk/train-kelly-ml` - Treina modelo (min 50 trades)
+  - `POST /api/risk/predict-kelly-ml` - Gera previsões
+  - `POST /api/risk/toggle-kelly-ml?enable=true` - Ativa/desativa ML
+
+- **Benefícios**:
+  - Kelly ajustado dinamicamente baseado em condições de mercado
+  - Captura padrões não-lineares (Random Forest)
+  - Feature importance identifica fatores chave
+  - Persistência: modelo salvo em disco
 
 **Commits Recentes (2025-12-13):**
 
@@ -1540,8 +1566,9 @@ def check_correlation(active_positions, new_symbol):
 - `541797d` - feat: Adicionar gráficos de Equity Curve ao Dashboard
 - `fe8a405` - docs: Atualizar roadmap FASE 4 com equity curve charts
 - `477d3f4` - test: Adicionar relatório completo de testes dos gráficos
+- `64d25fa` - feat: Implementar ML para ajuste dinâmico de Kelly Criterion
 
-**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, testes 100%, charts 100%)
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%)
 
 ---
 
