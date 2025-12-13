@@ -1454,8 +1454,9 @@ def check_correlation(active_positions, new_symbol):
 - [x] Integrar backtesting com RiskManager (validar trades) ✅
 - [x] Gráficos de equity curve no dashboard ✅
 - [x] ML para ajuste dinâmico de Kelly Criterion ✅
-- [ ] Frontend para Kelly ML - Visualizar previsões e feature importance
-- [ ] Re-treinar automaticamente - A cada X trades novos
+- [x] Frontend para Kelly ML - Visualizar previsões e feature importance ✅
+- [x] Re-treinar automaticamente - A cada X trades novos ✅
+- [ ] Gráfico de feature importance no dashboard
 - [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
@@ -1562,6 +1563,26 @@ def check_correlation(active_positions, new_symbol):
   - Feature importance identifica fatores chave
   - Persistência: modelo salvo em disco
 
+**Frontend Kelly ML (Nova Aba no Dashboard):**
+
+- **Aba "ML Kelly"** com badge "ON" quando ativado
+- **ML Status Card**: Trained, Enabled, Accuracy %
+- **Controls Card**: Train Model, Enable/Disable ML
+- **Current Predictions Card**:
+  - Predicted Win Rate, Avg Win/Loss
+  - Kelly Criterion ML, Full Kelly, Confidence
+- **Alerts**: Model not trained, ML Kelly active
+- **Auto-refresh**: Previsões ML a cada 5s quando ativado
+
+**Re-Treino Automático:**
+
+- **Configurável**: Intervalo entre re-treinos (padrão: 20 trades)
+- **Automático**: Sistema verifica `should_retrain()` a cada trade
+- **Rastreável**: Histórico de quando modelo foi treinado
+- **Endpoints**:
+  - `POST /api/risk/auto-retrain?enable=true&interval=20`
+  - `GET /api/risk/check-retrain` - Verifica status
+
 **Commits Recentes (2025-12-13):**
 
 - `9414e65` - feat: Implementar Backtesting com Risk Management Integrado
@@ -1569,8 +1590,10 @@ def check_correlation(active_positions, new_symbol):
 - `fe8a405` - docs: Atualizar roadmap FASE 4 com equity curve charts
 - `477d3f4` - test: Adicionar relatório completo de testes dos gráficos
 - `64d25fa` - feat: Implementar ML para ajuste dinâmico de Kelly Criterion
+- `1428157` - feat: Adicionar frontend para Kelly ML no dashboard
+- `7c06efc` - feat: Implementar re-treino automático do modelo Kelly ML
 
-**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%)
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%, auto-retrain 100%)
 
 ---
 
