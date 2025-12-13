@@ -1438,13 +1438,23 @@ def check_correlation(active_positions, new_symbol):
 ```
 
 ### 4.5 Tarefas
+
+**Concluídas:**
+
 - [x] Implementar Kelly Criterion e position sizing ✅
 - [x] Criar sistema de stop loss dinâmico (ATR + Trailing) ✅
 - [x] Implementar partial take profit ✅
 - [x] Criar RiskManager com limites diários/semanais ✅
 - [x] Adicionar controle de correlação entre trades ✅
 - [x] Implementar circuit breaker (pausa após perdas) ✅
-- [ ] Dashboard de gestão de risco (frontend) ⏳
+- [x] Dashboard de gestão de risco (frontend) ✅
+
+**Melhorias Futuras:**
+
+- [ ] Integrar backtesting com RiskManager (validar trades)
+- [ ] ML para ajuste dinâmico de Kelly Criterion
+- [ ] Gráficos de equity curve no dashboard
+- [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
 
@@ -1498,7 +1508,7 @@ def check_correlation(active_positions, new_symbol):
 - `backend/RISK_MANAGEMENT_DOCS.md` (950+ linhas)
 - `backend/TESTES_RISK_MANAGEMENT.md` (600+ linhas)
 
-**Status:** FASE 4 - 85% COMPLETA (backend 100%, frontend dashboard pendente)
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, testes 100%)
 
 ---
 
