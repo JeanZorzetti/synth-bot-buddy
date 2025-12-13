@@ -1606,8 +1606,9 @@ def check_correlation(active_positions, new_symbol):
 - `1428157` - feat: Adicionar frontend para Kelly ML no dashboard
 - `7c06efc` - feat: Implementar re-treino automático do modelo Kelly ML
 - `2062d73` - feat: Adicionar visualização de Feature Importance no Dashboard ML
+- `4050a67` - feat: Adicionar toast notifications para feedback visual no ML Kelly
 
-**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%, auto-retrain 100%, feature-importance 100%)
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%, auto-retrain 100%, feature-importance 100%, UX 100%)
 
 ---
 
