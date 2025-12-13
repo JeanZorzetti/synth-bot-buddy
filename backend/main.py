@@ -1097,11 +1097,6 @@ async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500)
 
 # ==================== BACKTESTING ENDPOINT ====================
 
-@app.options("/api/backtest/{symbol}")
-async def backtest_options(symbol: str):
-    """Handle CORS preflight for backtest endpoint"""
-    return Response(status_code=200)
-
 @app.post("/api/backtest/{symbol}")
 async def run_backtest(
     symbol: str,
