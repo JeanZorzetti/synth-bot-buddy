@@ -26,6 +26,7 @@ from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 from ml_predictor import get_ml_predictor, initialize_ml_predictor
 from backtesting import Backtester, BacktestResult
 from background_tasks import task_manager
+from risk_manager import RiskManager, RiskLimits, TrailingStop
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -727,6 +728,9 @@ async def execute_ml_trade(request: Request):
 
 # Inicializar análise técnica
 technical_analysis = TechnicalAnalysis()
+
+# Initialize Risk Manager
+risk_manager = RiskManager(initial_capital=1000.0)
 
 @app.get("/api/indicators/{symbol}")
 async def get_indicators(symbol: str, timeframe: str = "1m", count: int = 500):
@@ -1478,6 +1482,284 @@ async def get_trading_signals(symbol: str):
     except Exception as e:
         logger.error(f"Error getting trading signals: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== RISK MANAGEMENT ENDPOINTS ====================
+
+@app.get("/api/risk/metrics")
+async def get_risk_metrics():
+    """
+    Retorna métricas de risco atuais
+
+    Returns:
+        - Current capital, PnL, drawdown
+        - Win rate, Kelly Criterion
+        - Active limits and circuit breaker status
+    """
+    try:
+        metrics = risk_manager.get_risk_metrics()
+        return {
+            "status": "success",
+            "metrics": metrics,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter métricas de risco: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/calculate-position")
+async def calculate_position_size(
+    entry_price: float,
+    stop_loss: float,
+    risk_percent: Optional[float] = None
+):
+    """
+    Calcula tamanho ideal de posição
+
+    Args:
+        entry_price: Preço de entrada
+        stop_loss: Preço de stop loss
+        risk_percent: % do capital a arriscar (usa Kelly se None)
+
+    Returns:
+        Position size em USD
+    """
+    try:
+        position_size = risk_manager.calculate_position_size(
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            risk_per_trade_percent=risk_percent
+        )
+
+        kelly = risk_manager.calculate_kelly_criterion()
+
+        return {
+            "position_size": position_size,
+            "entry_price": entry_price,
+            "stop_loss": stop_loss,
+            "risk_percent_used": risk_percent or kelly,
+            "kelly_criterion": kelly,
+            "max_position_allowed": risk_manager.current_capital * (risk_manager.limits.max_position_size_percent / 100)
+        }
+    except Exception as e:
+        logger.error(f"Erro ao calcular position size: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/calculate-stop-loss")
+async def calculate_stop_loss(
+    current_price: float,
+    atr: float,
+    is_long: bool,
+    multiplier: float = 2.0
+):
+    """
+    Calcula stop loss dinâmico baseado em ATR
+
+    Args:
+        current_price: Preço atual
+        atr: Average True Range
+        is_long: True para long, False para short
+        multiplier: Multiplicador do ATR (padrão: 2.0)
+
+    Returns:
+        Stop loss price
+    """
+    try:
+        stop_loss = risk_manager.calculate_atr_stop_loss(
+            current_price=current_price,
+            atr=atr,
+            is_long=is_long,
+            multiplier=multiplier
+        )
+
+        return {
+            "stop_loss": stop_loss,
+            "current_price": current_price,
+            "atr": atr,
+            "is_long": is_long,
+            "multiplier": multiplier,
+            "distance_percent": abs((current_price - stop_loss) / current_price * 100)
+        }
+    except Exception as e:
+        logger.error(f"Erro ao calcular stop loss: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/calculate-take-profit")
+async def calculate_take_profit(
+    entry_price: float,
+    stop_loss: float,
+    is_long: bool,
+    risk_reward_ratio: float = 2.0
+):
+    """
+    Calcula níveis de take profit
+
+    Args:
+        entry_price: Preço de entrada
+        stop_loss: Preço de stop loss
+        is_long: True para long, False para short
+        risk_reward_ratio: Razão risco:recompensa (padrão: 2.0)
+
+    Returns:
+        TP1 (50% exit) e TP2 (50% exit)
+    """
+    try:
+        tp_levels = risk_manager.calculate_take_profit_levels(
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            is_long=is_long,
+            risk_reward_ratio=risk_reward_ratio
+        )
+
+        return {
+            "tp1": tp_levels['tp1'],
+            "tp2": tp_levels['tp2'],
+            "entry_price": entry_price,
+            "stop_loss": stop_loss,
+            "risk_reward_ratio": tp_levels['risk_reward_ratio']
+        }
+    except Exception as e:
+        logger.error(f"Erro ao calcular take profit: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/validate-trade")
+async def validate_trade(
+    symbol: str,
+    entry_price: float,
+    stop_loss: float,
+    take_profit: float,
+    position_size: float
+):
+    """
+    Valida se um trade pode ser executado
+
+    Args:
+        symbol: Símbolo do ativo
+        entry_price: Preço de entrada
+        stop_loss: Preço de stop loss
+        take_profit: Preço de take profit
+        position_size: Tamanho da posição em USD
+
+    Returns:
+        is_valid (bool) e reason (str)
+    """
+    try:
+        is_valid, reason = risk_manager.validate_trade(
+            symbol=symbol,
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            position_size=position_size
+        )
+
+        return {
+            "is_valid": is_valid,
+            "reason": reason,
+            "trade_details": {
+                "symbol": symbol,
+                "entry_price": entry_price,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
+                "position_size": position_size
+            },
+            "current_limits": {
+                "daily_pnl": risk_manager.daily_pnl,
+                "weekly_pnl": risk_manager.weekly_pnl,
+                "active_trades": len(risk_manager.active_trades),
+                "circuit_breaker_active": risk_manager.is_circuit_breaker_active
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao validar trade: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/reset-circuit-breaker")
+async def reset_circuit_breaker():
+    """
+    Reseta o circuit breaker manualmente
+
+    Returns:
+        Status message
+    """
+    try:
+        risk_manager.reset_circuit_breaker()
+        return {
+            "status": "success",
+            "message": "Circuit breaker resetado com sucesso",
+            "consecutive_losses": risk_manager.consecutive_losses,
+            "is_active": risk_manager.is_circuit_breaker_active
+        }
+    except Exception as e:
+        logger.error(f"Erro ao resetar circuit breaker: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/update-limits")
+async def update_risk_limits(
+    max_daily_loss_percent: Optional[float] = None,
+    max_weekly_loss_percent: Optional[float] = None,
+    max_drawdown_percent: Optional[float] = None,
+    max_position_size_percent: Optional[float] = None,
+    max_concurrent_trades: Optional[int] = None,
+    circuit_breaker_losses: Optional[int] = None,
+    min_risk_reward_ratio: Optional[float] = None
+):
+    """
+    Atualiza limites de risco
+
+    Args:
+        Todos os parâmetros são opcionais
+        Apenas os fornecidos serão atualizados
+
+    Returns:
+        Novos limites
+    """
+    try:
+        if max_daily_loss_percent is not None:
+            risk_manager.limits.max_daily_loss_percent = max_daily_loss_percent
+
+        if max_weekly_loss_percent is not None:
+            risk_manager.limits.max_weekly_loss_percent = max_weekly_loss_percent
+
+        if max_drawdown_percent is not None:
+            risk_manager.limits.max_drawdown_percent = max_drawdown_percent
+
+        if max_position_size_percent is not None:
+            risk_manager.limits.max_position_size_percent = max_position_size_percent
+
+        if max_concurrent_trades is not None:
+            risk_manager.limits.max_concurrent_trades = max_concurrent_trades
+
+        if circuit_breaker_losses is not None:
+            risk_manager.limits.circuit_breaker_losses = circuit_breaker_losses
+
+        if min_risk_reward_ratio is not None:
+            risk_manager.limits.min_risk_reward_ratio = min_risk_reward_ratio
+
+        logger.info(f"Limites de risco atualizados")
+
+        return {
+            "status": "success",
+            "message": "Limites atualizados com sucesso",
+            "limits": {
+                "max_daily_loss_percent": risk_manager.limits.max_daily_loss_percent,
+                "max_weekly_loss_percent": risk_manager.limits.max_weekly_loss_percent,
+                "max_drawdown_percent": risk_manager.limits.max_drawdown_percent,
+                "max_position_size_percent": risk_manager.limits.max_position_size_percent,
+                "max_concurrent_trades": risk_manager.limits.max_concurrent_trades,
+                "circuit_breaker_losses": risk_manager.limits.circuit_breaker_losses,
+                "min_risk_reward_ratio": risk_manager.limits.min_risk_reward_ratio
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao atualizar limites: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/trading/performance")
 async def get_trading_performance():
