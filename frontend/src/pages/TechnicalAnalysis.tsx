@@ -61,7 +61,7 @@ const TechnicalAnalysis = () => {
   const [settings, setSettings] = useState({
     symbol: 'R_100',
     timeframe: '1m',
-    count: 300, // Reduzido de 1000 para 300 para evitar timeout
+    count: 1000, // Timeout aumentado para 5 minutos no backend
     initialBalance: 1000,
     positionSize: 10,
     stopLoss: 2,

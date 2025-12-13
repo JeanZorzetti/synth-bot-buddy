@@ -22,5 +22,7 @@ if __name__ == "__main__":
         host=host,
         port=port,
         reload=True,  # Auto-reload durante desenvolvimento
-        log_level="info"
+        log_level="info",
+        timeout_keep_alive=300,  # 5 minutos para backtesting de 1000 candles
+        timeout_graceful_shutdown=30
     )
