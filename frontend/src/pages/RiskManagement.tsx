@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import {
   Shield,
   TrendingUp,
@@ -159,6 +160,10 @@ export default function RiskManagement() {
 
   const trainKellyML = async () => {
     setMlLoading(true);
+    toast.info('Training ML model...', {
+      description: 'This may take a few seconds'
+    });
+
     try {
       const response = await fetch('https://botderivapi.roilabs.com.br/api/risk/train-kelly-ml', {
         method: 'POST'
@@ -178,9 +183,24 @@ export default function RiskManagement() {
           setFeatureImportance(data.feature_importance);
         }
         await fetchMLPredictions();
+
+        toast.success('ML Model Trained Successfully!', {
+          description: `Accuracy: ${(data.metrics.accuracy * 100).toFixed(1)}% | Samples: ${data.metrics.total_samples} trades`
+        });
+      } else if (data.status === 'insufficient_data') {
+        toast.warning('Insufficient Data', {
+          description: `${data.trades_remaining} more trades needed (minimum 50 trades required)`
+        });
+      } else {
+        toast.error('Training Failed', {
+          description: data.message || 'Unknown error occurred'
+        });
       }
     } catch (error) {
       console.error('Error training Kelly ML:', error);
+      toast.error('Training Failed', {
+        description: 'Failed to connect to server. Please try again.'
+      });
     } finally {
       setMlLoading(false);
     }
@@ -199,9 +219,22 @@ export default function RiskManagement() {
           ml_enabled: data.ml_enabled,
           has_predictions: data.has_predictions
         }));
+
+        toast.success(`ML Kelly ${enable ? 'Enabled' : 'Disabled'}`, {
+          description: enable
+            ? 'Position sizing now uses ML predictions'
+            : 'Position sizing reverted to historical statistics'
+        });
+      } else {
+        toast.error('Toggle Failed', {
+          description: data.message || 'Failed to toggle ML Kelly'
+        });
       }
     } catch (error) {
       console.error('Error toggling Kelly ML:', error);
+      toast.error('Toggle Failed', {
+        description: 'Failed to connect to server. Please try again.'
+      });
     }
   };
 
