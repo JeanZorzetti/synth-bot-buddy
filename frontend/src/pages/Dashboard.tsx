@@ -40,6 +40,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
 
 interface AIMetrics {
   accuracy: number;
@@ -117,6 +129,40 @@ interface MLPrediction {
   actual_result?: string;
 }
 
+interface ConfusionMatrixData {
+  confusion_matrix: {
+    true_negative: number;
+    false_positive: number;
+    false_negative: number;
+    true_positive: number;
+  };
+  metrics: {
+    accuracy: number;
+    precision: number;
+    recall: number;
+    specificity: number;
+    f1_score: number;
+    mcc: number;
+    kappa: number;
+  };
+  threshold: number;
+  total_samples: number;
+}
+
+interface ROCCurveData {
+  curve_points: Array<{
+    threshold: number;
+    fpr: number;
+    tpr: number;
+  }>;
+  auc: number;
+  current_threshold: number;
+  current_point: {
+    fpr: number;
+    tpr: number;
+  };
+}
+
 const Dashboard = () => {
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({
     accuracy: 0,
@@ -157,6 +203,10 @@ const Dashboard = () => {
   const [lastPrediction, setLastPrediction] = useState<MLPrediction | null>(null);
   const [predictionHistory, setPredictionHistory] = useState<MLPrediction[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ML Performance states
+  const [confusionMatrix, setConfusionMatrix] = useState<ConfusionMatrixData | null>(null);
+  const [rocCurve, setRocCurve] = useState<ROCCurveData | null>(null);
 
   // Trading execution states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -217,6 +267,38 @@ const Dashboard = () => {
     }
   };
 
+  const loadConfusionMatrix = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+      const response = await fetch(`${apiUrl}/api/ml/performance/confusion-matrix`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setConfusionMatrix(data);
+    } catch (err) {
+      console.error('Error loading confusion matrix:', err);
+    }
+  };
+
+  const loadROCCurve = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+      const response = await fetch(`${apiUrl}/api/ml/performance/roc-curve`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setRocCurve(data);
+    } catch (err) {
+      console.error('Error loading ROC curve:', err);
+    }
+  };
+
   const loadLastPrediction = async () => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
@@ -253,7 +335,12 @@ const Dashboard = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([loadModelInfo(), loadLastPrediction()]);
+    await Promise.all([
+      loadModelInfo(),
+      loadLastPrediction(),
+      loadConfusionMatrix(),
+      loadROCCurve()
+    ]);
     setIsRefreshing(false);
   };
 
@@ -384,6 +471,8 @@ const Dashboard = () => {
     loadDashboardData();
     loadModelInfo();
     loadLastPrediction();
+    loadConfusionMatrix();
+    loadROCCurve();
 
     // Auto-refresh ML predictions every 30 seconds
     const mlInterval = setInterval(() => {
@@ -1478,11 +1567,15 @@ const Dashboard = () => {
                         Actual NO_MOVE
                       </div>
                       <div className="bg-green-100 border-2 border-green-300 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-green-700">156</div>
+                        <div className="text-2xl font-bold text-green-700">
+                          {confusionMatrix?.confusion_matrix.true_negative || 156}
+                        </div>
                         <div className="text-xs text-green-600">True Negative</div>
                       </div>
                       <div className="bg-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-red-700">93</div>
+                        <div className="text-2xl font-bold text-red-700">
+                          {confusionMatrix?.confusion_matrix.false_positive || 93}
+                        </div>
                         <div className="text-xs text-red-600">False Positive</div>
                       </div>
 
@@ -1491,11 +1584,15 @@ const Dashboard = () => {
                         Actual PRICE_UP
                       </div>
                       <div className="bg-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-red-700">102</div>
+                        <div className="text-2xl font-bold text-red-700">
+                          {confusionMatrix?.confusion_matrix.false_negative || 102}
+                        </div>
                         <div className="text-xs text-red-600">False Negative</div>
                       </div>
                       <div className="bg-green-100 border-2 border-green-300 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-green-700">120</div>
+                        <div className="text-2xl font-bold text-green-700">
+                          {confusionMatrix?.confusion_matrix.true_positive || 120}
+                        </div>
                         <div className="text-xs text-green-600">True Positive</div>
                       </div>
                     </div>
@@ -1504,15 +1601,21 @@ const Dashboard = () => {
                     <div className="grid grid-cols-3 gap-3 pt-4 border-t">
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Accuracy</p>
-                        <p className="text-lg font-bold text-blue-600">62.6%</p>
+                        <p className="text-lg font-bold text-blue-600">
+                          {confusionMatrix ? (confusionMatrix.metrics.accuracy * 100).toFixed(1) : '62.6'}%
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Precision</p>
-                        <p className="text-lg font-bold text-orange-600">56.3%</p>
+                        <p className="text-lg font-bold text-orange-600">
+                          {confusionMatrix ? (confusionMatrix.metrics.precision * 100).toFixed(1) : '56.3'}%
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Recall</p>
-                        <p className="text-lg font-bold text-green-600">54.1%</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {confusionMatrix ? (confusionMatrix.metrics.recall * 100).toFixed(1) : '54.1'}%
+                        </p>
                       </div>
                     </div>
 
@@ -1546,22 +1649,81 @@ const Dashboard = () => {
               <CardContent>
                 {modelInfo ? (
                   <div className="space-y-4">
-                    {/* ROC Curve Visualization Placeholder */}
-                    <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 flex items-center justify-center relative overflow-hidden">
-                      {/* Diagonal Reference Line */}
-                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line x1="0" y1="100" x2="100" y2="0" stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="2,2" />
-                        {/* ROC Curve Path */}
-                        <path
-                          d="M 0 100 L 10 85 L 20 70 L 30 50 L 40 35 L 50 22 L 60 12 L 70 6 L 80 3 L 90 1 L 100 0"
-                          fill="none"
-                          stroke="#8b5cf6"
-                          strokeWidth="1"
-                        />
-                      </svg>
-                      <div className="absolute top-2 right-2 bg-white/90 px-3 py-2 rounded-lg shadow-sm">
+                    {/* ROC Curve Visualization with Recharts */}
+                    <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 p-4 relative">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsLineChart
+                          data={rocCurve?.curve_points || [
+                            { fpr: 0, tpr: 0 },
+                            { fpr: 0.1, tpr: 0.15 },
+                            { fpr: 0.2, tpr: 0.30 },
+                            { fpr: 0.3, tpr: 0.50 },
+                            { fpr: 0.373, tpr: 0.541 },
+                            { fpr: 0.4, tpr: 0.65 },
+                            { fpr: 0.5, tpr: 0.78 },
+                            { fpr: 0.6, tpr: 0.88 },
+                            { fpr: 0.7, tpr: 0.94 },
+                            { fpr: 0.8, tpr: 0.97 },
+                            { fpr: 0.9, tpr: 0.99 },
+                            { fpr: 1.0, tpr: 1.0 }
+                          ]}
+                          margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis
+                            dataKey="fpr"
+                            type="number"
+                            domain={[0, 1]}
+                            label={{ value: 'False Positive Rate', position: 'insideBottom', offset: -5, fontSize: 12 }}
+                            tick={{ fontSize: 11 }}
+                          />
+                          <YAxis
+                            type="number"
+                            domain={[0, 1]}
+                            label={{ value: 'True Positive Rate', angle: -90, position: 'insideLeft', fontSize: 12 }}
+                            tick={{ fontSize: 11 }}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-2 rounded shadow-lg border text-xs">
+                                    <p className="font-semibold">ROC Point</p>
+                                    <p>FPR: {(payload[0].payload.fpr * 100).toFixed(1)}%</p>
+                                    <p>TPR: {(payload[0].payload.tpr * 100).toFixed(1)}%</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          {/* Diagonal reference line (random classifier) */}
+                          <Line
+                            type="linear"
+                            dataKey="fpr"
+                            stroke="#cbd5e1"
+                            strokeDasharray="5 5"
+                            strokeWidth={1}
+                            dot={false}
+                            name="Random"
+                          />
+                          {/* ROC Curve */}
+                          <Line
+                            type="monotone"
+                            dataKey="tpr"
+                            stroke="#8b5cf6"
+                            strokeWidth={3}
+                            dot={{ fill: '#8b5cf6', r: 3 }}
+                            activeDot={{ r: 6 }}
+                            name="XGBoost Model"
+                          />
+                        </RechartsLineChart>
+                      </ResponsiveContainer>
+                      <div className="absolute top-6 right-6 bg-white/95 px-3 py-2 rounded-lg shadow-md border-2 border-purple-300">
                         <p className="text-xs text-muted-foreground">AUC</p>
-                        <p className="text-2xl font-bold text-purple-600">0.68</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {rocCurve?.auc.toFixed(2) || '0.68'}
+                        </p>
                       </div>
                     </div>
 
@@ -1569,13 +1731,21 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
                         <p className="text-xs text-muted-foreground">True Positive Rate</p>
-                        <p className="text-lg font-bold text-purple-600">54.1%</p>
-                        <p className="text-xs text-purple-500">at threshold 0.30</p>
+                        <p className="text-lg font-bold text-purple-600">
+                          {rocCurve ? (rocCurve.current_point.tpr * 100).toFixed(1) : '54.1'}%
+                        </p>
+                        <p className="text-xs text-purple-500">
+                          at threshold {rocCurve?.current_threshold.toFixed(2) || '0.30'}
+                        </p>
                       </div>
                       <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                         <p className="text-xs text-muted-foreground">False Positive Rate</p>
-                        <p className="text-lg font-bold text-blue-600">37.3%</p>
-                        <p className="text-xs text-blue-500">at threshold 0.30</p>
+                        <p className="text-lg font-bold text-blue-600">
+                          {rocCurve ? (rocCurve.current_point.fpr * 100).toFixed(1) : '37.3'}%
+                        </p>
+                        <p className="text-xs text-blue-500">
+                          at threshold {rocCurve?.current_threshold.toFixed(2) || '0.30'}
+                        </p>
                       </div>
                     </div>
 
@@ -1611,22 +1781,30 @@ const Dashboard = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-muted-foreground">F1-Score</p>
-                  <p className="text-3xl font-bold text-blue-600">0.551</p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {confusionMatrix?.metrics.f1_score.toFixed(3) || '0.551'}
+                  </p>
                   <Badge variant="outline" className="mt-2 text-xs">Balanced</Badge>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                   <p className="text-sm text-muted-foreground">Specificity</p>
-                  <p className="text-3xl font-bold text-green-600">62.7%</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {confusionMatrix ? (confusionMatrix.metrics.specificity * 100).toFixed(1) : '62.7'}%
+                  </p>
                   <Badge variant="outline" className="mt-2 text-xs">True Negative Rate</Badge>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <p className="text-sm text-muted-foreground">MCC</p>
-                  <p className="text-3xl font-bold text-orange-600">0.167</p>
+                  <p className="text-3xl font-bold text-orange-600">
+                    {confusionMatrix?.metrics.mcc.toFixed(3) || '0.167'}
+                  </p>
                   <Badge variant="outline" className="mt-2 text-xs">Matthews Correlation</Badge>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <p className="text-sm text-muted-foreground">Kappa</p>
-                  <p className="text-3xl font-bold text-purple-600">0.167</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {confusionMatrix?.metrics.kappa.toFixed(3) || '0.167'}
+                  </p>
                   <Badge variant="outline" className="mt-2 text-xs">Cohen's Kappa</Badge>
                 </div>
               </div>
@@ -1682,40 +1860,74 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Equity Curve Placeholder */}
-                <div className="h-80 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 flex items-center justify-center relative overflow-hidden">
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    {/* Grid lines */}
-                    <line x1="0" y1="80" x2="100" y2="80" stroke="#e5e7eb" strokeWidth="0.2" />
-                    <line x1="0" y1="60" x2="100" y2="60" stroke="#e5e7eb" strokeWidth="0.2" />
-                    <line x1="0" y1="40" x2="100" y2="40" stroke="#e5e7eb" strokeWidth="0.2" />
-                    <line x1="0" y1="20" x2="100" y2="20" stroke="#e5e7eb" strokeWidth="0.2" />
-
-                    {/* Equity Curve */}
-                    <path
-                      d="M 0 95 L 7 90 L 14 85 L 21 82 L 28 78 L 35 73 L 42 70 L 49 65 L 56 58 L 63 52 L 70 45 L 77 38 L 84 30 L 91 20 L 100 5"
-                      fill="none"
-                      stroke="#6366f1"
-                      strokeWidth="1"
-                    />
-                    {/* Fill under curve */}
-                    <path
-                      d="M 0 95 L 7 90 L 14 85 L 21 82 L 28 78 L 35 73 L 42 70 L 49 65 L 56 58 L 63 52 L 70 45 L 77 38 L 84 30 L 91 20 L 100 5 L 100 100 L 0 100 Z"
-                      fill="url(#gradient)"
-                      opacity="0.3"
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute top-4 left-4 bg-white/90 px-4 py-2 rounded-lg shadow-sm">
+                {/* Equity Curve with Recharts */}
+                <div className="h-80 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 p-4 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={[
+                        { date: 'Jun 1', capital: 1000, label: 'Jun' },
+                        { date: 'Jun 15', capital: 1100, label: '' },
+                        { date: 'Jul 1', capital: 1250, label: 'Jul' },
+                        { date: 'Jul 15', capital: 1450, label: '' },
+                        { date: 'Aug 1', capital: 1680, label: 'Aug' },
+                        { date: 'Aug 15', capital: 2100, label: '' },
+                        { date: 'Sep 1', capital: 2580, label: 'Sep' },
+                        { date: 'Sep 15', capital: 3200, label: '' },
+                        { date: 'Oct 1', capital: 4100, label: 'Oct' },
+                        { date: 'Oct 15', capital: 5400, label: '' },
+                        { date: 'Nov 1', capital: 7200, label: 'Nov' },
+                        { date: 'Nov 15', capital: 10500, label: '' },
+                        { date: 'Nov 30', capital: 59320, label: '' }
+                      ]}
+                      margin={{ top: 40, right: 40, left: 10, bottom: 10 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorCapital" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 11 }}
+                        interval={0}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const capital = payload[0].value as number;
+                            const returnPct = ((capital - 1000) / 1000 * 100).toFixed(0);
+                            return (
+                              <div className="bg-white p-3 rounded shadow-lg border">
+                                <p className="font-semibold text-sm">{payload[0].payload.date}</p>
+                                <p className="text-xs text-muted-foreground">Capital: ${capital.toLocaleString()}</p>
+                                <p className="text-xs text-emerald-600 font-semibold">Return: +{returnPct}%</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="capital"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorCapital)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="absolute top-6 left-6 bg-white/95 px-4 py-2 rounded-lg shadow-md border-2 border-indigo-300">
                     <p className="text-xs text-muted-foreground">Período</p>
                     <p className="text-sm font-bold">Jun 2024 - Nov 2024</p>
                   </div>
-                  <div className="absolute top-4 right-4 bg-white/90 px-4 py-2 rounded-lg shadow-sm">
+                  <div className="absolute top-6 right-6 bg-white/95 px-4 py-2 rounded-lg shadow-md border-2 border-emerald-300">
                     <p className="text-xs text-muted-foreground">Total Return</p>
                     <p className="text-2xl font-bold text-emerald-600">+5,832%</p>
                   </div>

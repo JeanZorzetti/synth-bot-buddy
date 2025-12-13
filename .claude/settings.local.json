@@ -25,7 +25,8 @@
       "Bash(do echo \"=== Tentativa $i ===\")",
       "Bash(done)",
       "Bash(del:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
