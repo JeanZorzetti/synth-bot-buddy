@@ -61,16 +61,19 @@ const TechnicalAnalysis = () => {
   const [settings, setSettings] = useState({
     symbol: 'R_100',
     timeframe: '1m',
-    count: 1000, // Timeout aumentado para 5 minutos no backend
+    count: 1000, // Processamento em background permite 1000+ candles
     initialBalance: 1000,
     positionSize: 10,
     stopLoss: 2,
     takeProfit: 4,
   });
 
+  const [progress, setProgress] = useState(0);
+
   const runBacktest = async () => {
     setIsRunning(true);
     setError(null);
+    setProgress(0);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
@@ -93,17 +96,46 @@ const TechnicalAnalysis = () => {
         take_profit_percent: settings.takeProfit.toString(),
       });
 
-      const response = await fetch(`${apiUrl}/api/backtest/${settings.symbol}?${params}`, {
+      // Iniciar backtest em background
+      const startResponse = await fetch(`${apiUrl}/api/backtest/${settings.symbol}/start?${params}`, {
         method: 'POST',
         headers,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!startResponse.ok) {
+        throw new Error(`HTTP ${startResponse.status}: ${startResponse.statusText}`);
       }
 
-      const data = await response.json();
-      setBacktestResult(data);
+      const { task_id } = await startResponse.json();
+
+      // Polling para verificar status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${apiUrl}/api/backtest/status/${task_id}`);
+
+          if (!statusResponse.ok) {
+            clearInterval(pollInterval);
+            throw new Error(`HTTP ${statusResponse.status}: ${statusResponse.statusText}`);
+          }
+
+          const taskStatus = await statusResponse.json();
+          setProgress(taskStatus.progress || 0);
+
+          if (taskStatus.status === 'completed') {
+            clearInterval(pollInterval);
+            setBacktestResult(taskStatus.result);
+            setIsRunning(false);
+            setProgress(100);
+          } else if (taskStatus.status === 'error') {
+            clearInterval(pollInterval);
+            throw new Error(taskStatus.error || 'Erro desconhecido no backtest');
+          }
+        } catch (pollError) {
+          clearInterval(pollInterval);
+          throw pollError;
+        }
+      }, 2000); // Poll a cada 2 segundos
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(`Erro ao executar backtest: ${errorMessage}`);
@@ -229,7 +261,7 @@ const TechnicalAnalysis = () => {
                 {isRunning ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
-                    Executando Backtest...
+                    Executando Backtest... {progress > 0 && `(${progress}%)`}
                   </>
                 ) : (
                   <>
@@ -238,6 +270,22 @@ const TechnicalAnalysis = () => {
                   </>
                 )}
               </Button>
+
+              {/* Progress Bar */}
+              {isRunning && progress > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Progresso</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

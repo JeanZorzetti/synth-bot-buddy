@@ -25,6 +25,7 @@ from analysis import TechnicalAnalysis
 from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 from ml_predictor import get_ml_predictor, initialize_ml_predictor
 from backtesting import Backtester, BacktestResult
+from background_tasks import task_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1101,6 +1102,134 @@ async def get_all_patterns(symbol: str, timeframe: str = "1m", count: int = 500)
 async def backtest_options(symbol: str):
     """Handle CORS preflight - return empty dict to pass through CORSMiddleware"""
     return {}
+
+@app.post("/api/backtest/{symbol}/start")
+async def start_backtest(
+    symbol: str,
+    request: Request,
+    timeframe: str = "1m",
+    count: int = 1000,
+    initial_balance: float = 1000.0,
+    position_size_percent: float = 10.0,
+    stop_loss_percent: float = 2.0,
+    take_profit_percent: float = 4.0
+):
+    """
+    Inicia um backtest em background e retorna imediatamente o task_id.
+    Use GET /api/backtest/status/{task_id} para verificar o progresso.
+    """
+    global _api_token
+
+    # Check for token in header
+    token_from_header = request.headers.get('X-API-Token')
+    if token_from_header:
+        _api_token = token_from_header
+
+    # Criar task
+    task_id = task_manager.create_task()
+
+    # Capturar parâmetros para a task
+    params = {
+        'symbol': symbol,
+        'timeframe': timeframe,
+        'count': count,
+        'initial_balance': initial_balance,
+        'position_size_percent': position_size_percent,
+        'stop_loss_percent': stop_loss_percent,
+        'take_profit_percent': take_profit_percent,
+        'token': token_from_header
+    }
+
+    # Executar em background
+    asyncio.create_task(_run_backtest_background(task_id, params))
+
+    return {
+        "task_id": task_id,
+        "status": "pending",
+        "message": "Backtest iniciado em background. Use GET /api/backtest/status/{task_id} para verificar o status."
+    }
+
+@app.get("/api/backtest/status/{task_id}")
+async def get_backtest_status(task_id: str):
+    """Retorna o status de um backtest em background"""
+    task = task_manager.get_task(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task não encontrada")
+
+    return task.to_dict()
+
+async def _run_backtest_background(task_id: str, params: dict):
+    """Executa o backtest em background"""
+    global technical_analysis, _api_token
+
+    try:
+        # Atualizar token se fornecido
+        if params.get('token'):
+            _api_token = params['token']
+
+        # Atualizar status
+        task_manager.update_status(task_id, "running", 10)
+
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Iniciando para {params['symbol']}")
+
+        # Buscar dados
+        df, data_source = await fetch_deriv_candles(
+            params['symbol'],
+            params['timeframe'],
+            params['count']
+        )
+
+        task_manager.update_status(task_id, "running", 30)
+
+        if len(df) < 200:
+            task_manager.set_error(task_id, f"Dados insuficientes: {len(df)} candles (mínimo: 200)")
+            return
+
+        # Inicializar backtester
+        if technical_analysis is None:
+            technical_analysis = TechnicalAnalysis()
+
+        backtester = Backtester(technical_analysis)
+
+        task_manager.update_status(task_id, "running", 50)
+
+        # Executar backtest
+        result = backtester.run_backtest(
+            df=df,
+            symbol=params['symbol'],
+            initial_balance=params['initial_balance'],
+            position_size_percent=params['position_size_percent'],
+            stop_loss_percent=params['stop_loss_percent'],
+            take_profit_percent=params['take_profit_percent']
+        )
+
+        task_manager.update_status(task_id, "running", 90)
+
+        # Preparar resposta
+        response = result.to_dict()
+        response['metadata'] = {
+            'symbol': params['symbol'],
+            'timeframe': params['timeframe'],
+            'data_source': data_source,
+            'candles_analyzed': len(df),
+            'backtest_period': f"{df.index[0]} to {df.index[-1]}" if hasattr(df.index[0], 'isoformat') else f"{len(df)} candles",
+            'parameters': {
+                'initial_balance': params['initial_balance'],
+                'position_size_percent': params['position_size_percent'],
+                'stop_loss_percent': params['stop_loss_percent'],
+                'take_profit_percent': params['take_profit_percent']
+            }
+        }
+
+        # Marcar como completo
+        task_manager.set_result(task_id, response)
+
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Completo - Win Rate {result.win_rate:.2f}%")
+
+    except Exception as e:
+        logger.error(f"[BACKTEST ASYNC] Task {task_id}: Erro - {str(e)}")
+        task_manager.set_error(task_id, str(e))
 
 @app.post("/api/backtest/{symbol}")
 async def run_backtest(
