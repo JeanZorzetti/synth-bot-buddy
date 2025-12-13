@@ -1454,6 +1454,8 @@ def check_correlation(active_positions, new_symbol):
 - [x] Integrar backtesting com RiskManager (validar trades) ✅
 - [x] Gráficos de equity curve no dashboard ✅
 - [x] ML para ajuste dinâmico de Kelly Criterion ✅
+- [ ] Frontend para Kelly ML - Visualizar previsões e feature importance
+- [ ] Re-treinar automaticamente - A cada X trades novos
 - [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
