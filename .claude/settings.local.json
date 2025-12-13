@@ -15,7 +15,17 @@
       "Bash(git commit:*)",
       "Bash(npm run dev:*)",
       "Bash(timeout /t 3)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 120)",
+      "Bash(ping:*)",
+      "Bash(for i in {1..30})",
+      "Bash(do echo \"=== Tentativa $i ===\")",
+      "Bash(done)",
+      "Bash(del:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

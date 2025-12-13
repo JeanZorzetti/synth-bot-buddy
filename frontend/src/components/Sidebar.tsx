@@ -29,7 +29,9 @@ const navItems: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    description: 'Visão geral do sistema'
+    description: 'Visão geral + ML XGBoost',
+    badge: 'Completo',
+    badgeVariant: 'default'
   },
   {
     title: 'Trading',
@@ -38,14 +40,6 @@ const navItems: NavItem[] = [
     description: 'Execução de ordens',
     badge: 'Novo',
     badgeVariant: 'default'
-  },
-  {
-    title: 'ML Monitoring',
-    href: '/ml-monitoring',
-    icon: Brain,
-    description: 'Monitoramento do modelo ML',
-    badge: 'Fase 7',
-    badgeVariant: 'secondary'
   },
   {
     title: 'Análise Técnica',

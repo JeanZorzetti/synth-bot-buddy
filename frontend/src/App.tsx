@@ -11,7 +11,6 @@ import Trading from "./pages/Trading";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
-import MLMonitoring from "./pages/MLMonitoring";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
 import RiskManagement from "./pages/RiskManagement";
 
@@ -51,11 +50,6 @@ const App = () => (
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
-            </ProtectedRoute>
-          } />
-          <Route path="/ml-monitoring" element={
-            <ProtectedRoute>
-              <MLMonitoring />
             </ProtectedRoute>
           } />
           <Route path="/technical-analysis" element={
