@@ -1817,6 +1817,9 @@ async def train_kelly_ml():
         # Ativar ML no RiskManager
         risk_manager.enable_ml_kelly(True)
 
+        # Marcar que re-treino foi realizado
+        risk_manager.mark_retrain_done()
+
         logger.info(f"Kelly ML treinado com sucesso! Accuracy: {metrics['accuracy']:.2%}")
 
         return {
@@ -1824,7 +1827,8 @@ async def train_kelly_ml():
             "message": "Kelly ML treinado com sucesso",
             "metrics": metrics,
             "model_path": model_path,
-            "ml_enabled": True
+            "ml_enabled": True,
+            "last_train_count": risk_manager.last_train_count
         }
     except Exception as e:
         logger.error(f"Erro ao treinar Kelly ML: {e}", exc_info=True)
@@ -1939,6 +1943,61 @@ async def toggle_kelly_ml(enable: bool):
         }
     except Exception as e:
         logger.error(f"Erro ao alternar Kelly ML: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/auto-retrain")
+async def configure_auto_retrain(enable: bool, interval: int = 20):
+    """
+    Configura re-treino automático do modelo ML
+
+    Args:
+        enable: True para ativar, False para desativar
+        interval: Número de trades entre re-treinos (padrão: 20)
+
+    Returns:
+        Status da configuração
+    """
+    try:
+        risk_manager.enable_auto_retrain(enable, interval)
+
+        return {
+            "status": "success",
+            "message": f"Re-treino automático {'ATIVADO' if enable else 'DESATIVADO'}",
+            "auto_retrain_enabled": risk_manager.auto_retrain_enabled,
+            "retrain_interval": risk_manager.retrain_interval,
+            "last_train_count": risk_manager.last_train_count,
+            "current_trades": len(risk_manager.trade_history),
+            "trades_until_retrain": max(0, risk_manager.retrain_interval - (len(risk_manager.trade_history) - risk_manager.last_train_count))
+        }
+    except Exception as e:
+        logger.error(f"Erro ao configurar auto-retrain: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/risk/check-retrain")
+async def check_retrain_status():
+    """
+    Verifica se modelo deve ser re-treinado
+
+    Returns:
+        Status de re-treino e estatísticas
+    """
+    try:
+        should_retrain = risk_manager.should_retrain()
+
+        return {
+            "status": "success",
+            "should_retrain": should_retrain,
+            "auto_retrain_enabled": risk_manager.auto_retrain_enabled,
+            "retrain_interval": risk_manager.retrain_interval,
+            "last_train_count": risk_manager.last_train_count,
+            "current_trades": len(risk_manager.trade_history),
+            "trades_since_last_train": len(risk_manager.trade_history) - risk_manager.last_train_count,
+            "trades_until_retrain": max(0, risk_manager.retrain_interval - (len(risk_manager.trade_history) - risk_manager.last_train_count))
+        }
+    except Exception as e:
+        logger.error(f"Erro ao verificar retrain status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

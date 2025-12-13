@@ -92,6 +92,9 @@ class RiskManager:
         # ML Predictor (opcional)
         self.use_ml_kelly = False  # Ativa ML após treinar
         self.ml_predictions: Optional[Dict] = None
+        self.auto_retrain_enabled = False  # Re-treino automático
+        self.retrain_interval = 20  # Re-treinar a cada X trades
+        self.last_train_count = 0  # Contador de trades no último treino
 
         # Equity Curve Tracking
         self.equity_history: List[Dict] = [{
@@ -194,6 +197,43 @@ class RiskManager:
         """
         self.use_ml_kelly = enable
         logger.info(f"Kelly ML {'ATIVADO' if enable else 'DESATIVADO'}")
+
+    def enable_auto_retrain(self, enable: bool = True, interval: int = 20):
+        """
+        Ativa/desativa re-treino automático do modelo ML
+
+        Args:
+            enable: True para ativar re-treino automático
+            interval: Número de trades entre re-treinos (padrão: 20)
+        """
+        self.auto_retrain_enabled = enable
+        self.retrain_interval = interval
+        if enable:
+            self.last_train_count = len(self.trade_history)
+        logger.info(f"Re-treino automático {'ATIVADO' if enable else 'DESATIVADO'} (intervalo: {interval} trades)")
+
+    def should_retrain(self) -> bool:
+        """
+        Verifica se deve re-treinar o modelo ML
+
+        Returns:
+            True se deve re-treinar (auto_retrain ativado + intervalo atingido)
+        """
+        if not self.auto_retrain_enabled:
+            return False
+
+        trades_since_last_train = len(self.trade_history) - self.last_train_count
+        should_retrain = trades_since_last_train >= self.retrain_interval
+
+        if should_retrain:
+            logger.info(f"Re-treino necessário: {trades_since_last_train} trades desde último treino")
+
+        return should_retrain
+
+    def mark_retrain_done(self):
+        """Marca que re-treino foi realizado"""
+        self.last_train_count = len(self.trade_history)
+        logger.info(f"Re-treino marcado como completo no trade #{self.last_train_count}")
 
     def calculate_position_size(self,
                                entry_price: float,
