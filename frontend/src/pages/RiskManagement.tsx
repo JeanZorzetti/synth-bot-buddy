@@ -13,8 +13,21 @@ import {
   DollarSign,
   Activity,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  LineChart
 } from 'lucide-react';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
 
 interface RiskMetrics {
   current_capital: number;
@@ -46,8 +59,26 @@ interface RiskMetrics {
   };
 }
 
+interface EquityPoint {
+  timestamp: string;
+  capital: number;
+  pnl: number;
+  drawdown: number;
+  trade_count: number;
+  is_win?: boolean;
+}
+
+interface EquityHistory {
+  equity_history: EquityPoint[];
+  current_capital: number;
+  initial_capital: number;
+  peak_capital: number;
+  total_trades: number;
+}
+
 export default function RiskManagement() {
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null);
+  const [equityData, setEquityData] = useState<EquityHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
@@ -64,10 +95,24 @@ export default function RiskManagement() {
     }
   };
 
+  const fetchEquityHistory = async () => {
+    try {
+      const response = await fetch('https://botderivapi.roilabs.com.br/api/risk/equity-history');
+      const data = await response.json();
+      setEquityData(data);
+    } catch (error) {
+      console.error('Error fetching equity history:', error);
+    }
+  };
+
   useEffect(() => {
     fetchMetrics();
+    fetchEquityHistory();
     // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchMetrics, 5000);
+    const interval = setInterval(() => {
+      fetchMetrics();
+      fetchEquityHistory();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -213,8 +258,12 @@ export default function RiskManagement() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="limits" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="charts" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="charts">
+            <LineChart className="w-4 h-4 mr-2" />
+            Charts
+          </TabsTrigger>
           <TabsTrigger value="limits">
             <Activity className="w-4 h-4 mr-2" />
             Risk Limits
@@ -228,6 +277,149 @@ export default function RiskManagement() {
             Protection Settings
           </TabsTrigger>
         </TabsList>
+
+        {/* Charts Tab */}
+        <TabsContent value="charts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Equity Curve</CardTitle>
+              <CardDescription>
+                Capital growth over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {equityData && equityData.equity_history.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={equityData.equity_history}>
+                    <defs>
+                      <linearGradient id="colorCapital" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="trade_count"
+                      label={{ value: 'Trades', position: 'insideBottom', offset: -5 }}
+                    />
+                    <YAxis
+                      label={{ value: 'Capital ($)', angle: -90, position: 'insideLeft' }}
+                      domain={['auto', 'auto']}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => `$${value.toFixed(2)}`}
+                      labelFormatter={(label) => `Trade ${label}`}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="capital"
+                      stroke="#8884d8"
+                      fillOpacity={1}
+                      fill="url(#colorCapital)"
+                      name="Capital"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  No trade data available yet. Start trading to see your equity curve.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Drawdown Chart</CardTitle>
+              <CardDescription>
+                Drawdown percentage over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {equityData && equityData.equity_history.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={equityData.equity_history}>
+                    <defs>
+                      <linearGradient id="colorDrawdown" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="trade_count"
+                      label={{ value: 'Trades', position: 'insideBottom', offset: -5 }}
+                    />
+                    <YAxis
+                      label={{ value: 'Drawdown (%)', angle: -90, position: 'insideLeft' }}
+                      domain={[0, 'auto']}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => `${value.toFixed(2)}%`}
+                      labelFormatter={(label) => `Trade ${label}`}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="drawdown"
+                      stroke="#ef4444"
+                      fillOpacity={1}
+                      fill="url(#colorDrawdown)"
+                      name="Drawdown"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  No trade data available yet. Start trading to see drawdown metrics.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>P&L per Trade</CardTitle>
+              <CardDescription>
+                Profit/Loss for each individual trade
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {equityData && equityData.equity_history.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsLineChart data={equityData.equity_history.slice(1)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="trade_count"
+                      label={{ value: 'Trade #', position: 'insideBottom', offset: -5 }}
+                    />
+                    <YAxis
+                      label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft' }}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => `$${value.toFixed(2)}`}
+                      labelFormatter={(label) => `Trade ${label}`}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="pnl"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ fill: '#10b981', r: 4 }}
+                      name="P&L"
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  No trade data available yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Risk Limits Tab */}
         <TabsContent value="limits" className="space-y-4">

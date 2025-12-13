@@ -1508,6 +1508,29 @@ async def get_risk_metrics():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/risk/equity-history")
+async def get_equity_history():
+    """
+    Retorna histórico de equity curve para gráficos
+
+    Returns:
+        - Array com pontos da equity curve (timestamp, capital, pnl, drawdown)
+    """
+    try:
+        return {
+            "status": "success",
+            "equity_history": risk_manager.equity_history,
+            "current_capital": risk_manager.current_capital,
+            "initial_capital": risk_manager.initial_capital,
+            "peak_capital": risk_manager.peak_capital,
+            "total_trades": len(risk_manager.trade_history),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter equity history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/risk/calculate-position")
 async def calculate_position_size(
     entry_price: float,

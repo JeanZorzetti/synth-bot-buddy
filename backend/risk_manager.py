@@ -88,6 +88,15 @@ class RiskManager:
         self.avg_win = 0.0
         self.avg_loss = 0.0
 
+        # Equity Curve Tracking
+        self.equity_history: List[Dict] = [{
+            'timestamp': datetime.now().isoformat(),
+            'capital': initial_capital,
+            'pnl': 0.0,
+            'drawdown': 0.0,
+            'trade_count': 0
+        }]
+
         # Timestamps
         self.last_daily_reset = datetime.now()
         self.last_weekly_reset = datetime.now()
@@ -414,6 +423,17 @@ class RiskManager:
 
         # Remover dos trades ativos
         self.active_trades.remove(trade)
+
+        # Registrar ponto na equity curve
+        current_drawdown = (self.peak_capital - self.current_capital) / self.peak_capital * 100
+        self.equity_history.append({
+            'timestamp': datetime.now().isoformat(),
+            'capital': self.current_capital,
+            'pnl': pnl,
+            'drawdown': current_drawdown,
+            'trade_count': len(self.trade_history),
+            'is_win': is_win
+        })
 
         logger.info(f"Trade fechado: {symbol} PnL: ${pnl:.2f} ({'WIN' if is_win else 'LOSS'})")
 
