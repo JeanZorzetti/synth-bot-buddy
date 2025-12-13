@@ -1531,9 +1531,17 @@ def check_correlation(active_positions, new_symbol):
 - `backend/backtesting_with_risk.py` (400+ linhas) - Backtesting com validação de RiskManager
 - `backend/RISK_MANAGEMENT_DOCS.md` (950+ linhas)
 - `backend/TESTES_RISK_MANAGEMENT.md` (600+ linhas)
+- `backend/TESTES_EQUITY_CHARTS.md` (427 linhas) - Testes dos gráficos de equity curve
 - `frontend/src/pages/RiskManagement.tsx` (600+ linhas) - Dashboard com gráficos interativos
 
-**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, testes 100%)
+**Commits Recentes (2025-12-13):**
+
+- `9414e65` - feat: Implementar Backtesting com Risk Management Integrado
+- `541797d` - feat: Adicionar gráficos de Equity Curve ao Dashboard
+- `fe8a405` - docs: Atualizar roadmap FASE 4 com equity curve charts
+- `477d3f4` - test: Adicionar relatório completo de testes dos gráficos
+
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, testes 100%, charts 100%)
 
 ---
 
