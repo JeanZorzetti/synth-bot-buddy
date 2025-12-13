@@ -1822,10 +1822,18 @@ async def train_kelly_ml():
 
         logger.info(f"Kelly ML treinado com sucesso! Accuracy: {metrics['accuracy']:.2%}")
 
+        # Preparar feature importance para o frontend (array ordenado)
+        feature_importance = metrics.get('feature_importance', {})
+        feature_importance_array = [
+            {"feature": name, "importance": float(importance)}
+            for name, importance in sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+        ]
+
         return {
             "status": "success",
             "message": "Kelly ML treinado com sucesso",
             "metrics": metrics,
+            "feature_importance": feature_importance_array,
             "model_path": model_path,
             "ml_enabled": True,
             "last_train_count": risk_manager.last_train_count

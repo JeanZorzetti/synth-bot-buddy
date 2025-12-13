@@ -1456,7 +1456,7 @@ def check_correlation(active_positions, new_symbol):
 - [x] ML para ajuste dinâmico de Kelly Criterion ✅
 - [x] Frontend para Kelly ML - Visualizar previsões e feature importance ✅
 - [x] Re-treinar automaticamente - A cada X trades novos ✅
-- [ ] Gráfico de feature importance no dashboard
+- [x] Gráfico de feature importance no dashboard ✅
 - [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
@@ -1583,6 +1583,19 @@ def check_correlation(active_positions, new_symbol):
   - `POST /api/risk/auto-retrain?enable=true&interval=20`
   - `GET /api/risk/check-retrain` - Verifica status
 
+**Gráfico de Feature Importance:**
+
+- **Visualização**: BarChart com recharts na aba ML
+- **Dados**: Array ordenado de feature importance do RandomForest
+- **Features**: 9 features (recent_win_rate, volatility, consecutive_wins, etc.)
+- **UX**: Labels rotacionados -45°, tooltip formatado em %, cantos arredondados
+- **Renderização**: Condicional (apenas se `featureImportance.length > 0`)
+- **Endpoint**: `POST /api/risk/train-kelly-ml` retorna `feature_importance` array
+- **Implementação**:
+  - Backend: [main.py:1825-1840](backend/main.py#L1825-L1840)
+  - Frontend: [RiskManagement.tsx:692-725](frontend/src/pages/RiskManagement.tsx#L692-L725)
+- **Testes**: [TESTES_FEATURE_IMPORTANCE.md](backend/TESTES_FEATURE_IMPORTANCE.md)
+
 **Commits Recentes (2025-12-13):**
 
 - `9414e65` - feat: Implementar Backtesting com Risk Management Integrado
@@ -1593,7 +1606,7 @@ def check_correlation(active_positions, new_symbol):
 - `1428157` - feat: Adicionar frontend para Kelly ML no dashboard
 - `7c06efc` - feat: Implementar re-treino automático do modelo Kelly ML
 
-**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%, auto-retrain 100%)
+**Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, charts 100%, ML 100%, auto-retrain 100%, feature-importance 100%)
 
 ---
 

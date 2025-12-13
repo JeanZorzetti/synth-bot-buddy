@@ -99,11 +99,17 @@ interface MLStatus {
   total_samples?: number;
 }
 
+interface FeatureImportance {
+  feature: string;
+  importance: number;
+}
+
 export default function RiskManagement() {
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null);
   const [equityData, setEquityData] = useState<EquityHistory | null>(null);
   const [mlPredictions, setMlPredictions] = useState<MLPredictions | null>(null);
   const [mlStatus, setMlStatus] = useState<MLStatus>({ ml_enabled: false, has_predictions: false });
+  const [featureImportance, setFeatureImportance] = useState<FeatureImportance[]>([]);
   const [loading, setLoading] = useState(true);
   const [mlLoading, setMlLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -167,6 +173,10 @@ export default function RiskManagement() {
           accuracy: data.metrics.accuracy,
           total_samples: data.metrics.total_samples
         });
+        // Capturar feature importance
+        if (data.feature_importance) {
+          setFeatureImportance(data.feature_importance);
+        }
         await fetchMLPredictions();
       }
     } catch (error) {
@@ -677,6 +687,41 @@ export default function RiskManagement() {
                     The model adapts to market conditions in real-time.
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* Feature Importance Chart */}
+              {featureImportance.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Feature Importance</CardTitle>
+                    <CardDescription>
+                      Which factors influence the ML predictions the most
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={featureImportance}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="feature"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis
+                          label={{ value: 'Importance', angle: -90, position: 'insideLeft' }}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [(value * 100).toFixed(2) + '%', 'Importance']}
+                          labelStyle={{ color: '#000' }}
+                        />
+                        <Bar dataKey="importance" fill="#8884d8" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
               )}
             </CardContent>
           </Card>
