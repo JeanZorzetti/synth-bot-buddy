@@ -3,6 +3,7 @@ Gestão de Risco Inteligente para Trading Bot
 
 Este módulo implementa:
 - Kelly Criterion para position sizing
+- Kelly Criterion com ML (ajuste dinâmico baseado em padrões)
 - Stop Loss dinâmico baseado em ATR
 - Trailing Stop para proteger lucros
 - Partial Take Profit
@@ -88,6 +89,10 @@ class RiskManager:
         self.avg_win = 0.0
         self.avg_loss = 0.0
 
+        # ML Predictor (opcional)
+        self.use_ml_kelly = False  # Ativa ML após treinar
+        self.ml_predictions: Optional[Dict] = None
+
         # Equity Curve Tracking
         self.equity_history: List[Dict] = [{
             'timestamp': datetime.now().isoformat(),
@@ -150,6 +155,46 @@ class RiskManager:
 
         return kelly_limited
 
+    def calculate_kelly_with_ml(self) -> float:
+        """
+        Calcula Kelly Criterion usando previsões de ML
+
+        Se ML predictions estiver disponível e use_ml_kelly=True,
+        usa as previsões do modelo. Caso contrário, usa estatísticas históricas.
+
+        Returns:
+            Fração do capital (0-1), conservador (Quarter Kelly)
+        """
+        if self.use_ml_kelly and self.ml_predictions:
+            # Usar previsões ML
+            kelly = self.ml_predictions.get('kelly_criterion', 0.02)
+            logger.debug(f"Kelly ML: {kelly:.2%} (confiança: {self.ml_predictions.get('confidence', 0):.2%})")
+            return kelly
+        else:
+            # Fallback para cálculo tradicional
+            return self.calculate_kelly_criterion()
+
+    def update_ml_predictions(self, predictions: Dict):
+        """
+        Atualiza previsões ML para uso no Kelly Criterion
+
+        Args:
+            predictions: Dict com predicted_win_rate, predicted_avg_win/loss, kelly_criterion
+        """
+        self.ml_predictions = predictions
+        logger.info(f"ML predictions atualizadas: Win Rate={predictions.get('predicted_win_rate', 0):.2%}, "
+                   f"Kelly={predictions.get('kelly_criterion', 0):.2%}")
+
+    def enable_ml_kelly(self, enable: bool = True):
+        """
+        Ativa/desativa uso de ML para Kelly Criterion
+
+        Args:
+            enable: True para ativar ML, False para usar estatísticas históricas
+        """
+        self.use_ml_kelly = enable
+        logger.info(f"Kelly ML {'ATIVADO' if enable else 'DESATIVADO'}")
+
     def calculate_position_size(self,
                                entry_price: float,
                                stop_loss: float,
@@ -165,9 +210,9 @@ class RiskManager:
         Returns:
             Tamanho da posição em USD
         """
-        # Usar Kelly Criterion se não especificado
+        # Usar Kelly Criterion se não especificado (com ou sem ML)
         if risk_per_trade_percent is None:
-            risk_per_trade_percent = self.calculate_kelly_criterion()
+            risk_per_trade_percent = self.calculate_kelly_with_ml()
 
         # Valor em risco
         risk_amount = self.current_capital * risk_per_trade_percent

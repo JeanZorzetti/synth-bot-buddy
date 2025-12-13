@@ -27,6 +27,7 @@ from ml_predictor import get_ml_predictor, initialize_ml_predictor
 from backtesting import Backtester, BacktestResult
 from background_tasks import task_manager
 from risk_manager import RiskManager, RiskLimits, TrailingStop
+from kelly_ml_predictor import get_kelly_ml_predictor, initialize_kelly_ml_predictor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1781,6 +1782,163 @@ async def update_risk_limits(
         }
     except Exception as e:
         logger.error(f"Erro ao atualizar limites: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== KELLY ML ENDPOINTS ====================
+
+@app.post("/api/risk/train-kelly-ml")
+async def train_kelly_ml():
+    """
+    Treina modelo de ML para prever Kelly Criterion dinamicamente
+
+    Usa histórico de trades do RiskManager para treinar Random Forest
+    que prevê win_rate e avg_win/loss baseado em condições de mercado
+
+    Returns:
+        Métricas de treinamento e status
+    """
+    try:
+        if len(risk_manager.trade_history) < 50:
+            return {
+                "status": "insufficient_data",
+                "message": f"Mínimo de 50 trades necessários. Atual: {len(risk_manager.trade_history)}",
+                "trades_remaining": 50 - len(risk_manager.trade_history)
+            }
+
+        kelly_ml = get_kelly_ml_predictor()
+
+        # Treinar modelo
+        metrics = kelly_ml.train(risk_manager.trade_history)
+
+        # Salvar modelo
+        model_path = kelly_ml.save_model()
+
+        # Ativar ML no RiskManager
+        risk_manager.enable_ml_kelly(True)
+
+        logger.info(f"Kelly ML treinado com sucesso! Accuracy: {metrics['accuracy']:.2%}")
+
+        return {
+            "status": "success",
+            "message": "Kelly ML treinado com sucesso",
+            "metrics": metrics,
+            "model_path": model_path,
+            "ml_enabled": True
+        }
+    except Exception as e:
+        logger.error(f"Erro ao treinar Kelly ML: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/predict-kelly-ml")
+async def predict_kelly_ml():
+    """
+    Gera previsão ML para Kelly Criterion baseado no estado atual
+
+    Returns:
+        Previsões de win_rate, avg_win/loss e Kelly Criterion ajustado
+    """
+    try:
+        kelly_ml = get_kelly_ml_predictor()
+
+        if not kelly_ml.is_trained:
+            return {
+                "status": "not_trained",
+                "message": "Modelo ML não treinado. Execute POST /api/risk/train-kelly-ml primeiro"
+            }
+
+        # Extrair estado atual
+        recent_trades = risk_manager.trade_history[-20:] if len(risk_manager.trade_history) >= 20 else risk_manager.trade_history
+
+        # Calcular features atuais
+        consecutive_wins = 0
+        consecutive_losses = 0
+        for trade in reversed(recent_trades):
+            if trade['is_win']:
+                if consecutive_losses > 0:
+                    break
+                consecutive_wins += 1
+            else:
+                if consecutive_wins > 0:
+                    break
+                consecutive_losses += 1
+
+        last_10 = risk_manager.trade_history[-10:] if len(risk_manager.trade_history) >= 10 else risk_manager.trade_history
+        recent_win_rate = sum(1 for t in last_10 if t['is_win']) / len(last_10) if last_10 else 0.5
+
+        pnls = [t['pnl'] for t in recent_trades]
+        volatility = float(np.std(pnls)) if len(pnls) > 1 else 0.0
+
+        avg_position_size = float(np.mean([t['position_size'] for t in last_10])) if last_10 else 0.0
+
+        if len(pnls) > 1:
+            sharpe_ratio = float(np.mean(pnls) / np.std(pnls)) if np.std(pnls) > 0 else 0.0
+        else:
+            sharpe_ratio = 0.0
+
+        current_state = {
+            'consecutive_wins': consecutive_wins,
+            'consecutive_losses': consecutive_losses,
+            'recent_win_rate': recent_win_rate,
+            'volatility': volatility,
+            'hour_of_day': datetime.now().hour,
+            'day_of_week': datetime.now().weekday(),
+            'total_trades': len(risk_manager.trade_history),
+            'avg_position_size': avg_position_size,
+            'sharpe_ratio': sharpe_ratio,
+            'fallback_avg_win': risk_manager.avg_win,
+            'fallback_avg_loss': risk_manager.avg_loss
+        }
+
+        # Gerar previsão
+        predictions = kelly_ml.predict(current_state)
+
+        # Atualizar RiskManager com previsões
+        risk_manager.update_ml_predictions(predictions)
+
+        return {
+            "status": "success",
+            "predictions": predictions,
+            "current_state": current_state,
+            "ml_enabled": risk_manager.use_ml_kelly
+        }
+    except Exception as e:
+        logger.error(f"Erro ao prever Kelly ML: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/risk/toggle-kelly-ml")
+async def toggle_kelly_ml(enable: bool):
+    """
+    Ativa/desativa uso de ML para Kelly Criterion
+
+    Args:
+        enable: True para ativar, False para desativar
+
+    Returns:
+        Status atual
+    """
+    try:
+        kelly_ml = get_kelly_ml_predictor()
+
+        if enable and not kelly_ml.is_trained:
+            return {
+                "status": "not_trained",
+                "message": "Modelo ML não treinado. Execute POST /api/risk/train-kelly-ml primeiro",
+                "ml_enabled": False
+            }
+
+        risk_manager.enable_ml_kelly(enable)
+
+        return {
+            "status": "success",
+            "message": f"Kelly ML {'ATIVADO' if enable else 'DESATIVADO'}",
+            "ml_enabled": risk_manager.use_ml_kelly,
+            "has_predictions": risk_manager.ml_predictions is not None
+        }
+    except Exception as e:
+        logger.error(f"Erro ao alternar Kelly ML: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
