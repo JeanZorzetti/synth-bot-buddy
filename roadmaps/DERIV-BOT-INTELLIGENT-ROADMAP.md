@@ -1438,21 +1438,67 @@ def check_correlation(active_positions, new_symbol):
 ```
 
 ### 4.5 Tarefas
-- [ ] Implementar Kelly Criterion e position sizing
-- [ ] Criar sistema de stop loss dinâmico (ATR + Trailing)
-- [ ] Implementar partial take profit
-- [ ] Criar RiskManager com limites diários/semanais
-- [ ] Adicionar controle de correlação entre trades
-- [ ] Implementar circuit breaker (pausa após perdas)
-- [ ] Dashboard de gestão de risco
+- [x] Implementar Kelly Criterion e position sizing ✅
+- [x] Criar sistema de stop loss dinâmico (ATR + Trailing) ✅
+- [x] Implementar partial take profit ✅
+- [x] Criar RiskManager com limites diários/semanais ✅
+- [x] Adicionar controle de correlação entre trades ✅
+- [x] Implementar circuit breaker (pausa após perdas) ✅
+- [ ] Dashboard de gestão de risco (frontend) ⏳
 
 ### 4.6 Entregáveis
-- ✅ Classe `RiskManager` completa
-- ✅ Position sizing automático
-- ✅ Stop loss e take profit dinâmicos
-- ✅ Limites de risco configuráveis
-- ✅ API: `/api/risk/evaluation`
-- ✅ Dashboard de exposição de risco
+
+- ✅ Classe `RiskManager` completa (600+ linhas)
+- ✅ Position sizing automático (Kelly Criterion + Fixed Fractional)
+- ✅ Stop loss e take profit dinâmicos (ATR + Trailing + Partial TP)
+- ✅ Limites de risco configuráveis (diário/semanal/drawdown)
+- ✅ 7 API REST endpoints de risk management
+- ✅ Documentação completa (950+ linhas)
+- ✅ Relatório de testes (7/7 endpoints validados)
+
+### 4.7 Testes Realizados (2025-12-13)
+
+**Sistema testado em produção:** <https://botderivapi.roilabs.com.br>
+
+| Endpoint | Status | Performance | Validação |
+|----------|--------|-------------|-----------|
+| GET /api/risk/metrics | ✅ 200 OK | ~150ms | 15/15 campos validados |
+| POST /api/risk/calculate-position | ✅ 200 OK | ~60ms | Kelly Criterion correto |
+| POST /api/risk/calculate-stop-loss | ✅ 200 OK | ~70ms | ATR calculation correto |
+| POST /api/risk/calculate-take-profit | ✅ 200 OK | ~70ms | TP1/TP2 correto (1:1, 1:2) |
+| POST /api/risk/validate-trade | ✅ 200 OK | ~100ms | 7 validações (circuit breaker, limits, etc) |
+| POST /api/risk/reset-circuit-breaker | ✅ 200 OK | ~75ms | Reset funcionando |
+| POST /api/risk/update-limits | ✅ 200 OK | ~85ms | Update dinâmico OK |
+
+**Performance Média:** 87ms (excelente, < 200ms target)
+
+**Algoritmos Validados:**
+
+- ✅ Kelly Criterion: `f = (p * b - q) / b` (Quarter Kelly implementado)
+- ✅ Fixed Fractional: `position = (capital * risk%) / distance`
+- ✅ ATR Stop Loss: `SL = price ± (ATR * multiplier)`
+- ✅ Trailing Stop: Move apenas a favor, nunca contra
+- ✅ Partial TP: 50% @ TP1 (1:1 R:R), 50% @ TP2 (1:2 R:R)
+- ✅ Circuit Breaker: Pausa após 3 perdas consecutivas
+- ✅ R:R Validation: Mínimo 1:1.5 ratio
+
+**Proteções Implementadas:**
+
+- Max Daily Loss: 5%
+- Max Weekly Loss: 10%
+- Max Drawdown: 15% (compatível com backtesting)
+- Circuit Breaker: 3 consecutive losses
+- Max Concurrent Trades: 3
+- Max Position Size: 10% per trade
+- Min R:R Ratio: 1:1.5
+
+**Arquivos Criados:**
+
+- `backend/risk_manager.py` (600+ linhas)
+- `backend/RISK_MANAGEMENT_DOCS.md` (950+ linhas)
+- `backend/TESTES_RISK_MANAGEMENT.md` (600+ linhas)
+
+**Status:** FASE 4 - 85% COMPLETA (backend 100%, frontend dashboard pendente)
 
 ---
 
