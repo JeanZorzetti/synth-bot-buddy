@@ -1451,9 +1451,9 @@ def check_correlation(active_positions, new_symbol):
 
 **Melhorias Futuras:**
 
-- [ ] Integrar backtesting com RiskManager (validar trades)
+- [x] Integrar backtesting com RiskManager (validar trades) ✅
+- [x] Gráficos de equity curve no dashboard ✅
 - [ ] ML para ajuste dinâmico de Kelly Criterion
-- [ ] Gráficos de equity curve no dashboard
 - [ ] Alertas por email/telegram
 
 ### 4.6 Entregáveis
@@ -1502,11 +1502,36 @@ def check_correlation(active_positions, new_symbol):
 - Max Position Size: 10% per trade
 - Min R:R Ratio: 1:1.5
 
+**Dashboard Features (Frontend):**
+
+- **Aba Charts** (Nova! ✨):
+  - Equity Curve: AreaChart com evolução de capital ao longo dos trades
+  - Drawdown Chart: AreaChart mostrando drawdown % em tempo real
+  - P&L per Trade: LineChart com lucro/prejuízo individual por trade
+  - Auto-refresh a cada 5s
+  - Tooltips formatados e legendas interativas
+
+- **Aba Risk Limits**:
+  - Progress bars para Daily Loss, Weekly Loss, Drawdown
+  - Indicador de trades ativos vs limite máximo
+  - Cores dinâmicas (verde/vermelho) baseadas em limites
+
+- **Aba Performance**:
+  - Average Win/Loss, Win/Loss Ratio
+  - Consecutive Losses tracker
+  - Trading Statistics completas
+
+- **Aba Protection Settings**:
+  - Visualização de todos os limites configurados
+  - Kelly Criterion explanation e recomendação
+
 **Arquivos Criados:**
 
 - `backend/risk_manager.py` (600+ linhas)
+- `backend/backtesting_with_risk.py` (400+ linhas) - Backtesting com validação de RiskManager
 - `backend/RISK_MANAGEMENT_DOCS.md` (950+ linhas)
 - `backend/TESTES_RISK_MANAGEMENT.md` (600+ linhas)
+- `frontend/src/pages/RiskManagement.tsx` (600+ linhas) - Dashboard com gráficos interativos
 
 **Status:** FASE 4 - 100% COMPLETA ✅ (backend 100%, frontend 100%, testes 100%)
 
