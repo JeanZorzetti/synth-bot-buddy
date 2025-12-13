@@ -1142,7 +1142,21 @@ async def start_backtest(
     }
 
     # Executar em background usando FastAPI BackgroundTasks
-    background_tasks.add_task(_run_backtest_background, task_id, params)
+    # IMPORTANTE: Usar wrapper síncrono porque BackgroundTasks não suporta async corretamente
+    def run_backtest_sync():
+        """Wrapper síncrono que executa a coroutine async"""
+        import asyncio
+        try:
+            # Criar novo event loop para a thread de background
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(_run_backtest_background(task_id, params))
+            loop.close()
+        except Exception as e:
+            logger.error(f"[BACKTEST SYNC WRAPPER] Erro fatal: {e}", exc_info=True)
+            task_manager.set_error(task_id, f"Erro fatal no wrapper: {str(e)}")
+
+    background_tasks.add_task(run_backtest_sync)
 
     return {
         "task_id": task_id,
