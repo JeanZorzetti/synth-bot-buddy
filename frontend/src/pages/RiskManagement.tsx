@@ -14,7 +14,11 @@ import {
   Activity,
   BarChart3,
   RefreshCw,
-  LineChart
+  LineChart,
+  Brain,
+  Zap,
+  Play,
+  Pause
 } from 'lucide-react';
 import {
   LineChart as RechartsLineChart,
@@ -26,7 +30,9 @@ import {
   Legend,
   ResponsiveContainer,
   Area,
-  AreaChart
+  AreaChart,
+  BarChart,
+  Bar
 } from 'recharts';
 
 interface RiskMetrics {
@@ -76,10 +82,30 @@ interface EquityHistory {
   total_trades: number;
 }
 
+interface MLPredictions {
+  predicted_win_rate: number;
+  predicted_avg_win: number;
+  predicted_avg_loss: number;
+  kelly_criterion: number;
+  kelly_full: number;
+  confidence: number;
+}
+
+interface MLStatus {
+  ml_enabled: boolean;
+  has_predictions: boolean;
+  is_trained?: boolean;
+  accuracy?: number;
+  total_samples?: number;
+}
+
 export default function RiskManagement() {
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null);
   const [equityData, setEquityData] = useState<EquityHistory | null>(null);
+  const [mlPredictions, setMlPredictions] = useState<MLPredictions | null>(null);
+  const [mlStatus, setMlStatus] = useState<MLStatus>({ ml_enabled: false, has_predictions: false });
   const [loading, setLoading] = useState(true);
+  const [mlLoading, setMlLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   const fetchMetrics = async () => {
@@ -105,16 +131,83 @@ export default function RiskManagement() {
     }
   };
 
+  const fetchMLPredictions = async () => {
+    try {
+      const response = await fetch('https://botderivapi.roilabs.com.br/api/risk/predict-kelly-ml', {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setMlPredictions(data.predictions);
+        setMlStatus({
+          ml_enabled: data.ml_enabled,
+          has_predictions: true,
+          is_trained: true
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching ML predictions:', error);
+    }
+  };
+
+  const trainKellyML = async () => {
+    setMlLoading(true);
+    try {
+      const response = await fetch('https://botderivapi.roilabs.com.br/api/risk/train-kelly-ml', {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setMlStatus({
+          ml_enabled: data.ml_enabled,
+          has_predictions: false,
+          is_trained: true,
+          accuracy: data.metrics.accuracy,
+          total_samples: data.metrics.total_samples
+        });
+        await fetchMLPredictions();
+      }
+    } catch (error) {
+      console.error('Error training Kelly ML:', error);
+    } finally {
+      setMlLoading(false);
+    }
+  };
+
+  const toggleKellyML = async (enable: boolean) => {
+    try {
+      const response = await fetch(`https://botderivapi.roilabs.com.br/api/risk/toggle-kelly-ml?enable=${enable}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setMlStatus(prev => ({
+          ...prev,
+          ml_enabled: data.ml_enabled,
+          has_predictions: data.has_predictions
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling Kelly ML:', error);
+    }
+  };
+
   useEffect(() => {
     fetchMetrics();
     fetchEquityHistory();
-    // Auto-refresh every 5 seconds
+    fetchMLPredictions();
     const interval = setInterval(() => {
       fetchMetrics();
       fetchEquityHistory();
+      if (mlStatus.ml_enabled) {
+        fetchMLPredictions();
+      }
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [mlStatus.ml_enabled]);
 
   const resetCircuitBreaker = async () => {
     try {
@@ -259,10 +352,17 @@ export default function RiskManagement() {
 
       {/* Tabs */}
       <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="charts">
             <LineChart className="w-4 h-4 mr-2" />
             Charts
+          </TabsTrigger>
+          <TabsTrigger value="ml">
+            <Brain className="w-4 h-4 mr-2" />
+            ML Kelly
+            {mlStatus.ml_enabled && (
+              <Badge variant="default" className="ml-2 text-xs">ON</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="limits">
             <Activity className="w-4 h-4 mr-2" />
@@ -416,6 +516,167 @@ export default function RiskManagement() {
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                   No trade data available yet.
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ML Kelly Tab */}
+        <TabsContent value="ml" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5" />
+                Machine Learning Kelly Criterion
+              </CardTitle>
+              <CardDescription>
+                Use ML to predict win_rate and adjust Kelly Criterion dynamically
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Status and Controls */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">ML Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Trained</span>
+                        <Badge variant={mlStatus.is_trained ? "default" : "secondary"}>
+                          {mlStatus.is_trained ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Enabled</span>
+                        <Badge variant={mlStatus.ml_enabled ? "default" : "secondary"}>
+                          {mlStatus.ml_enabled ? "ON" : "OFF"}
+                        </Badge>
+                      </div>
+                      {mlStatus.accuracy && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Accuracy</span>
+                          <span className="font-semibold text-primary">
+                            {(mlStatus.accuracy * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Controls</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      onClick={trainKellyML}
+                      disabled={mlLoading}
+                      className="w-full"
+                      variant="default"
+                    >
+                      {mlLoading ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4 mr-2" />
+                      )}
+                      Train Model
+                    </Button>
+                    <Button
+                      onClick={() => toggleKellyML(!mlStatus.ml_enabled)}
+                      disabled={!mlStatus.is_trained}
+                      className="w-full"
+                      variant={mlStatus.ml_enabled ? "destructive" : "default"}
+                    >
+                      {mlStatus.ml_enabled ? (
+                        <><Pause className="w-4 h-4 mr-2" /> Disable ML</>
+                      ) : (
+                        <><Play className="w-4 h-4 mr-2" /> Enable ML</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ML Predictions */}
+              {mlPredictions && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Predictions</CardTitle>
+                    <CardDescription>
+                      ML model predictions based on current market conditions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Predicted Win Rate</p>
+                        <p className="text-2xl font-bold text-green-500">
+                          {(mlPredictions.predicted_win_rate * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Predicted Avg Win</p>
+                        <p className="text-2xl font-bold text-green-500">
+                          ${mlPredictions.predicted_avg_win.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Predicted Avg Loss</p>
+                        <p className="text-2xl font-bold text-red-500">
+                          ${mlPredictions.predicted_avg_loss.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Kelly Criterion (ML)</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {(mlPredictions.kelly_criterion * 100).toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Full Kelly</p>
+                        <p className="text-2xl font-bold">
+                          {(mlPredictions.kelly_full * 100).toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Confidence</p>
+                        <p className="text-2xl font-bold">
+                          {(mlPredictions.confidence * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Info Alert */}
+              {!mlStatus.is_trained && (
+                <Alert>
+                  <Brain className="h-4 w-4" />
+                  <AlertTitle>ML Model Not Trained</AlertTitle>
+                  <AlertDescription>
+                    You need at least 50 trades to train the ML model. Current trades: {metrics?.total_trades || 0}
+                    {metrics && metrics.total_trades < 50 && (
+                      <span className="block mt-2 font-semibold">
+                        {50 - metrics.total_trades} more trades needed
+                      </span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {mlStatus.ml_enabled && (
+                <Alert variant="default">
+                  <Zap className="h-4 w-4" />
+                  <AlertTitle>ML Kelly Active</AlertTitle>
+                  <AlertDescription>
+                    Position sizing is now using ML-predicted Kelly Criterion.
+                    The model adapts to market conditions in real-time.
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>
