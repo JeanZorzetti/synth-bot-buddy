@@ -1160,76 +1160,125 @@ async def get_backtest_status(task_id: str):
     return task.to_dict()
 
 async def _run_backtest_background(task_id: str, params: dict):
-    """Executa o backtest em background"""
+    """Executa o backtest em background com tratamento robusto de erros"""
     global technical_analysis, _api_token
 
     try:
-        # Atualizar token se fornecido
-        if params.get('token'):
-            _api_token = params['token']
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Iniciando para {params['symbol']}")
+        task_manager.update_status(task_id, "running", 5)
 
-        # Atualizar status
+        # Atualizar token se fornecido
+        try:
+            if params.get('token'):
+                _api_token = params['token']
+        except Exception as e:
+            logger.warning(f"[BACKTEST ASYNC] Task {task_id}: Erro ao atualizar token - {e}")
+
         task_manager.update_status(task_id, "running", 10)
 
-        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Iniciando para {params['symbol']}")
-
-        # Buscar dados
-        df, data_source = await fetch_deriv_candles(
-            params['symbol'],
-            params['timeframe'],
-            params['count']
-        )
+        # Buscar dados históricos
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Buscando {params['count']} candles de {params['symbol']}")
+        try:
+            df, data_source = await fetch_deriv_candles(
+                params['symbol'],
+                params['timeframe'],
+                params['count']
+            )
+            logger.info(f"[BACKTEST ASYNC] Task {task_id}: {len(df)} candles obtidos de {data_source}")
+        except Exception as e:
+            error_msg = f"Erro ao buscar dados históricos: {str(e)}"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+            task_manager.set_error(task_id, error_msg)
+            return
 
         task_manager.update_status(task_id, "running", 30)
 
+        # Validar quantidade de dados
         if len(df) < 200:
-            task_manager.set_error(task_id, f"Dados insuficientes: {len(df)} candles (mínimo: 200)")
+            error_msg = f"Dados insuficientes: {len(df)} candles (mínimo: 200)"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}")
+            task_manager.set_error(task_id, error_msg)
             return
 
-        # Inicializar backtester
-        if technical_analysis is None:
-            technical_analysis = TechnicalAnalysis()
+        # Inicializar TechnicalAnalysis se necessário
+        try:
+            if technical_analysis is None:
+                logger.info(f"[BACKTEST ASYNC] Task {task_id}: Inicializando TechnicalAnalysis")
+                technical_analysis = TechnicalAnalysis()
+        except Exception as e:
+            error_msg = f"Erro ao inicializar TechnicalAnalysis: {str(e)}"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+            task_manager.set_error(task_id, error_msg)
+            return
 
-        backtester = Backtester(technical_analysis)
+        task_manager.update_status(task_id, "running", 40)
+
+        # Inicializar Backtester
+        try:
+            logger.info(f"[BACKTEST ASYNC] Task {task_id}: Inicializando Backtester")
+            backtester = Backtester(technical_analysis)
+        except Exception as e:
+            error_msg = f"Erro ao inicializar Backtester: {str(e)}"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+            task_manager.set_error(task_id, error_msg)
+            return
 
         task_manager.update_status(task_id, "running", 50)
 
         # Executar backtest
-        result = backtester.run_backtest(
-            df=df,
-            symbol=params['symbol'],
-            initial_balance=params['initial_balance'],
-            position_size_percent=params['position_size_percent'],
-            stop_loss_percent=params['stop_loss_percent'],
-            take_profit_percent=params['take_profit_percent']
-        )
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Executando backtest com {len(df)} candles")
+        try:
+            result = backtester.run_backtest(
+                df=df,
+                symbol=params['symbol'],
+                initial_balance=params['initial_balance'],
+                position_size_percent=params['position_size_percent'],
+                stop_loss_percent=params['stop_loss_percent'],
+                take_profit_percent=params['take_profit_percent']
+            )
+            logger.info(f"[BACKTEST ASYNC] Task {task_id}: Backtest completo - {result.total_trades} trades executados")
+        except Exception as e:
+            error_msg = f"Erro ao executar backtest: {str(e)}"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+            task_manager.set_error(task_id, error_msg)
+            return
 
         task_manager.update_status(task_id, "running", 90)
 
         # Preparar resposta
-        response = result.to_dict()
-        response['metadata'] = {
-            'symbol': params['symbol'],
-            'timeframe': params['timeframe'],
-            'data_source': data_source,
-            'candles_analyzed': len(df),
-            'backtest_period': f"{df.index[0]} to {df.index[-1]}" if hasattr(df.index[0], 'isoformat') else f"{len(df)} candles",
-            'parameters': {
-                'initial_balance': params['initial_balance'],
-                'position_size_percent': params['position_size_percent'],
-                'stop_loss_percent': params['stop_loss_percent'],
-                'take_profit_percent': params['take_profit_percent']
+        try:
+            response = result.to_dict()
+            response['metadata'] = {
+                'symbol': params['symbol'],
+                'timeframe': params['timeframe'],
+                'data_source': data_source,
+                'candles_analyzed': len(df),
+                'backtest_period': f"{df.index[0]} to {df.index[-1]}" if hasattr(df.index[0], 'isoformat') else f"{len(df)} candles",
+                'parameters': {
+                    'initial_balance': params['initial_balance'],
+                    'position_size_percent': params['position_size_percent'],
+                    'stop_loss_percent': params['stop_loss_percent'],
+                    'take_profit_percent': params['take_profit_percent']
+                }
             }
-        }
+        except Exception as e:
+            error_msg = f"Erro ao preparar resposta: {str(e)}"
+            logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+            task_manager.set_error(task_id, error_msg)
+            return
 
         # Marcar como completo
         task_manager.set_result(task_id, response)
+        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Completo - Win Rate {result.win_rate:.2f}%, {result.total_trades} trades")
 
-        logger.info(f"[BACKTEST ASYNC] Task {task_id}: Completo - Win Rate {result.win_rate:.2f}%")
-
+    except asyncio.CancelledError:
+        logger.warning(f"[BACKTEST ASYNC] Task {task_id}: Task cancelada")
+        task_manager.set_error(task_id, "Task cancelada pelo sistema")
+        raise
     except Exception as e:
-        logger.error(f"[BACKTEST ASYNC] Task {task_id}: Erro - {str(e)}")
-        task_manager.set_error(task_id, str(e))
+        error_msg = f"Erro inesperado: {str(e)}"
+        logger.error(f"[BACKTEST ASYNC] Task {task_id}: {error_msg}", exc_info=True)
+        task_manager.set_error(task_id, error_msg)
 
 @app.post("/api/backtest/{symbol}")
 async def run_backtest(
