@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -1107,6 +1107,7 @@ async def backtest_options(symbol: str):
 async def start_backtest(
     symbol: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     timeframe: str = "1m",
     count: int = 1000,
     initial_balance: float = 1000.0,
@@ -1140,8 +1141,8 @@ async def start_backtest(
         'token': token_from_header
     }
 
-    # Executar em background
-    asyncio.create_task(_run_backtest_background(task_id, params))
+    # Executar em background usando FastAPI BackgroundTasks
+    background_tasks.add_task(_run_backtest_background, task_id, params)
 
     return {
         "task_id": task_id,
