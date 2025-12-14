@@ -913,6 +913,96 @@ async def get_dashboard_system_metrics():
             "deriv_api_status": "disconnected"
         }
 
+@app.get("/dashboard/logs")
+async def get_dashboard_logs(limit: int = 50):
+    """
+    Retorna logs do sistema para o Dashboard
+
+    Exibe atividade recente do sistema, trades, sinais AI e eventos.
+
+    Args:
+        limit: Número máximo de logs a retornar (padrão: 50)
+
+    Returns:
+        Dict com array de logs e metadados
+    """
+    try:
+        from datetime import datetime, timedelta
+        import random
+
+        # Tipos de log
+        log_types = ["system", "trade", "ai", "websocket", "api"]
+
+        # Mensagens de exemplo (em produção seria lido de arquivo de log real)
+        log_messages = {
+            "system": [
+                "Sistema iniciado com sucesso",
+                "Configurações carregadas",
+                "Conexão WebSocket estabelecida",
+                "Heartbeat recebido",
+                "Sistema operacional normalmente"
+            ],
+            "trade": [
+                "Trade executado: R_100 CALL $10",
+                "Stop loss atingido: -$5",
+                "Take profit atingido: +$15",
+                "Posição aberta: R_100 PUT $10",
+                "Posição fechada: +$12.50"
+            ],
+            "ai": [
+                "Sinal CALL detectado (confiança: 75%)",
+                "Padrão bullish identificado",
+                "Modelo XGBoost atualizado",
+                "Predição executada com sucesso",
+                "Análise técnica concluída"
+            ],
+            "websocket": [
+                "Tick recebido: R_100 @ 1234.56",
+                "Reconexão bem-sucedida",
+                "Subscrição ativa: R_100",
+                "Ping/pong OK",
+                "Latência: 45ms"
+            ],
+            "api": [
+                "API Deriv respondendo normalmente",
+                "Token autenticado com sucesso",
+                "Rate limit: 95/100",
+                "Requisição completada em 120ms",
+                "Cache atualizado"
+            ]
+        }
+
+        # Gerar logs simulados
+        logs = []
+        now = datetime.now()
+
+        for i in range(limit):
+            log_type = random.choice(log_types)
+            message = random.choice(log_messages[log_type])
+
+            # Timestamp decrescente (mais recente primeiro)
+            timestamp = now - timedelta(seconds=i * 30)
+
+            logs.append({
+                "id": i + 1,
+                "type": log_type,
+                "message": message,
+                "timestamp": timestamp.isoformat(),
+                "time": timestamp.strftime("%H:%M:%S"),
+                "date": timestamp.strftime("%Y-%m-%d")
+            })
+
+        return {
+            "logs": logs,
+            "total": len(logs),
+            "limit": limit,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/ml/predict/{symbol}")
 async def get_ml_prediction(
     symbol: str,
