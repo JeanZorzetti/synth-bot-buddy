@@ -1783,11 +1783,13 @@ def confirm_signal_with_order_flow(technical_signal, order_flow_data):
 ```
 
 ### 5.5 Tarefas
-- [ ] Implementar análise de order book (depth, walls)
-- [ ] Criar detector de ordens agressivas
-- [ ] Implementar volume profile (POC, VAH, VAL)
-- [ ] Desenvolver tape reading em tempo real
-- [ ] Integrar order flow com sistema de sinais
+
+- [x] Implementar análise de order book (depth, walls) - **IMPLEMENTADO 2025-12-14**
+- [x] Criar detector de ordens agressivas - **IMPLEMENTADO 2025-12-14**
+- [x] Implementar volume profile (POC, VAH, VAL) - **IMPLEMENTADO 2025-12-14**
+- [x] Desenvolver tape reading em tempo real - **IMPLEMENTADO 2025-12-14**
+- [x] Integrar order flow com sistema de sinais - **IMPLEMENTADO 2025-12-14**
+- [x] Criar endpoints REST API para order flow - **IMPLEMENTADO 2025-12-14** (7 endpoints)
 - [ ] Criar visualização de order flow no frontend
 
 ### 5.6 Entregáveis

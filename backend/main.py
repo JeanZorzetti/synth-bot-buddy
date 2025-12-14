@@ -4854,3 +4854,282 @@ async def reset_proposals_stats():
             "status": "error",
             "message": str(e)
         }
+
+
+# ==========================================
+# ORDER FLOW ANALYSIS ENDPOINTS (FASE 5)
+# ==========================================
+
+from analysis.order_flow_analyzer import OrderFlowAnalyzer
+
+# Global order flow analyzer
+order_flow_analyzer = OrderFlowAnalyzer()
+
+
+class OrderFlowRequest(BaseModel):
+    """Request para análise de order flow"""
+    symbol: str
+    order_book: Optional[Dict] = None
+    trade_stream: Optional[List[Dict]] = None
+
+
+class SignalEnhanceRequest(BaseModel):
+    """Request para melhorar sinal com order flow"""
+    signal: Dict
+    symbol: str
+    order_book: Optional[Dict] = None
+    trade_stream: Optional[List[Dict]] = None
+
+
+@app.post("/api/order-flow/analyze")
+async def analyze_order_flow(request: OrderFlowRequest):
+    """
+    Análise completa de order flow
+
+    POST /api/order-flow/analyze
+    {
+        "symbol": "1HZ75V",
+        "order_book": {
+            "bids": [[100.0, 1000], [99.9, 500]],
+            "asks": [[100.1, 600], [100.2, 400]]
+        },
+        "trade_stream": [
+            {"price": 100.0, "size": 100, "side": "buy", "timestamp": "2025-12-14T..."}
+        ]
+    }
+
+    Returns análise completa com order book, ordens agressivas, volume profile e tape reading
+    """
+    try:
+        result = order_flow_analyzer.analyze_complete(
+            order_book=request.order_book,
+            trade_stream=request.trade_stream
+        )
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "analysis": result
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao analisar order flow: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/order-flow/order-book")
+async def analyze_order_book(request: OrderFlowRequest):
+    """
+    Análise de order book (depth, walls, imbalance)
+
+    POST /api/order-flow/order-book
+    {
+        "symbol": "1HZ75V",
+        "order_book": {
+            "bids": [[100.0, 1000], [99.9, 500]],
+            "asks": [[100.1, 600], [100.2, 400]]
+        }
+    }
+
+    Returns análise de profundidade, muros e pressão de compra/venda
+    """
+    try:
+        if not request.order_book:
+            raise HTTPException(status_code=400, detail="Order book is required")
+
+        result = order_flow_analyzer.order_book_analyzer.analyze_depth(request.order_book)
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "order_book_analysis": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao analisar order book: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/order-flow/aggressive-orders")
+async def detect_aggressive_orders(request: OrderFlowRequest):
+    """
+    Detecta ordens agressivas (market orders) no fluxo de trades
+
+    POST /api/order-flow/aggressive-orders
+    {
+        "symbol": "1HZ75V",
+        "trade_stream": [
+            {"price": 100.0, "size": 100, "side": "buy"},
+            {"price": 100.1, "size": 500, "side": "buy"}
+        ]
+    }
+
+    Returns detecção de ordens agressivas, delta e sentimento
+    """
+    try:
+        if not request.trade_stream:
+            raise HTTPException(status_code=400, detail="Trade stream is required")
+
+        result = order_flow_analyzer.aggressive_detector.detect_aggressive_orders(request.trade_stream)
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "aggressive_orders_analysis": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao detectar ordens agressivas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/order-flow/volume-profile")
+async def calculate_volume_profile(request: OrderFlowRequest):
+    """
+    Calcula volume profile (POC, VAH, VAL)
+
+    POST /api/order-flow/volume-profile
+    {
+        "symbol": "1HZ75V",
+        "trade_stream": [
+            {"price": 100.0, "volume": 100},
+            {"price": 100.1, "volume": 200}
+        ]
+    }
+
+    Returns POC (Point of Control), VAH (Value Area High), VAL (Value Area Low)
+    """
+    try:
+        if not request.trade_stream:
+            raise HTTPException(status_code=400, detail="Trade stream is required")
+
+        result = order_flow_analyzer.volume_profile_analyzer.calculate_volume_profile(request.trade_stream)
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "volume_profile": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao calcular volume profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/order-flow/tape-reading")
+async def analyze_tape(request: OrderFlowRequest):
+    """
+    Análise de tape reading (fluxo de trades em tempo real)
+
+    POST /api/order-flow/tape-reading
+    {
+        "symbol": "1HZ75V",
+        "trade_stream": [
+            {"price": 100.0, "size": 100, "side": "buy", "timestamp": "..."}
+        ]
+    }
+
+    Returns pressão de compra/venda, absorção, momentum
+    """
+    try:
+        if not request.trade_stream:
+            raise HTTPException(status_code=400, detail="Trade stream is required")
+
+        result = order_flow_analyzer.tape_reader.analyze_tape(request.trade_stream)
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "tape_reading": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao analisar tape: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/order-flow/enhance-signal")
+async def enhance_signal_with_order_flow(request: SignalEnhanceRequest):
+    """
+    Melhora um sinal técnico com análise de order flow
+
+    POST /api/order-flow/enhance-signal
+    {
+        "signal": {
+            "type": "BUY",
+            "confidence": 65,
+            "price": 100.5
+        },
+        "symbol": "1HZ75V",
+        "order_book": {...},
+        "trade_stream": [...]
+    }
+
+    Returns sinal técnico com confidence ajustada e razões de confirmação
+    """
+    try:
+        if not request.signal:
+            raise HTTPException(status_code=400, detail="Signal is required")
+
+        result = order_flow_analyzer.enhance_signal(
+            technical_signal=request.signal,
+            order_book=request.order_book,
+            trade_stream=request.trade_stream
+        )
+
+        return {
+            "status": "success",
+            "symbol": request.symbol,
+            "enhanced_signal": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao melhorar sinal com order flow: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/order-flow/info")
+async def get_order_flow_info():
+    """
+    Informações sobre o sistema de order flow
+
+    GET /api/order-flow/info
+
+    Returns informações sobre capacidades e configuração
+    """
+    return {
+        "status": "active",
+        "version": "1.0.0",
+        "capabilities": {
+            "order_book_analysis": True,
+            "aggressive_order_detection": True,
+            "volume_profile": True,
+            "tape_reading": True,
+            "signal_enhancement": True
+        },
+        "configuration": {
+            "wall_threshold_multiplier": 3.0,
+            "aggressive_size_multiplier": 3.0,
+            "volume_profile_levels": 100,
+            "tape_window_size": 100
+        },
+        "endpoints": [
+            "POST /api/order-flow/analyze",
+            "POST /api/order-flow/order-book",
+            "POST /api/order-flow/aggressive-orders",
+            "POST /api/order-flow/volume-profile",
+            "POST /api/order-flow/tape-reading",
+            "POST /api/order-flow/enhance-signal",
+            "GET /api/order-flow/info"
+        ]
+    }
