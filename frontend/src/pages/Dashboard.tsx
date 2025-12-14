@@ -571,7 +571,8 @@ const Dashboard = () => {
     // Setup WebSocket for real-time updates
     const setupWebSocket = () => {
       try {
-        const ws = new WebSocket(`ws://localhost:8000/ws/dashboard`);
+        const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+        const ws = new WebSocket(`${wsUrl}/ws/dashboard`);
 
         ws.onopen = () => {
           console.log('Dashboard WebSocket connected');
