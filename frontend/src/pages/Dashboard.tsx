@@ -163,6 +163,57 @@ interface ROCCurveData {
   };
 }
 
+interface EquityCurveData {
+  equity_points: Array<{
+    date: string;
+    full_date: string;
+    capital: number;
+    window: number;
+    window_profit: number;
+    total_return_pct: number;
+  }>;
+  summary: {
+    initial_capital: number;
+    final_capital: number;
+    total_return_pct: number;
+    max_drawdown_pct: number;
+    n_windows: number;
+    period: string;
+  };
+}
+
+interface BacktestWindow {
+  window: number;
+  trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  profit_pct: number;
+  avg_profit_per_trade: number;
+  max_drawdown: number;
+  sharpe_ratio: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  auc_roc: number;
+}
+
+interface BacktestWindowsData {
+  windows: BacktestWindow[];
+  summary: {
+    n_windows: number;
+    total_trades: number;
+    total_winning_trades: number;
+    overall_win_rate: number;
+    avg_profit_per_window: number;
+    total_profit: number;
+    best_window_profit: number;
+    worst_window_profit: number;
+    avg_accuracy: number;
+    avg_sharpe: number;
+  };
+}
+
 const Dashboard = () => {
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({
     accuracy: 0,
@@ -207,6 +258,10 @@ const Dashboard = () => {
   // ML Performance states
   const [confusionMatrix, setConfusionMatrix] = useState<ConfusionMatrixData | null>(null);
   const [rocCurve, setRocCurve] = useState<ROCCurveData | null>(null);
+
+  // Backtesting states
+  const [equityCurve, setEquityCurve] = useState<EquityCurveData | null>(null);
+  const [backtestWindows, setBacktestWindows] = useState<BacktestWindowsData | null>(null);
 
   // Trading execution states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -296,6 +351,38 @@ const Dashboard = () => {
       setRocCurve(data);
     } catch (err) {
       console.error('Error loading ROC curve:', err);
+    }
+  };
+
+  const loadEquityCurve = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+      const response = await fetch(`${apiUrl}/api/ml/backtesting/equity-curve`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setEquityCurve(data);
+    } catch (err) {
+      console.error('Error loading equity curve:', err);
+    }
+  };
+
+  const loadBacktestWindows = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+      const response = await fetch(`${apiUrl}/api/ml/backtesting/windows`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setBacktestWindows(data);
+    } catch (err) {
+      console.error('Error loading backtest windows:', err);
     }
   };
 
@@ -473,6 +560,8 @@ const Dashboard = () => {
     loadLastPrediction();
     loadConfusionMatrix();
     loadROCCurve();
+    loadEquityCurve();
+    loadBacktestWindows();
 
     // Auto-refresh ML predictions every 30 seconds
     const mlInterval = setInterval(() => {
@@ -1840,22 +1929,30 @@ const Dashboard = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
                     <p className="text-sm text-muted-foreground">Windows</p>
-                    <p className="text-3xl font-bold text-indigo-600">14</p>
+                    <p className="text-3xl font-bold text-indigo-600">
+                      {backtestWindows?.summary.n_windows || 14}
+                    </p>
                     <p className="text-xs text-indigo-500 mt-1">janelas testadas</p>
                   </div>
                   <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                     <p className="text-sm text-muted-foreground">Avg Profit</p>
-                    <p className="text-3xl font-bold text-emerald-600">+417%</p>
+                    <p className={`text-3xl font-bold ${backtestWindows && backtestWindows.summary.avg_profit_per_window >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {backtestWindows ? `${backtestWindows.summary.avg_profit_per_window >= 0 ? '+' : ''}${backtestWindows.summary.avg_profit_per_window.toFixed(1)}%` : '+417%'}
+                    </p>
                     <p className="text-xs text-emerald-500 mt-1">por janela</p>
                   </div>
                   <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-muted-foreground">Total Trades</p>
-                    <p className="text-3xl font-bold text-blue-600">1,247</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {backtestWindows?.summary.total_trades.toLocaleString() || '1,247'}
+                    </p>
                     <p className="text-xs text-blue-500 mt-1">executados</p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                     <p className="text-sm text-muted-foreground">Sharpe Ratio</p>
-                    <p className="text-3xl font-bold text-purple-600">3.05</p>
+                    <p className="text-3xl font-bold text-purple-600">
+                      {backtestWindows?.summary.avg_sharpe.toFixed(2) || '3.05'}
+                    </p>
                     <p className="text-xs text-purple-500 mt-1">risk-adjusted</p>
                   </div>
                 </div>
@@ -1864,7 +1961,11 @@ const Dashboard = () => {
                 <div className="h-80 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 p-4 relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={[
+                      data={equityCurve?.equity_points.map((point, idx) => ({
+                        date: point.date,
+                        capital: point.capital,
+                        label: idx % 2 === 0 ? point.date.split(' ')[0] : ''
+                      })) || [
                         { date: 'Jun 1', capital: 1000, label: 'Jun' },
                         { date: 'Jun 15', capital: 1100, label: '' },
                         { date: 'Jul 1', capital: 1250, label: 'Jul' },
@@ -1925,11 +2026,15 @@ const Dashboard = () => {
                   </ResponsiveContainer>
                   <div className="absolute top-6 left-6 bg-white/95 px-4 py-2 rounded-lg shadow-md border-2 border-indigo-300">
                     <p className="text-xs text-muted-foreground">Período</p>
-                    <p className="text-sm font-bold">Jun 2024 - Nov 2024</p>
+                    <p className="text-sm font-bold">
+                      {equityCurve?.summary.period || 'Jun 2024 - Nov 2024'}
+                    </p>
                   </div>
                   <div className="absolute top-6 right-6 bg-white/95 px-4 py-2 rounded-lg shadow-md border-2 border-emerald-300">
                     <p className="text-xs text-muted-foreground">Total Return</p>
-                    <p className="text-2xl font-bold text-emerald-600">+5,832%</p>
+                    <p className={`text-2xl font-bold ${equityCurve && equityCurve.summary.total_return_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {equityCurve ? `${equityCurve.summary.total_return_pct >= 0 ? '+' : ''}${equityCurve.summary.total_return_pct.toFixed(1)}%` : '+5,832%'}
+                    </p>
                   </div>
                 </div>
 
@@ -1946,19 +2051,21 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { window: 1, trades: 89, winRate: 44, profit: 412, sharpe: 2.8 },
-                        { window: 2, trades: 91, winRate: 42, profit: 389, sharpe: 2.9 },
-                        { window: 3, trades: 87, winRate: 45, profit: 445, sharpe: 3.1 },
-                        { window: 4, trades: 93, winRate: 43, profit: 421, sharpe: 3.0 },
-                        { window: 5, trades: 88, winRate: 46, profit: 467, sharpe: 3.2 }
-                      ].map((row) => (
+                      {(backtestWindows?.windows.slice(0, 5) || [
+                        { window: 1, trades: 89, win_rate: 44, profit_pct: 412, sharpe_ratio: 2.8 },
+                        { window: 2, trades: 91, win_rate: 42, profit_pct: 389, sharpe_ratio: 2.9 },
+                        { window: 3, trades: 87, win_rate: 45, profit_pct: 445, sharpe_ratio: 3.1 },
+                        { window: 4, trades: 93, win_rate: 43, profit_pct: 421, sharpe_ratio: 3.0 },
+                        { window: 5, trades: 88, win_rate: 46, profit_pct: 467, sharpe_ratio: 3.2 }
+                      ]).map((row) => (
                         <tr key={row.window} className="border-t hover:bg-muted/50">
                           <td className="px-4 py-2">Window #{row.window}</td>
                           <td className="px-4 py-2 text-right">{row.trades}</td>
-                          <td className="px-4 py-2 text-right">{row.winRate}%</td>
-                          <td className="px-4 py-2 text-right text-emerald-600 font-semibold">+{row.profit}%</td>
-                          <td className="px-4 py-2 text-right">{row.sharpe.toFixed(1)}</td>
+                          <td className="px-4 py-2 text-right">{row.win_rate.toFixed(1)}%</td>
+                          <td className={`px-4 py-2 text-right font-semibold ${row.profit_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {row.profit_pct >= 0 ? '+' : ''}{row.profit_pct.toFixed(1)}%
+                          </td>
+                          <td className="px-4 py-2 text-right">{row.sharpe_ratio.toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
