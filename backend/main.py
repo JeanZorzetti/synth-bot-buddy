@@ -924,7 +924,7 @@ async def get_dashboard_logs(limit: int = 50):
         limit: Número máximo de logs a retornar (padrão: 50)
 
     Returns:
-        Dict com array de logs e metadados
+        Array de logs (retorna diretamente o array para compatibilidade com frontend)
     """
     try:
         from datetime import datetime, timedelta
@@ -992,12 +992,8 @@ async def get_dashboard_logs(limit: int = 50):
                 "date": timestamp.strftime("%Y-%m-%d")
             })
 
-        return {
-            "logs": logs,
-            "total": len(logs),
-            "limit": limit,
-            "timestamp": datetime.now().isoformat()
-        }
+        # Retornar diretamente o array (frontend espera array, não objeto)
+        return logs
 
     except Exception as e:
         logger.error(f"Erro ao obter logs: {e}")
