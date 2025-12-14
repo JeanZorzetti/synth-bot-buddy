@@ -10,6 +10,18 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ],
       "env": {}
+    },
+    "sqlite": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "mcp-server-sqlite-npx",
+        "c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\database\\roadmap.db"
+      ],
+      "env": {}
     }
   }
 }

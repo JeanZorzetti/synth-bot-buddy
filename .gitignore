@@ -1,3 +1,10 @@
 Lib/
 *.pyc
 __pycache__/
+
+# SQLite databases
+database/*.db
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+database/backups/
