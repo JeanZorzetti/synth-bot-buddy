@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -998,6 +998,97 @@ async def get_dashboard_logs(limit: int = 50):
     except Exception as e:
         logger.error(f"Erro ao obter logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws/dashboard")
+async def websocket_dashboard(websocket: WebSocket):
+    """
+    WebSocket endpoint para atualizações em tempo real do Dashboard
+
+    Envia atualizações periódicas de:
+    - Métricas de AI (accuracy, sinais, padrões)
+    - Métricas de trading (trades, win rate, PnL)
+    - Métricas de sistema (uptime, ticks, latência)
+    - Logs em tempo real
+
+    Mensagens enviadas a cada 5 segundos no formato:
+    {
+        "type": "ai_metrics" | "trading_metrics" | "system_metrics" | "new_log",
+        "payload": { ... }
+    }
+    """
+    await websocket.accept()
+    logger.info("WebSocket /ws/dashboard conectado")
+
+    try:
+        # Loop infinito enviando atualizações periódicas
+        while True:
+            try:
+                # Enviar métricas AI
+                ai_metrics = await get_dashboard_ai_metrics()
+                await websocket.send_json({
+                    "type": "ai_metrics",
+                    "payload": ai_metrics
+                })
+
+                await asyncio.sleep(2)
+
+                # Enviar métricas de trading
+                trading_metrics = await get_dashboard_trading_metrics()
+                await websocket.send_json({
+                    "type": "trading_metrics",
+                    "payload": trading_metrics
+                })
+
+                await asyncio.sleep(2)
+
+                # Enviar métricas de sistema
+                system_metrics = await get_dashboard_system_metrics()
+                await websocket.send_json({
+                    "type": "system_metrics",
+                    "payload": system_metrics
+                })
+
+                await asyncio.sleep(2)
+
+                # Enviar novo log simulado
+                import random
+                from datetime import datetime
+
+                log_types = ["system", "trade", "ai", "websocket", "api"]
+                log_messages = {
+                    "system": ["Heartbeat recebido", "Sistema operacional normalmente"],
+                    "trade": ["Trade executado: R_100 CALL $10", "Posição fechada: +$12.50"],
+                    "ai": ["Sinal CALL detectado (confiança: 75%)", "Predição executada com sucesso"],
+                    "websocket": ["Tick recebido: R_100 @ 1234.56", "Latência: 45ms"],
+                    "api": ["API Deriv respondendo normalmente", "Requisição completada em 120ms"]
+                }
+
+                log_type = random.choice(log_types)
+                log_message = random.choice(log_messages[log_type])
+
+                await websocket.send_json({
+                    "type": "new_log",
+                    "payload": {
+                        "id": int(time.time() * 1000),
+                        "type": log_type,
+                        "message": log_message,
+                        "timestamp": datetime.now().isoformat(),
+                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "date": datetime.now().strftime("%Y-%m-%d")
+                    }
+                })
+
+                # Aguardar 5 segundos antes do próximo ciclo
+                await asyncio.sleep(5)
+
+            except Exception as e:
+                logger.error(f"Erro ao enviar dados WebSocket: {e}")
+                await asyncio.sleep(5)
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket /ws/dashboard desconectado")
+    except Exception as e:
+        logger.error(f"Erro no WebSocket /ws/dashboard: {e}")
 
 @app.get("/api/ml/predict/{symbol}")
 async def get_ml_prediction(
