@@ -94,6 +94,14 @@ const navItems: NavItem[] = [
     badgeVariant: 'default'
   },
   {
+    title: 'Paper Trading',
+    href: '/paper-trading',
+    icon: Activity,
+    description: 'Simulação realista de trading',
+    badge: 'Fase 8',
+    badgeVariant: 'default'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,

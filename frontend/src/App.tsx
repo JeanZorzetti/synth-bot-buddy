@@ -17,6 +17,7 @@ import OrderFlow from "./pages/OrderFlow";
 import TradeHistory from "./pages/TradeHistory";
 import BacktestingVisual from "./pages/BacktestingVisual";
 import AlertsConfig from "./pages/AlertsConfig";
+import PaperTrading from "./pages/PaperTrading";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,11 @@ const App = () => (
           <Route path="/alerts" element={
             <ProtectedRoute>
               <AlertsConfig />
+            </ProtectedRoute>
+          } />
+          <Route path="/paper-trading" element={
+            <ProtectedRoute>
+              <PaperTrading />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

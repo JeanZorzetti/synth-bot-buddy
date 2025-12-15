@@ -1007,6 +1007,364 @@ async def get_alerts_history():
         logger.error(f"Erro ao obter histórico de alertas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# PAPER TRADING API ENDPOINTS
+# ============================================================================
+
+# Global paper trading engine instance
+paper_trading_engine = None
+
+def get_paper_trading_engine():
+    """Get or create global paper trading engine instance"""
+    global paper_trading_engine
+    if paper_trading_engine is None:
+        from paper_trading_engine import PaperTradingEngine
+        paper_trading_engine = PaperTradingEngine(
+            initial_capital=10000.0,
+            execution_latency_ms=100.0,
+            slippage_pct=0.1,
+            commission_pct=0.0
+        )
+    return paper_trading_engine
+
+@app.post("/api/paper-trading/start")
+async def start_paper_trading(request: Request):
+    """
+    Inicia sessão de paper trading
+
+    Body (opcional):
+    {
+        "initial_capital": 10000,
+        "execution_latency_ms": 100,
+        "slippage_pct": 0.1
+    }
+
+    Returns:
+        Status da sessão iniciada
+    """
+    try:
+        body = await request.json() if request.headers.get('content-length') else {}
+
+        engine = get_paper_trading_engine()
+
+        # Se já está rodando, retornar erro
+        if engine.is_running:
+            raise HTTPException(status_code=400, detail="Paper trading já está rodando")
+
+        # Resetar se solicitado
+        if body.get('reset', False):
+            engine.reset()
+
+        # Aplicar configurações se fornecidas
+        if 'initial_capital' in body:
+            engine.initial_capital = float(body['initial_capital'])
+            engine.capital = engine.initial_capital
+
+        if 'execution_latency_ms' in body:
+            engine.execution_latency_ms = float(body['execution_latency_ms'])
+
+        if 'slippage_pct' in body:
+            engine.slippage_pct = float(body['slippage_pct'])
+
+        # Iniciar
+        engine.start()
+
+        logger.info("Paper trading iniciado via API")
+
+        return {
+            "status": "success",
+            "message": "Paper trading iniciado",
+            "config": {
+                "initial_capital": engine.initial_capital,
+                "execution_latency_ms": engine.execution_latency_ms,
+                "slippage_pct": engine.slippage_pct,
+                "commission_pct": engine.commission_pct
+            },
+            "metrics": engine.get_metrics()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao iniciar paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/paper-trading/stop")
+async def stop_paper_trading():
+    """
+    Para sessão de paper trading
+
+    Returns:
+        Status final da sessão
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        if not engine.is_running:
+            raise HTTPException(status_code=400, detail="Paper trading não está rodando")
+
+        # Parar
+        engine.stop()
+
+        logger.info("Paper trading parado via API")
+
+        return {
+            "status": "success",
+            "message": "Paper trading parado",
+            "final_metrics": engine.get_metrics()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao parar paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/paper-trading/reset")
+async def reset_paper_trading():
+    """
+    Reseta sessão de paper trading para estado inicial
+
+    Returns:
+        Confirmação de reset
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        # Resetar
+        engine.reset()
+
+        logger.info("Paper trading resetado via API")
+
+        return {
+            "status": "success",
+            "message": "Paper trading resetado",
+            "metrics": engine.get_metrics()
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao resetar paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/paper-trading/status")
+async def get_paper_trading_status():
+    """
+    Retorna status atual do paper trading
+
+    Returns:
+        Métricas completas da sessão atual
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        return {
+            "status": "success",
+            "metrics": engine.get_metrics(),
+            "open_positions": engine.get_open_positions(),
+            "recent_trades": engine.get_trade_history(limit=10)
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter status do paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/paper-trading/metrics")
+async def get_paper_trading_metrics():
+    """
+    Retorna métricas em tempo real
+
+    Returns:
+        Dict com todas as métricas
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        return {
+            "status": "success",
+            "metrics": engine.get_metrics()
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter métricas do paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/paper-trading/positions")
+async def get_paper_trading_positions():
+    """
+    Retorna posições abertas
+
+    Returns:
+        Lista de posições abertas
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        return {
+            "status": "success",
+            "positions": engine.get_open_positions()
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter posições do paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/paper-trading/history")
+async def get_paper_trading_history(limit: int = 50):
+    """
+    Retorna histórico de trades
+
+    Args:
+        limit: Número máximo de trades a retornar
+
+    Returns:
+        Lista de trades completos
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        return {
+            "status": "success",
+            "trades": engine.get_trade_history(limit=limit),
+            "total": engine.total_trades
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter histórico do paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/paper-trading/equity-curve")
+async def get_paper_trading_equity_curve():
+    """
+    Retorna equity curve completa
+
+    Returns:
+        Lista de pontos da equity curve
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        return {
+            "status": "success",
+            "equity_curve": engine.get_equity_curve(),
+            "summary": {
+                "initial_capital": engine.initial_capital,
+                "current_capital": engine.capital,
+                "total_pnl": engine.capital - engine.initial_capital,
+                "total_pnl_pct": ((engine.capital - engine.initial_capital) / engine.initial_capital) * 100
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter equity curve do paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/paper-trading/execute")
+async def execute_paper_trade(request: Request):
+    """
+    Executa um trade no paper trading
+
+    Body:
+    {
+        "symbol": "R_100",
+        "position_type": "LONG" | "SHORT",
+        "size": 100.0,
+        "current_price": 1234.56,
+        "stop_loss": 1200.00,  // opcional
+        "take_profit": 1300.00  // opcional
+    }
+
+    Returns:
+        Posição criada
+    """
+    try:
+        from paper_trading_engine import PositionType
+
+        engine = get_paper_trading_engine()
+
+        if not engine.is_running:
+            raise HTTPException(status_code=400, detail="Paper trading não está rodando. Inicie primeiro.")
+
+        body = await request.json()
+
+        # Validar campos obrigatórios
+        required = ['symbol', 'position_type', 'size', 'current_price']
+        for field in required:
+            if field not in body:
+                raise HTTPException(status_code=400, detail=f"Campo '{field}' é obrigatório")
+
+        # Converter position_type
+        try:
+            position_type = PositionType[body['position_type']]
+        except KeyError:
+            raise HTTPException(status_code=400, detail="position_type deve ser 'LONG' ou 'SHORT'")
+
+        # Executar ordem
+        position = await engine.execute_order(
+            symbol=body['symbol'],
+            position_type=position_type,
+            size=float(body['size']),
+            current_price=float(body['current_price']),
+            stop_loss=float(body['stop_loss']) if 'stop_loss' in body else None,
+            take_profit=float(body['take_profit']) if 'take_profit' in body else None
+        )
+
+        if position is None:
+            raise HTTPException(status_code=400, detail="Falha ao executar ordem (verifique capital ou limite de posições)")
+
+        return {
+            "status": "success",
+            "message": "Ordem executada",
+            "position": position.to_dict()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao executar trade no paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/paper-trading/close/{position_id}")
+async def close_paper_trade(position_id: str, request: Request):
+    """
+    Fecha uma posição aberta
+
+    Body:
+    {
+        "current_price": 1250.00
+    }
+
+    Returns:
+        Trade completo
+    """
+    try:
+        engine = get_paper_trading_engine()
+
+        body = await request.json()
+
+        if 'current_price' not in body:
+            raise HTTPException(status_code=400, detail="Campo 'current_price' é obrigatório")
+
+        # Fechar posição
+        trade = engine.close_position(
+            position_id=position_id,
+            current_price=float(body['current_price'])
+        )
+
+        if trade is None:
+            raise HTTPException(status_code=404, detail=f"Posição {position_id} não encontrada")
+
+        return {
+            "status": "success",
+            "message": "Posição fechada",
+            "trade": trade.to_dict()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao fechar posição no paper trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/dashboard/ai-metrics")
 async def get_dashboard_ai_metrics():
     """
