@@ -798,7 +798,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {aiMetrics.accuracy.toFixed(1)}%
+                {(aiMetrics?.accuracy ?? 0).toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Target: 65%+ ✓
@@ -806,7 +806,7 @@ const Dashboard = () => {
               <div className="mt-2 bg-muted rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${aiMetrics.accuracy}%` }}
+                  style={{ width: `${aiMetrics?.accuracy ?? 0}%` }}
                 />
               </div>
             </CardContent>
@@ -821,7 +821,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {(aiMetrics.confidence_avg * 100).toFixed(1)}%
+                {((aiMetrics?.confidence_avg ?? 0) * 100).toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Últimas 100 predições
@@ -829,7 +829,7 @@ const Dashboard = () => {
               <div className="mt-2 bg-muted rounded-full h-2">
                 <div
                   className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${aiMetrics.confidence_avg * 100}%` }}
+                  style={{ width: `${(aiMetrics?.confidence_avg ?? 0) * 100}%` }}
                 />
               </div>
             </CardContent>
@@ -890,10 +890,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                +${tradingMetrics.total_pnl.toFixed(2)}
+                +${(tradingMetrics?.total_pnl ?? 0).toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {tradingMetrics.total_trades} trades
+                {tradingMetrics?.total_trades ?? 0} trades
               </p>
             </CardContent>
           </Card>
@@ -904,10 +904,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {tradingMetrics.win_rate.toFixed(1)}%
+                {(tradingMetrics?.win_rate ?? 0).toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {tradingMetrics.winning_trades}W / {tradingMetrics.losing_trades}L
+                {tradingMetrics?.winning_trades ?? 0}W / {tradingMetrics?.losing_trades ?? 0}L
               </p>
             </CardContent>
           </Card>
@@ -918,7 +918,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
-                {tradingMetrics.sharpe_ratio.toFixed(2)}
+                {(tradingMetrics?.sharpe_ratio ?? 0).toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Risk-adjusted returns
@@ -932,7 +932,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {tradingMetrics.max_drawdown.toFixed(1)}%
+                {(tradingMetrics?.max_drawdown ?? 0).toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Target: &lt;10% ✓
@@ -957,7 +957,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {systemMetrics.uptime_hours.toFixed(1)}h
+                {(systemMetrics?.uptime_hours ?? 0).toFixed(1)}h
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Sistema 24/7 ativo
@@ -974,10 +974,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {systemMetrics.ticks_processed.toLocaleString()}
+                {(systemMetrics?.ticks_processed ?? 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {systemMetrics.processing_speed.toFixed(1)} ticks/s
+                {(systemMetrics?.processing_speed ?? 0).toFixed(1)} ticks/s
               </p>
             </CardContent>
           </Card>
@@ -991,7 +991,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {systemMetrics.api_latency}ms
+                {systemMetrics?.api_latency ?? 0}ms
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Target: &lt;200ms ✓
