@@ -239,20 +239,20 @@ export default function OrderFlow() {
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-xs text-gray-400">Bid Pressure</p>
                       <p className="text-xl font-bold text-emerald-500">
-                        {orderBook.bid_pressure.toFixed(1)}%
+                        {(orderBook?.bid_pressure ?? 0).toFixed(1)}%
                       </p>
                     </div>
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-xs text-gray-400">Imbalance</p>
-                      <p className={`text-xl font-bold flex items-center gap-1 ${getSentimentColor(orderBook.imbalance)}`}>
-                        {getSentimentIcon(orderBook.imbalance)}
-                        {orderBook.imbalance}
+                      <p className={`text-xl font-bold flex items-center gap-1 ${getSentimentColor(orderBook?.imbalance ?? 0)}`}>
+                        {getSentimentIcon(orderBook?.imbalance ?? 0)}
+                        {orderBook?.imbalance ?? 0}
                       </p>
                     </div>
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-xs text-gray-400">Spread</p>
                       <p className="text-xl font-bold text-blue-400">
-                        {orderBook.spread_pct.toFixed(3)}%
+                        {(orderBook?.spread_pct ?? 0).toFixed(3)}%
                       </p>
                     </div>
                   </div>
@@ -333,7 +333,7 @@ export default function OrderFlow() {
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-xs text-gray-400">Intensity</p>
                       <p className="text-xl font-bold text-purple-400">
-                        {aggressiveOrders.aggression_intensity.toFixed(1)}%
+                        {(aggressiveOrders?.aggression_intensity ?? 0).toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -415,19 +415,19 @@ export default function OrderFlow() {
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
                       <p className="text-xs text-amber-400">POC</p>
                       <p className="text-lg font-bold text-white">
-                        {volumeProfile.poc.toFixed(2)}
+                        {(volumeProfile?.poc ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
                       <p className="text-xs text-purple-400">VAH</p>
                       <p className="text-lg font-bold text-white">
-                        {volumeProfile.vah.toFixed(2)}
+                        {(volumeProfile?.vah ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
                       <p className="text-xs text-purple-400">VAL</p>
                       <p className="text-lg font-bold text-white">
-                        {volumeProfile.val.toFixed(2)}
+                        {(volumeProfile?.val ?? 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -455,24 +455,24 @@ export default function OrderFlow() {
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Buy Pressure</span>
-                        <span className="text-emerald-500 font-medium">{tapeReading.buy_pressure.toFixed(1)}%</span>
+                        <span className="text-emerald-500 font-medium">{(tapeReading?.buy_pressure ?? 0).toFixed(1)}%</span>
                       </div>
                       <div className="h-4 bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
-                          style={{ width: `${tapeReading.buy_pressure}%` }}
+                          style={{ width: `${tapeReading?.buy_pressure ?? 0}%` }}
                         />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Sell Pressure</span>
-                        <span className="text-red-500 font-medium">{tapeReading.sell_pressure.toFixed(1)}%</span>
+                        <span className="text-red-500 font-medium">{(tapeReading?.sell_pressure ?? 0).toFixed(1)}%</span>
                       </div>
                       <div className="h-4 bg-gray-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500"
-                          style={{ width: `${tapeReading.sell_pressure}%` }}
+                          style={{ width: `${tapeReading?.sell_pressure ?? 0}%` }}
                         />
                       </div>
                     </div>
@@ -513,10 +513,10 @@ export default function OrderFlow() {
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <p className="text-xs text-gray-400">Aceleração</p>
                       <p className="text-lg font-bold text-purple-400">
-                        {tapeReading.momentum.acceleration > 0 ? '+' : ''}{tapeReading.momentum.acceleration.toFixed(1)}%
+                        {(tapeReading?.momentum?.acceleration ?? 0) > 0 ? '+' : ''}{(tapeReading?.momentum?.acceleration ?? 0).toFixed(1)}%
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {tapeReading.num_trades} trades
+                        {tapeReading?.num_trades ?? 0} trades
                       </p>
                     </div>
                   </div>
