@@ -10,7 +10,8 @@ import {
   Activity,
   Shield,
   Layers,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -72,6 +73,14 @@ const navItems: NavItem[] = [
     href: '/trade-history',
     icon: History,
     description: 'Histórico de trades',
+    badge: 'Fase 7',
+    badgeVariant: 'default'
+  },
+  {
+    title: 'Backtesting',
+    href: '/backtesting',
+    icon: BarChart3,
+    description: 'Análise de performance ML',
     badge: 'Fase 7',
     badgeVariant: 'default'
   },

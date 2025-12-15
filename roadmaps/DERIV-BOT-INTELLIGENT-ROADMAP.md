@@ -2095,13 +2095,13 @@ class AlertManager:
         self.push.notify(message)
 ```
 
-### 7.5 Tarefas (4/7 = 57.1% COMPLETO)
+### 7.5 Tarefas (5/7 = 71.4% COMPLETO)
 
 - [x] Criar dashboard com gráficos em tempo real (ML Monitoring Dashboard - Fase 7.1 ✅)
 - [x] Interface de configuração de estratégias (Settings.tsx expandido com ML, Order Flow, Advanced Risk ✅)
 - [x] Histórico de trades com filtros (TradeHistory.tsx com paginação e backend SQLite ✅)
 - [x] Exportação de relatórios (CSV, Excel, PDF com papaparse, xlsx, jspdf ✅)
-- [ ] Sistema de backtesting visual (endpoint backend já existe - falta frontend)
+- [x] Sistema de backtesting visual (BacktestingVisual.tsx com equity curve e tabela de windows ✅)
 - [ ] Sistema de alertas frontend (backend já existe - Fase 6 ✅ - falta frontend)
 - [ ] Integração com TradingView (Opcional - pode pular)
 

@@ -1285,3 +1285,106 @@ export const tradesApi = {
     return response.json();
   },
 };
+
+// Backtesting API interfaces
+export interface EquityPoint {
+  date: string;
+  full_date: string;
+  capital: number;
+  window: string;
+  window_profit: number;
+  total_return_pct: number;
+}
+
+export interface EquityCurveSummary {
+  initial_capital: number;
+  final_capital: number;
+  total_return_pct: number;
+  max_drawdown_pct: number;
+  n_windows: number;
+  period: string;
+}
+
+export interface EquityCurveResponse {
+  equity_points: EquityPoint[];
+  summary: EquityCurveSummary;
+  notes: string;
+}
+
+export interface BacktestWindow {
+  window: string;
+  start_date: string;
+  end_date: string;
+  train_size: number;
+  test_size: number;
+  metrics: {
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1: number;
+  };
+  trading: {
+    total_signals: number;
+    total_trades: number;
+    winning_trades: number;
+    losing_trades: number;
+    win_rate: number;
+    total_profit: number;
+    avg_profit_per_trade: number;
+    max_drawdown: number;
+    sharpe_ratio: number;
+  };
+}
+
+export interface BacktestWindowsResponse {
+  windows: BacktestWindow[];
+  summary: {
+    total_windows: number;
+    avg_metrics: {
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1: number;
+    };
+    avg_trading: {
+      win_rate: number;
+      total_profit: number;
+      sharpe_ratio: number;
+      max_drawdown: number;
+    };
+    period: string;
+  };
+  notes: string;
+}
+
+export const backtestingApi = {
+  /**
+   * Get equity curve from backtesting results
+   */
+  getEquityCurve: async (): Promise<EquityCurveResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/ml/backtesting/equity-curve`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch equity curve');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get detailed results for each backtesting window
+   */
+  getWindows: async (): Promise<BacktestWindowsResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/ml/backtesting/windows`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch backtest windows');
+    }
+
+    return response.json();
+  },
+};

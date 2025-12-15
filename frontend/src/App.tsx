@@ -15,6 +15,7 @@ import TechnicalAnalysis from "./pages/TechnicalAnalysis";
 import RiskManagement from "./pages/RiskManagement";
 import OrderFlow from "./pages/OrderFlow";
 import TradeHistory from "./pages/TradeHistory";
+import BacktestingVisual from "./pages/BacktestingVisual";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,11 @@ const App = () => (
           <Route path="/trade-history" element={
             <ProtectedRoute>
               <TradeHistory />
+            </ProtectedRoute>
+          } />
+          <Route path="/backtesting" element={
+            <ProtectedRoute>
+              <BacktestingVisual />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
