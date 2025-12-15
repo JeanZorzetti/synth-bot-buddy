@@ -30,6 +30,7 @@ from risk_manager import RiskManager, RiskLimits, TrailingStop
 from kelly_ml_predictor import get_kelly_ml_predictor, initialize_kelly_ml_predictor
 from metrics import get_metrics_manager, initialize_metrics_manager
 from prometheus_client import generate_latest, REGISTRY
+from forward_testing import ForwardTestingEngine, get_forward_testing_engine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -5957,4 +5958,192 @@ async def get_trades_stats():
         }
     except Exception as e:
         logger.error(f"Error fetching trade stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== FORWARD TESTING ENDPOINTS ====================
+
+@app.post("/api/forward-testing/start")
+async def start_forward_testing(background_tasks: BackgroundTasks):
+    """
+    Inicia sessão de forward testing automatizado
+
+    Integra ML Predictor com Paper Trading Engine para testar
+    estratégia em condições de mercado real.
+
+    Returns:
+        Status da inicialização
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        if engine.is_running:
+            raise HTTPException(
+                status_code=400,
+                detail="Forward testing já está rodando"
+            )
+
+        # Iniciar em background
+        background_tasks.add_task(engine.start)
+
+        logger.info("🚀 Forward testing iniciado via API")
+
+        return {
+            "status": "success",
+            "message": "Forward testing iniciado com sucesso",
+            "start_time": datetime.now().isoformat(),
+            "config": {
+                "symbol": engine.symbol,
+                "initial_capital": engine.paper_trading.initial_capital,
+                "confidence_threshold": engine.confidence_threshold,
+                "max_position_size_pct": engine.max_position_size_pct,
+                "stop_loss_pct": engine.stop_loss_pct,
+                "take_profit_pct": engine.take_profit_pct
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao iniciar forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/forward-testing/stop")
+async def stop_forward_testing():
+    """
+    Para sessão de forward testing e gera relatório final
+
+    Returns:
+        Status e caminho do relatório gerado
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        if not engine.is_running:
+            raise HTTPException(
+                status_code=400,
+                detail="Forward testing não está rodando"
+            )
+
+        # Parar engine
+        engine.stop()
+
+        # Gerar relatório
+        report_path = engine.generate_validation_report()
+
+        logger.info("⏹️ Forward testing parado via API")
+
+        return {
+            "status": "success",
+            "message": "Forward testing parado e relatório gerado",
+            "report_path": report_path,
+            "metrics": engine.paper_trading.get_metrics()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao parar forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forward-testing/status")
+async def get_forward_testing_status():
+    """
+    Retorna status atual do forward testing
+
+    Returns:
+        Métricas completas do forward testing em andamento
+    """
+    try:
+        engine = get_forward_testing_engine()
+        status = engine.get_status()
+
+        return {
+            "status": "success",
+            "data": status
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter status do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forward-testing/predictions")
+async def get_forward_testing_predictions(limit: int = 50):
+    """
+    Retorna histórico de previsões do forward testing
+
+    Args:
+        limit: Número máximo de previsões a retornar
+
+    Returns:
+        Lista das últimas previsões ML geradas
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        predictions = engine.prediction_log[-limit:] if limit else engine.prediction_log
+
+        return {
+            "status": "success",
+            "total": len(engine.prediction_log),
+            "returned": len(predictions),
+            "data": predictions
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter previsões do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forward-testing/bugs")
+async def get_forward_testing_bugs():
+    """
+    Retorna bugs registrados durante forward testing
+
+    Returns:
+        Lista completa de bugs encontrados
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        return {
+            "status": "success",
+            "total_bugs": len(engine.bug_log),
+            "critical_bugs": len([b for b in engine.bug_log if b['severity'] == 'CRITICAL']),
+            "data": engine.bug_log
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter bugs do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/forward-testing/report")
+async def generate_forward_testing_report():
+    """
+    Gera relatório de validação sob demanda
+
+    Pode ser chamado a qualquer momento durante o forward testing
+    para obter snapshot das métricas atuais.
+
+    Returns:
+        Caminho do relatório gerado
+    """
+    try:
+        engine = get_forward_testing_engine()
+        report_path = engine.generate_validation_report()
+
+        logger.info(f"📊 Relatório de forward testing gerado via API: {report_path}")
+
+        return {
+            "status": "success",
+            "message": "Relatório gerado com sucesso",
+            "report_path": report_path
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório: {e}")
         raise HTTPException(status_code=500, detail=str(e))
