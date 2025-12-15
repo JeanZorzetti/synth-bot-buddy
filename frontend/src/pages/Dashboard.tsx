@@ -575,15 +575,22 @@ const Dashboard = () => {
 
     const setupWebSocket = () => {
       try {
+        // Verificar se WebSocket está desabilitado via env var
+        if (import.meta.env.VITE_DISABLE_WEBSOCKET === 'true') {
+          console.log('ℹ️ WebSocket desabilitado via configuração. Sistema funcionando em modo polling HTTP.');
+          setWsConnected(false);
+          return () => {};
+        }
+
         // Se já tentou muitas vezes, desabilita WebSocket
         if (wsRetryCount >= MAX_WS_RETRIES) {
-          console.warn('WebSocket desabilitado após múltiplas falhas. Usando polling.');
+          console.warn('⚠️ WebSocket desabilitado após múltiplas falhas. Usando polling.');
           setWsConnected(false);
           return () => {};
         }
 
         const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-        console.log(`Tentando conectar WebSocket: ${wsUrl}/ws/dashboard (tentativa ${wsRetryCount + 1}/${MAX_WS_RETRIES})`);
+        console.log(`🔌 Tentando conectar WebSocket: ${wsUrl}/ws/dashboard (tentativa ${wsRetryCount + 1}/${MAX_WS_RETRIES})`);
 
         const ws = new WebSocket(`${wsUrl}/ws/dashboard`);
         let isConnected = false;
