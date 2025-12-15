@@ -778,6 +778,202 @@ async def get_backtest_windows():
         logger.error(f"Erro ao carregar janelas de backtesting: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# ALERTS API ENDPOINTS
+# ============================================================================
+
+# Global alerts manager instance
+alerts_manager = None
+
+def get_alerts_manager():
+    """Get or create global alerts manager instance"""
+    global alerts_manager
+    if alerts_manager is None:
+        from alerts_manager import AlertsManager
+        alerts_manager = AlertsManager()
+    return alerts_manager
+
+@app.get("/api/alerts/config")
+async def get_alerts_config():
+    """
+    Retorna configuração atual de alertas
+
+    Returns:
+        Dict com configuração de alertas (sem expor credentials sensíveis)
+    """
+    try:
+        manager = get_alerts_manager()
+        config = manager.config
+
+        return {
+            "status": "success",
+            "config": {
+                "discord": {
+                    "enabled": config.discord_webhook_url is not None,
+                    "webhook_configured": bool(config.discord_webhook_url)
+                },
+                "telegram": {
+                    "enabled": config.telegram_bot_token is not None and config.telegram_chat_id is not None,
+                    "bot_configured": bool(config.telegram_bot_token),
+                    "chat_id": config.telegram_chat_id if config.telegram_chat_id else None
+                },
+                "email": {
+                    "enabled": all([config.smtp_server, config.smtp_username]),
+                    "smtp_server": config.smtp_server,
+                    "smtp_port": config.smtp_port,
+                    "smtp_username": config.smtp_username,
+                    "email_from": config.email_from,
+                    "email_to": config.email_to or []
+                },
+                "settings": {
+                    "enabled_channels": [ch.value for ch in (config.enabled_channels or [])],
+                    "min_level": config.min_level.value
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter config de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/alerts/config")
+async def update_alerts_config(config_data: dict):
+    """
+    Atualiza configuração de alertas
+
+    Body:
+        config_data: Dict com configuração de alertas
+
+    Returns:
+        Status da atualização
+    """
+    try:
+        from alerts_manager import AlertConfig, AlertLevel, AlertChannel
+
+        # Build config from request
+        enabled_channels = []
+
+        # Discord
+        discord_webhook = config_data.get("discord", {}).get("webhook_url")
+        if discord_webhook:
+            enabled_channels.append(AlertChannel.DISCORD)
+
+        # Telegram
+        telegram_config = config_data.get("telegram", {})
+        telegram_token = telegram_config.get("bot_token")
+        telegram_chat = telegram_config.get("chat_id")
+        if telegram_token and telegram_chat:
+            enabled_channels.append(AlertChannel.TELEGRAM)
+
+        # Email
+        email_config = config_data.get("email", {})
+        smtp_server = email_config.get("smtp_server")
+        smtp_username = email_config.get("smtp_username")
+        if smtp_server and smtp_username:
+            enabled_channels.append(AlertChannel.EMAIL)
+
+        # Create new config
+        new_config = AlertConfig(
+            discord_webhook_url=discord_webhook,
+            telegram_bot_token=telegram_token,
+            telegram_chat_id=telegram_chat,
+            smtp_server=smtp_server,
+            smtp_port=email_config.get("smtp_port", 587),
+            smtp_username=smtp_username,
+            smtp_password=email_config.get("smtp_password"),
+            email_from=email_config.get("email_from", smtp_username),
+            email_to=email_config.get("email_to", []),
+            enabled_channels=enabled_channels,
+            min_level=AlertLevel[config_data.get("min_level", "WARNING")]
+        )
+
+        # Update global manager
+        global alerts_manager
+        from alerts_manager import AlertsManager
+        alerts_manager = AlertsManager(new_config)
+
+        return {
+            "status": "success",
+            "message": "Configuração de alertas atualizada com sucesso"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar config de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/alerts/test")
+async def test_alert(test_data: dict):
+    """
+    Envia alerta de teste
+
+    Body:
+        test_data: Dict com channel, title, message
+
+    Returns:
+        Status do envio
+    """
+    try:
+        from alerts_manager import AlertLevel, AlertChannel
+
+        manager = get_alerts_manager()
+
+        channel_str = test_data.get("channel", "discord")
+        title = test_data.get("title", "Teste de Alerta")
+        message = test_data.get("message", "Este é um alerta de teste do Deriv Bot Buddy.")
+        level = AlertLevel[test_data.get("level", "INFO")]
+
+        # Map channel string to enum
+        channel_map = {
+            "discord": AlertChannel.DISCORD,
+            "telegram": AlertChannel.TELEGRAM,
+            "email": AlertChannel.EMAIL
+        }
+
+        channel = channel_map.get(channel_str.lower())
+        if not channel:
+            raise HTTPException(status_code=400, detail=f"Canal inválido: {channel_str}")
+
+        # Send test alert
+        await manager.send_alert(
+            title=title,
+            message=message,
+            level=level,
+            channels=[channel]
+        )
+
+        return {
+            "status": "success",
+            "message": f"Alerta de teste enviado via {channel_str}",
+            "channel": channel_str,
+            "title": title
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao enviar alerta de teste: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/alerts/history")
+async def get_alerts_history():
+    """
+    Retorna histórico de alertas enviados
+
+    Returns:
+        Lista de alertas enviados recentemente
+    """
+    try:
+        manager = get_alerts_manager()
+
+        return {
+            "status": "success",
+            "history": manager.alert_history[-50:],  # Últimos 50 alertas
+            "total": len(manager.alert_history)
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter histórico de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/dashboard/ai-metrics")
 async def get_dashboard_ai_metrics():
     """

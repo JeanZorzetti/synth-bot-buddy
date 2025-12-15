@@ -1388,3 +1388,121 @@ export const backtestingApi = {
     return response.json();
   },
 };
+
+// Alerts API interfaces
+export interface AlertConfig {
+  discord: {
+    enabled: boolean;
+    webhook_configured: boolean;
+    webhook_url?: string;
+  };
+  telegram: {
+    enabled: boolean;
+    bot_configured: boolean;
+    chat_id?: string;
+    bot_token?: string;
+  };
+  email: {
+    enabled: boolean;
+    smtp_server?: string;
+    smtp_port?: number;
+    smtp_username?: string;
+    smtp_password?: string;
+    email_from?: string;
+    email_to?: string[];
+  };
+  settings: {
+    enabled_channels: string[];
+    min_level: string;
+  };
+}
+
+export interface AlertConfigResponse {
+  status: string;
+  config: AlertConfig;
+}
+
+export interface AlertHistoryItem {
+  timestamp: string;
+  title: string;
+  message: string;
+  level: string;
+  channels: string[];
+}
+
+export interface AlertHistoryResponse {
+  status: string;
+  history: AlertHistoryItem[];
+  total: number;
+}
+
+export const alertsApi = {
+  /**
+   * Get current alerts configuration
+   */
+  getConfig: async (): Promise<AlertConfigResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/alerts/config`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch alerts config');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Update alerts configuration
+   */
+  updateConfig: async (config: Partial<AlertConfig>): Promise<{ status: string; message: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/alerts/config`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(config),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update alerts config');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Send test alert
+   */
+  sendTest: async (testData: {
+    channel: string;
+    title?: string;
+    message?: string;
+    level?: string;
+  }): Promise<{ status: string; message: string; channel: string; title: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/alerts/test`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(testData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send test alert');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get alerts history
+   */
+  getHistory: async (): Promise<AlertHistoryResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/alerts/history`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch alerts history');
+    }
+
+    return response.json();
+  },
+};

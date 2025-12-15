@@ -11,7 +11,8 @@ import {
   Shield,
   Layers,
   History,
-  BarChart3
+  BarChart3,
+  Bell
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -81,6 +82,14 @@ const navItems: NavItem[] = [
     href: '/backtesting',
     icon: BarChart3,
     description: 'Análise de performance ML',
+    badge: 'Fase 7',
+    badgeVariant: 'default'
+  },
+  {
+    title: 'Alertas',
+    href: '/alerts',
+    icon: Bell,
+    description: 'Notificações multi-canal',
     badge: 'Fase 7',
     badgeVariant: 'default'
   },

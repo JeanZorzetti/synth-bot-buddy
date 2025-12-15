@@ -16,6 +16,7 @@ import RiskManagement from "./pages/RiskManagement";
 import OrderFlow from "./pages/OrderFlow";
 import TradeHistory from "./pages/TradeHistory";
 import BacktestingVisual from "./pages/BacktestingVisual";
+import AlertsConfig from "./pages/AlertsConfig";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,11 @@ const App = () => (
           <Route path="/backtesting" element={
             <ProtectedRoute>
               <BacktestingVisual />
+            </ProtectedRoute>
+          } />
+          <Route path="/alerts" element={
+            <ProtectedRoute>
+              <AlertsConfig />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
