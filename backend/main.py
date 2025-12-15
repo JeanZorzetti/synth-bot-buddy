@@ -5879,6 +5879,23 @@ async def get_trades_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/trades/stats")
+async def get_trades_stats():
+    """
+    Get overall trading statistics
+    """
+    try:
+        stats = trades_manager.get_trade_stats()
+
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        logger.error(f"Error fetching trade stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/trades/{trade_id}")
 async def get_trade(trade_id: int):
     """
@@ -5942,23 +5959,6 @@ async def delete_trade(trade_id: int):
         raise
     except Exception as e:
         logger.error(f"Error deleting trade: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/trades/stats")
-async def get_trades_stats():
-    """
-    Get overall trading statistics
-    """
-    try:
-        stats = trades_manager.get_trade_stats()
-
-        return {
-            "status": "success",
-            "data": stats
-        }
-    except Exception as e:
-        logger.error(f"Error fetching trade stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
