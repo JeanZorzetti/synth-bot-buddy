@@ -568,54 +568,100 @@ const Dashboard = () => {
       loadLastPrediction();
     }, 30000);
 
-    // Setup WebSocket for real-time updates
+    // Setup WebSocket for real-time updates with retry limit
+    let wsRetryCount = 0;
+    const MAX_WS_RETRIES = 3;
+    let wsRetryTimeout: NodeJS.Timeout | null = null;
+
     const setupWebSocket = () => {
       try {
+        // Se já tentou muitas vezes, desabilita WebSocket
+        if (wsRetryCount >= MAX_WS_RETRIES) {
+          console.warn('WebSocket desabilitado após múltiplas falhas. Usando polling.');
+          setWsConnected(false);
+          return () => {};
+        }
+
         const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+        console.log(`Tentando conectar WebSocket: ${wsUrl}/ws/dashboard (tentativa ${wsRetryCount + 1}/${MAX_WS_RETRIES})`);
+
         const ws = new WebSocket(`${wsUrl}/ws/dashboard`);
+        let isConnected = false;
+
+        // Timeout para detectar falha de conexão
+        const connectionTimeout = setTimeout(() => {
+          if (!isConnected) {
+            console.warn('WebSocket connection timeout');
+            ws.close();
+          }
+        }, 5000);
 
         ws.onopen = () => {
-          console.log('Dashboard WebSocket connected');
+          isConnected = true;
+          clearTimeout(connectionTimeout);
+          console.log('✅ Dashboard WebSocket connected');
           setWsConnected(true);
+          wsRetryCount = 0; // Reset contador em caso de sucesso
         };
 
         ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
+          try {
+            const data = JSON.parse(event.data);
 
-          switch (data.type) {
-            case 'ai_metrics':
-              setAiMetrics(prev => ({ ...prev, ...data.payload }));
-              break;
-            case 'trading_metrics':
-              setTradingMetrics(prev => ({ ...prev, ...data.payload }));
-              break;
-            case 'system_metrics':
-              setSystemMetrics(prev => ({ ...prev, ...data.payload }));
-              break;
-            case 'new_log':
-              setRealtimeLog(prev => [data.payload, ...prev.slice(0, 9)]);
-              break;
+            switch (data.type) {
+              case 'ai_metrics':
+                setAiMetrics(prev => ({ ...prev, ...data.payload }));
+                break;
+              case 'trading_metrics':
+                setTradingMetrics(prev => ({ ...prev, ...data.payload }));
+                break;
+              case 'system_metrics':
+                setSystemMetrics(prev => ({ ...prev, ...data.payload }));
+                break;
+              case 'new_log':
+                setRealtimeLog(prev => [data.payload, ...prev.slice(0, 9)]);
+                break;
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
           }
         };
 
-        ws.onclose = () => {
-          console.log('Dashboard WebSocket disconnected');
+        ws.onclose = (event) => {
+          clearTimeout(connectionTimeout);
+          console.log(`Dashboard WebSocket disconnected (code: ${event.code})`);
           setWsConnected(false);
-          // Attempt to reconnect after 5 seconds
-          setTimeout(setupWebSocket, 5000);
+
+          // Incrementa contador de retry
+          wsRetryCount++;
+
+          // Só tenta reconectar se ainda não excedeu limite
+          if (wsRetryCount < MAX_WS_RETRIES) {
+            console.log(`Tentando reconectar em 5 segundos... (${wsRetryCount}/${MAX_WS_RETRIES})`);
+            wsRetryTimeout = setTimeout(setupWebSocket, 5000);
+          } else {
+            console.warn('❌ WebSocket desabilitado. Sistema funcionando em modo polling.');
+          }
         };
 
         ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           console.error('Dashboard WebSocket error:', error);
           setWsConnected(false);
+          ws.close(); // Força fechamento para acionar onclose
         };
 
         return () => {
+          if (wsRetryTimeout) {
+            clearTimeout(wsRetryTimeout);
+          }
           ws.close();
         };
       } catch (error) {
         console.error('Failed to setup WebSocket:', error);
         setWsConnected(false);
+        wsRetryCount++;
+        return () => {};
       }
     };
 
