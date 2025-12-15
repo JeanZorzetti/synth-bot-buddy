@@ -22,7 +22,6 @@ import numpy as np
 
 from ml_predictor import MLPredictor
 from paper_trading_engine import PaperTradingEngine, PositionType
-from deriv_api_integration import DerivAPIIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,6 @@ class ForwardTestingEngine:
         # Componentes
         self.ml_predictor = MLPredictor()
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
-        self.deriv_api = DerivAPIIntegration()
 
         # Estado
         self.is_running = False
@@ -192,24 +190,32 @@ class ForwardTestingEngine:
 
     async def _fetch_market_data(self) -> Optional[Dict]:
         """
-        Coleta dados do mercado via Deriv API
+        Coleta dados do mercado (mock para desenvolvimento)
+
+        TODO: Integrar com Deriv API real quando pronto
 
         Returns:
             Dict com OHLC + indicadores técnicos ou None se falhar
         """
         try:
-            # Aqui usaríamos a Deriv API real
-            # Por enquanto, simular com dados mockados
-            # TODO: Integrar com self.deriv_api.get_candles()
+            # Mock data simulando volatilidade realista
+            # Preço base oscila entre 95-105
+            base_price = 100.0
+            volatility = np.random.normal(0, 0.5)  # 0.5% volatilidade
+            close_price = base_price * (1 + volatility / 100)
 
-            # Mock data (substituir com API real)
+            # OHLC com movimento realista
+            open_price = close_price * (1 + np.random.uniform(-0.002, 0.002))
+            high_price = max(open_price, close_price) * (1 + np.random.uniform(0, 0.003))
+            low_price = min(open_price, close_price) * (1 - np.random.uniform(0, 0.003))
+
             return {
                 'timestamp': datetime.now().isoformat(),
-                'open': 100.0,
-                'high': 101.5,
-                'low': 99.5,
-                'close': 100.5,
-                'volume': 1000
+                'open': round(open_price, 4),
+                'high': round(high_price, 4),
+                'low': round(low_price, 4),
+                'close': round(close_price, 4),
+                'volume': int(np.random.uniform(800, 1200))
             }
 
         except Exception as e:
