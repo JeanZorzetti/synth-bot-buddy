@@ -1068,3 +1068,202 @@ export const handleDerivOAuthRedirect = async () => {
 
   return null;
 };
+
+// ==========================================
+// TRADES HISTORY API (FASE 7)
+// ==========================================
+
+export interface Trade {
+  id: number;
+  timestamp: string;
+  symbol: string;
+  trade_type: string;
+  entry_price: number;
+  exit_price?: number;
+  stake: number;
+  profit_loss?: number;
+  result: 'win' | 'loss' | 'pending';
+  confidence?: number;
+  strategy?: string;
+  indicators_used?: any;
+  ml_prediction?: number;
+  order_flow_signal?: string;
+  stop_loss?: number;
+  take_profit?: number;
+  exit_reason?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TradesHistoryResponse {
+  status: string;
+  data: {
+    trades: Trade[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      total_pages: number;
+      has_next: boolean;
+      has_prev: boolean;
+    };
+  };
+}
+
+export interface TradeStatsResponse {
+  status: string;
+  data: {
+    overall: {
+      total_trades: number;
+      wins: number;
+      losses: number;
+      pending: number;
+      total_pnl: number;
+      avg_pnl: number;
+      max_profit: number;
+      max_loss: number;
+      avg_confidence: number;
+      win_rate: number;
+    };
+    by_symbol: Array<{
+      symbol: string;
+      trades: number;
+      wins: number;
+      pnl: number;
+    }>;
+    by_strategy: Array<{
+      strategy: string;
+      trades: number;
+      wins: number;
+      pnl: number;
+      avg_confidence: number;
+    }>;
+    recent_performance: Array<{
+      date: string;
+      trades: number;
+      pnl: number;
+    }>;
+  };
+}
+
+export const tradesApi = {
+  /**
+   * Get trades history with filters and pagination
+   */
+  getHistory: async (params?: {
+    page?: number;
+    limit?: number;
+    symbol?: string;
+    trade_type?: string;
+    result?: string;
+    start_date?: string;
+    end_date?: string;
+    strategy?: string;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<TradesHistoryResponse> => {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/trades/history?${queryParams.toString()}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trades history');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get overall trading statistics
+   */
+  getStats: async (): Promise<TradeStatsResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/trades/stats`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trade stats');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get a specific trade by ID
+   */
+  getTrade: async (tradeId: number): Promise<{ status: string; data: Trade }> => {
+    const response = await fetch(`${API_BASE_URL}/api/trades/${tradeId}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trade');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Record a new trade
+   */
+  recordTrade: async (tradeData: Partial<Trade>): Promise<{ status: string; message: string; trade_id: number }> => {
+    const response = await fetch(`${API_BASE_URL}/api/trades/record`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(tradeData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to record trade');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Update a trade
+   */
+  updateTrade: async (tradeId: number, updateData: Partial<Trade>): Promise<{ status: string; message: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/trades/${tradeId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update trade');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Delete a trade
+   */
+  deleteTrade: async (tradeId: number): Promise<{ status: string; message: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/trades/${tradeId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete trade');
+    }
+
+    return response.json();
+  },
+};

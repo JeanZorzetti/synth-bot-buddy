@@ -4891,9 +4891,13 @@ async def reset_proposals_stats():
 # ==========================================
 
 from analysis.order_flow_analyzer import OrderFlowAnalyzer
+from trades_history_manager import get_trades_manager
 
 # Global order flow analyzer
 order_flow_analyzer = OrderFlowAnalyzer()
+
+# Global trades history manager
+trades_manager = get_trades_manager()
 
 
 class OrderFlowRequest(BaseModel):
@@ -5183,3 +5187,167 @@ async def metrics():
         content=generate_latest(REGISTRY),
         media_type="text/plain; charset=utf-8"
     )
+
+
+# ==========================================
+# TRADES HISTORY ENDPOINTS (FASE 7)
+# ==========================================
+
+class TradeRecordRequest(BaseModel):
+    """Request to record a new trade"""
+    symbol: str
+    trade_type: str  # BUY, SELL, CALL, PUT
+    entry_price: float
+    exit_price: Optional[float] = None
+    stake: float
+    profit_loss: Optional[float] = None
+    result: Optional[str] = 'pending'  # win, loss, pending
+    confidence: Optional[float] = None
+    strategy: Optional[str] = None  # ml, technical, hybrid, order_flow
+    indicators_used: Optional[Dict] = None
+    ml_prediction: Optional[float] = None
+    order_flow_signal: Optional[str] = None
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
+    exit_reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.post("/api/trades/record")
+async def record_trade(trade: TradeRecordRequest):
+    """
+    Record a new trade in the history
+    """
+    try:
+        trade_id = trades_manager.add_trade(trade.dict())
+
+        return {
+            "status": "success",
+            "message": "Trade recorded successfully",
+            "trade_id": trade_id
+        }
+    except Exception as e:
+        logger.error(f"Error recording trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trades/history")
+async def get_trades_history(
+    page: int = 1,
+    limit: int = 25,
+    symbol: Optional[str] = None,
+    trade_type: Optional[str] = None,
+    result: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    strategy: Optional[str] = None,
+    sort_by: str = 'timestamp',
+    sort_order: str = 'DESC'
+):
+    """
+    Get trades history with pagination and filters
+    """
+    try:
+        data = trades_manager.get_trades(
+            page=page,
+            limit=limit,
+            symbol=symbol,
+            trade_type=trade_type,
+            result=result,
+            start_date=start_date,
+            end_date=end_date,
+            strategy=strategy,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+
+        return {
+            "status": "success",
+            "data": data
+        }
+    except Exception as e:
+        logger.error(f"Error fetching trades history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trades/{trade_id}")
+async def get_trade(trade_id: int):
+    """
+    Get a specific trade by ID
+    """
+    try:
+        trade = trades_manager.get_trade(trade_id)
+
+        if not trade:
+            raise HTTPException(status_code=404, detail="Trade not found")
+
+        return {
+            "status": "success",
+            "data": trade
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/trades/{trade_id}")
+async def update_trade(trade_id: int, update_data: Dict[str, Any]):
+    """
+    Update a trade (e.g., when it closes)
+    """
+    try:
+        success = trades_manager.update_trade(trade_id, update_data)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Trade not found")
+
+        return {
+            "status": "success",
+            "message": "Trade updated successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/trades/{trade_id}")
+async def delete_trade(trade_id: int):
+    """
+    Delete a trade from history
+    """
+    try:
+        success = trades_manager.delete_trade(trade_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Trade not found")
+
+        return {
+            "status": "success",
+            "message": "Trade deleted successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trades/stats")
+async def get_trades_stats():
+    """
+    Get overall trading statistics
+    """
+    try:
+        stats = trades_manager.get_trade_stats()
+
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        logger.error(f"Error fetching trade stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
