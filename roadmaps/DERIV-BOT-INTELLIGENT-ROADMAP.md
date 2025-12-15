@@ -2805,13 +2805,260 @@ models/
     └── metadata.json
 ```
 
-### 9.4 Tarefas
-- [ ] Configurar infraestrutura de produção
-- [ ] Setup monitoramento (Prometheus + Grafana)
-- [ ] Configurar alertas críticos
-- [ ] Documentar procedimentos de manutenção
-- [ ] Criar rotina de retreinamento automático
-- [ ] Setup backup e recovery
+### 9.4 Tarefas (4/6 = 67% COMPLETO)
+
+- [x] ✅ Configurar infraestrutura de produção (docker-compose.prod.yml completo) - **IMPLEMENTADO 15/12/2024**
+- [x] ✅ Setup monitoramento (Prometheus + Grafana) - **IMPLEMENTADO 15/12/2024**
+- [x] ✅ Configurar alertas críticos (Alertmanager com Telegram + Email) - **IMPLEMENTADO 15/12/2024**
+- [x] ✅ Documentar procedimentos de manutenção (DEPLOY_PRODUCTION.md criado) - **IMPLEMENTADO 15/12/2024**
+- [ ] ⏳ Criar rotina de retreinamento automático (próxima tarefa)
+- [ ] ⏳ Setup backup e recovery (agendamento automático pendente)
+
+### 9.4.1 Implementação - Infraestrutura de Produção (15/12/2024)
+
+#### ✅ Docker Compose Completo
+
+**Arquivo:** `docker-compose.prod.yml` (539 linhas)
+
+**Serviços Configurados:**
+
+1. **Trading Bot Application**
+   - Build multi-stage com Dockerfile.prod
+   - Health checks automáticos (30s interval)
+   - Resource limits: 2 CPU / 4GB RAM
+   - Volumes persistentes: logs, models, backups
+   - Restart policy: unless-stopped
+
+2. **PostgreSQL Database**
+   - PostgreSQL 15 Alpine
+   - Data checksums habilitados
+   - Backup automático diário
+   - Health check via pg_isready
+
+3. **Redis Cache**
+   - Redis 7 Alpine
+   - MaxMemory: 256MB com LRU policy
+   - Senha protegida
+   - Persistência em volume
+
+4. **Prometheus Monitoring**
+   - Retention: 30 dias
+   - Scrape interval: 15s
+   - Admin API habilitada
+   - Rules para alertas
+
+5. **Grafana Dashboards**
+   - Admin password configurável
+   - Plugins: piechart, worldmap
+   - Provisioning automático de datasources
+   - Dashboards customizados
+
+6. **Elasticsearch + Logstash + Kibana (ELK)**
+   - Logs centralizados
+   - Parsing automático
+   - Visualização em Kibana
+
+7. **Nginx Reverse Proxy**
+   - SSL/TLS support
+   - Load balancing
+   - Rate limiting
+
+8. **Alertmanager**
+   - Telegram integration
+   - Email notifications
+   - Webhook support
+   - Intelligent routing
+
+9. **Backup Service**
+   - Cron diário às 2 AM
+   - Retention: 30 dias
+   - PostgreSQL + Models + Logs
+
+10. **Health Check Service**
+    - Interval: 30s
+    - Webhook alerts
+
+#### ✅ Prometheus Configuration
+
+**Arquivo:** `monitoring/prometheus.yml` (152 linhas)
+
+**Jobs Configurados:**
+
+- `trading-bot` - Métricas da aplicação (10s interval)
+- `trading-bot-websocket` - Métricas do WebSocket
+- `postgres` - Métricas do banco de dados
+- `redis` - Métricas do cache
+- `node-exporter` - Métricas do sistema
+- `trading-metrics` - Métricas customizadas de trading (5s interval)
+- `ai-metrics` - Performance do modelo ML
+- `risk-metrics` - Métricas de risk management
+
+**Alerting Rules:** `monitoring/rules/trading-alerts.yml`
+
+#### ✅ Alertmanager Configuration
+
+**Arquivo:** `monitoring/alertmanager/alertmanager.yml` (175 linhas)
+
+**Receivers Configurados:**
+
+1. **critical-alerts** (Email + Telegram + Webhook)
+   - API desconectada > 5 min
+   - Loss diário > 5%
+   - Drawdown > 15%
+   - Erro de execução de ordem
+
+2. **warning-alerts** (Telegram)
+   - Win rate < 50% (últimas 20 trades)
+   - Latência > 500ms
+   - Model accuracy < 65%
+
+3. **trading-alerts** (Email + Telegram)
+   - Alertas específicos de trading
+   - Métricas e limiares
+
+4. **ml-alerts** (Telegram)
+   - Performance do modelo ML
+   - Drift detection
+
+5. **infra-alerts** (Telegram)
+   - CPU/Memory/Disk high
+   - Container restarts
+
+**Features:**
+
+- Grouping inteligente por severidade
+- Inhibition rules (evita duplicatas)
+- Template customizado HTML para emails
+- Retry automático
+
+#### ✅ Grafana Dashboard
+
+**Arquivo:** `monitoring/grafana/dashboards/trading-bot-main.json`
+
+**Painéis Implementados:**
+
+1. **🎯 Trading Performance** (Real-time)
+   - Total P&L com threshold colors
+   - Unit: USD currency
+
+2. **📊 Win Rate Gauge**
+   - 0-100% scale
+   - Thresholds: Red < 50%, Yellow < 60%, Green >= 60%
+
+3. **🧠 ML Model Accuracy**
+   - Accuracy % em tempo real
+   - Thresholds customizados
+
+4. **⚠️ Max Drawdown**
+   - Alerta visual se > 15%
+
+5. **📈 P&L Over Time** (Graph)
+   - Total P&L linha
+   - Current Capital linha
+   - Legend com avg/min/max
+
+6. **🎲 Trade Distribution** (Pie Chart)
+   - Winning vs Losing trades
+   - Percentual visual
+
+7. **📊 Sharpe Ratio & Profit Factor** (Stats)
+   - Métricas de risco-retorno
+
+8. **🚀 Active Positions** (Table)
+   - Symbol, Direction, Entry, Current, P&L
+
+9. **🤖 ML Predictions** (Graph)
+   - Predictions/hour
+   - Executed/hour
+
+10. **⚙️ System Health**
+    - CPU Usage (%) com alert > 80%
+    - Memory Usage (MB)
+    - API Latency (p95/p99) com alert > 500ms
+
+11. **🔥 Recent Trades** (Table - Last 24h)
+    - Timestamp, Symbol, Direction, Prices, P&L, ML Confidence
+
+12. **🐛 Bugs & Errors** (Logs)
+    - Últimos 7 dias
+    - Filter: ERROR ou BUG
+
+**Features Avançadas:**
+
+- Annotations: Deployments, Alerts fired
+- Variables: Symbol (multi-select), Interval
+- Auto-refresh: 10s
+- Time range: Last 6h
+
+#### ✅ Grafana Provisioning
+
+**Datasources:** `monitoring/grafana/provisioning/datasources/prometheus.yml`
+
+- Prometheus (default)
+- Loki (logs)
+- InfluxDB (time series)
+
+**Dashboards:** `monitoring/grafana/provisioning/dashboards/dashboard.yml`
+
+- Auto-import de dashboards
+- Folders: Trading System, AI & ML, Infrastructure
+
+#### ✅ Environment Variables
+
+**Arquivo:** `.env.production.example` (200+ linhas)
+
+**Categorias:**
+
+1. 🔐 Deriv API Credentials
+2. 🗄️ Database Configuration
+3. 📦 Redis Configuration
+4. 🔑 Security (JWT)
+5. 📊 InfluxDB
+6. 📈 Grafana
+7. 🚨 Alerting (Email + Telegram + Webhook)
+8. 🌐 Environment Settings
+9. 🔒 SSL Certificates
+10. 🤖 ML Model Settings
+11. 💰 Trading Risk Management
+12. 📊 Paper Trading
+13. 🔄 Forward Testing
+14. 🏥 Health Check
+15. 💾 Backup Settings
+16. 🌐 API Configuration
+17. 🔍 Monitoring & Metrics
+18. 🐛 Debug
+19. 📝 Logging
+20. ⚙️ Performance Tuning
+21. 🌍 Timezone
+
+**Total:** 80+ variáveis documentadas
+
+#### ✅ Deploy Guide
+
+**Arquivo:** `DEPLOY_PRODUCTION.md` (750+ linhas)
+
+**Seções:**
+
+1. Pré-requisitos (Hardware/Software)
+2. Configuração Inicial (Clone, .env, Telegram bot, Gmail)
+3. Deploy com Docker Compose (Build, Up, Logs)
+4. Configuração de Monitoramento (Grafana, Prometheus, Alertmanager)
+5. Sistema de Alertas (Testes, Configuração)
+6. Backup e Recuperação (Manual/Automático, Restore)
+7. Troubleshooting (10 problemas comuns + soluções)
+8. Checklist de Deploy (30+ itens)
+9. Suporte (Comandos úteis)
+10. Próximos Passos
+11. Segurança em Produção
+
+**Troubleshooting Coverage:**
+
+- Container não inicia
+- ModuleNotFoundError
+- Erro de conexão com Deriv API
+- Grafana não mostra dados
+- Alertas não chegam no Telegram
+- Alto uso de CPU/Memória
 
 ### 9.5 Entregáveis
 - ✅ Bot rodando 24/7 em produção

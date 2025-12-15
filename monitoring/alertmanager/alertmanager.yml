@@ -1,0 +1,190 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'trading-bot-alerts@example.com'
+  smtp_auth_username: '${ALERT_EMAIL_USERNAME}'
+  smtp_auth_password: '${ALERT_EMAIL_PASSWORD}'
+  smtp_require_tls: true
+
+# Templates para mensagens customizadas
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Roteamento de alertas
+route:
+  group_by: ['alertname', 'severity', 'cluster']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+
+  routes:
+    # Alertas CRÍTICOS - Notificação imediata em todos os canais
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      continue: true
+
+    # Alertas de WARNING - Apenas Telegram
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 30s
+      repeat_interval: 1h
+
+    # Alertas de Trading - Canal específico
+    - match:
+        category: trading
+      receiver: 'trading-alerts'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # Alertas de ML Model - Canal específico
+    - match:
+        category: ml-model
+      receiver: 'ml-alerts'
+      group_wait: 1m
+      repeat_interval: 2h
+
+    # Alertas de Infraestrutura
+    - match:
+        category: infrastructure
+      receiver: 'infra-alerts'
+      group_wait: 30s
+      repeat_interval: 1h
+
+# Configuração de receivers (destinos das notificações)
+receivers:
+  # Receiver padrão
+  - name: 'default'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        headers:
+          Subject: '[Trading Bot] {{ .GroupLabels.alertname }}'
+
+  # CRÍTICO - Email + Telegram + Webhook
+  - name: 'critical-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        headers:
+          Subject: '🚨 [CRÍTICO] Trading Bot Alert: {{ .GroupLabels.alertname }}'
+        html: |
+          <h2 style="color: red;">🚨 ALERTA CRÍTICO</h2>
+          <p><strong>Alerta:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Severidade:</strong> {{ .CommonLabels.severity }}</p>
+          <p><strong>Descrição:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Hora:</strong> {{ .StartsAt }}</p>
+          <p><strong>Ação:</strong> {{ .CommonAnnotations.action }}</p>
+
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: 'HTML'
+        message: |
+          🚨 <b>ALERTA CRÍTICO - Trading Bot</b>
+
+          <b>Alerta:</b> {{ .GroupLabels.alertname }}
+          <b>Severidade:</b> {{ .CommonLabels.severity }}
+
+          <b>Descrição:</b>
+          {{ .CommonAnnotations.description }}
+
+          <b>Ação Requerida:</b>
+          {{ .CommonAnnotations.action }}
+
+          <b>Hora:</b> {{ .StartsAt.Format "02/01/2006 15:04:05" }}
+
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
+        send_resolved: true
+
+  # WARNING - Apenas Telegram
+  - name: 'warning-alerts'
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: 'HTML'
+        message: |
+          ⚠️ <b>Alerta - Trading Bot</b>
+
+          <b>Tipo:</b> {{ .GroupLabels.alertname }}
+          <b>Descrição:</b> {{ .CommonAnnotations.description }}
+
+          <i>Hora:</i> {{ .StartsAt.Format "02/01/2006 15:04:05" }}
+
+  # Trading Alerts - Email + Telegram
+  - name: 'trading-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        headers:
+          Subject: '📊 [Trading] {{ .GroupLabels.alertname }}'
+        html: |
+          <h2 style="color: orange;">📊 Trading Alert</h2>
+          <p><strong>Alerta:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Descrição:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Métrica:</strong> {{ .CommonAnnotations.metric }}</p>
+          <p><strong>Valor Atual:</strong> {{ .CommonAnnotations.value }}</p>
+          <p><strong>Limiar:</strong> {{ .CommonAnnotations.threshold }}</p>
+
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: 'HTML'
+        message: |
+          📊 <b>Trading Alert</b>
+
+          <b>{{ .GroupLabels.alertname }}</b>
+          {{ .CommonAnnotations.description }}
+
+          <b>Métrica:</b> {{ .CommonAnnotations.metric }}
+          <b>Valor:</b> {{ .CommonAnnotations.value }}
+          <b>Limiar:</b> {{ .CommonAnnotations.threshold }}
+
+  # ML Model Alerts
+  - name: 'ml-alerts'
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: 'HTML'
+        message: |
+          🤖 <b>ML Model Alert</b>
+
+          <b>{{ .GroupLabels.alertname }}</b>
+          {{ .CommonAnnotations.description }}
+
+          <b>Modelo:</b> {{ .CommonAnnotations.model }}
+          <b>Métrica:</b> {{ .CommonAnnotations.metric }}
+          <b>Valor:</b> {{ .CommonAnnotations.value }}
+
+  # Infrastructure Alerts
+  - name: 'infra-alerts'
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: 'HTML'
+        message: |
+          🏗️ <b>Infrastructure Alert</b>
+
+          <b>{{ .GroupLabels.alertname }}</b>
+          {{ .CommonAnnotations.description }}
+
+          <b>Serviço:</b> {{ .CommonLabels.job }}
+          <b>Instância:</b> {{ .CommonLabels.instance }}
+
+# Configuração de inibição (evita alertas duplicados)
+inhibit_rules:
+  # Se há um alerta crítico, suprimir warnings relacionados
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+
+  # Se sistema está down, suprimir alertas de performance
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      alertname: '(HighCPU|HighMemory|HighDisk)'
+    equal: ['instance']
