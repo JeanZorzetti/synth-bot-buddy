@@ -102,6 +102,14 @@ const navItems: NavItem[] = [
     badgeVariant: 'default'
   },
   {
+    title: 'Forward Testing',
+    href: '/forward-testing',
+    icon: Brain,
+    description: 'Validação ML + Paper Trading',
+    badge: 'Fase 8',
+    badgeVariant: 'default'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,

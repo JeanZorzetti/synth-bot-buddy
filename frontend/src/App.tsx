@@ -18,6 +18,7 @@ import TradeHistory from "./pages/TradeHistory";
 import BacktestingVisual from "./pages/BacktestingVisual";
 import AlertsConfig from "./pages/AlertsConfig";
 import PaperTrading from "./pages/PaperTrading";
+import ForwardTesting from "./pages/ForwardTesting";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,11 @@ const App = () => (
           <Route path="/paper-trading" element={
             <ProtectedRoute>
               <PaperTrading />
+            </ProtectedRoute>
+          } />
+          <Route path="/forward-testing" element={
+            <ProtectedRoute>
+              <ForwardTesting />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
