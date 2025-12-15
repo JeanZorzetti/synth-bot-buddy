@@ -1073,6 +1073,24 @@ export const handleDerivOAuthRedirect = async () => {
 // TRADES HISTORY API (FASE 7)
 // ==========================================
 
+// Helper function for authentication headers
+const getAuthHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  // Try to get token from localStorage
+  const token = localStorage.getItem('deriv_oauth_token') ||
+                localStorage.getItem('deriv_primary_token') ||
+                localStorage.getItem('token');
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 export interface Trade {
   id: number;
   timestamp: string;

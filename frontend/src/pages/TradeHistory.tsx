@@ -398,12 +398,12 @@ export default function TradeHistory() {
 
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select value={typeFilter} onValueChange={(value) => { setTypeFilter(value); setPage(1); }}>
+              <Select value={typeFilter || "all"} onValueChange={(value) => { setTypeFilter(value === "all" ? "" : value); setPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="BUY">Buy</SelectItem>
                   <SelectItem value="SELL">Sell</SelectItem>
                   <SelectItem value="CALL">Call</SelectItem>
@@ -414,12 +414,12 @@ export default function TradeHistory() {
 
             <div className="space-y-2">
               <Label>Resultado</Label>
-              <Select value={resultFilter} onValueChange={(value) => { setResultFilter(value); setPage(1); }}>
+              <Select value={resultFilter || "all"} onValueChange={(value) => { setResultFilter(value === "all" ? "" : value); setPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="win">Win</SelectItem>
                   <SelectItem value="loss">Loss</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -429,12 +429,12 @@ export default function TradeHistory() {
 
             <div className="space-y-2">
               <Label>Estratégia</Label>
-              <Select value={strategyFilter} onValueChange={(value) => { setStrategyFilter(value); setPage(1); }}>
+              <Select value={strategyFilter || "all"} onValueChange={(value) => { setStrategyFilter(value === "all" ? "" : value); setPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="ml">ML</SelectItem>
                   <SelectItem value="technical">Technical</SelectItem>
                   <SelectItem value="hybrid">Hybrid</SelectItem>
