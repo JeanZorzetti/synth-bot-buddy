@@ -9,7 +9,8 @@ import {
   Brain,
   Activity,
   Shield,
-  Layers
+  Layers,
+  History
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -67,10 +68,18 @@ const navItems: NavItem[] = [
     badgeVariant: 'default'
   },
   {
+    title: 'Histórico',
+    href: '/trade-history',
+    icon: History,
+    description: 'Histórico de trades',
+    badge: 'Fase 7',
+    badgeVariant: 'default'
+  },
+  {
     title: 'Configurações',
     href: '/settings',
     icon: Settings,
-    description: 'API Token e configurações'
+    description: 'Estratégias e Risco'
   }
 ];
 

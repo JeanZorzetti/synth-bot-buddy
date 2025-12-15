@@ -14,6 +14,7 @@ import AuthCallback from "./pages/AuthCallback";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
 import RiskManagement from "./pages/RiskManagement";
 import OrderFlow from "./pages/OrderFlow";
+import TradeHistory from "./pages/TradeHistory";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,11 @@ const App = () => (
           <Route path="/order-flow" element={
             <ProtectedRoute>
               <OrderFlow />
+            </ProtectedRoute>
+          } />
+          <Route path="/trade-history" element={
+            <ProtectedRoute>
+              <TradeHistory />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
