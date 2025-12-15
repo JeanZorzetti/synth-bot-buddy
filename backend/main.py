@@ -1028,16 +1028,16 @@ async def websocket_dashboard(websocket: WebSocket):
     - Métricas de sistema (uptime, ticks, latência)
     - Logs em tempo real
 
-    Mensagens enviadas a cada 5 segundos no formato:
+    Mensagens enviadas a cada 11 segundos no formato:
     {
         "type": "ai_metrics" | "trading_metrics" | "system_metrics" | "new_log",
         "payload": { ... }
     }
     """
-    await websocket.accept()
-    logger.info("WebSocket /ws/dashboard conectado")
-
     try:
+        await websocket.accept()
+        logger.info("WebSocket /ws/dashboard conectado")
+
         # Loop infinito enviando atualizações periódicas
         while True:
             try:
@@ -1099,14 +1099,34 @@ async def websocket_dashboard(websocket: WebSocket):
                 # Aguardar 5 segundos antes do próximo ciclo
                 await asyncio.sleep(5)
 
+            except WebSocketDisconnect:
+                logger.info("WebSocket /ws/dashboard cliente desconectou durante envio")
+                break
+            except RuntimeError as e:
+                if "websocket.disconnect" in str(e).lower() or "websocket.close" in str(e).lower():
+                    logger.info("WebSocket /ws/dashboard conexão fechada durante operação")
+                    break
+                logger.error(f"Erro RuntimeError no WebSocket: {e}")
+                break
             except Exception as e:
                 logger.error(f"Erro ao enviar dados WebSocket: {e}")
-                await asyncio.sleep(5)
+                # Tentar enviar um ping para verificar se conexão está viva
+                try:
+                    await websocket.send_text("ping")
+                    await asyncio.sleep(5)
+                except:
+                    logger.error("WebSocket não responde, encerrando conexão")
+                    break
 
     except WebSocketDisconnect:
-        logger.info("WebSocket /ws/dashboard desconectado")
+        logger.info("WebSocket /ws/dashboard desconectado no accept")
     except Exception as e:
         logger.error(f"Erro no WebSocket /ws/dashboard: {e}")
+    finally:
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @app.get("/api/ml/predict/{symbol}")
 async def get_ml_prediction(
