@@ -1082,7 +1082,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Confiança:</span>
-                    <span className="font-medium">{(aiMetrics.last_prediction.confidence * 100).toFixed(1)}%</span>
+                    <span className="font-medium">{((aiMetrics.last_prediction?.confidence ?? 0) * 100).toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Horário:</span>
@@ -1195,7 +1195,7 @@ const Dashboard = () => {
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">Sharpe Ratio</p>
                       <p className="text-2xl font-bold text-indigo-600">
-                        {modelInfo.expected_performance.sharpe_ratio.toFixed(2)}
+                        {(modelInfo?.expected_performance?.sharpe_ratio ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="text-center">
@@ -1243,11 +1243,11 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Confidence:</span>
                       <div className="text-right">
-                        <span className="text-2xl font-bold">{(lastPrediction.confidence * 100).toFixed(1)}%</span>
+                        <span className="text-2xl font-bold">{((lastPrediction?.confidence ?? 0) * 100).toFixed(1)}%</span>
                         <div className="w-32 bg-muted rounded-full h-2 mt-1">
                           <div
                             className="bg-blue-500 h-2 rounded-full transition-all"
-                            style={{ width: `${lastPrediction.confidence * 100}%` }}
+                            style={{ width: `${(lastPrediction?.confidence ?? 0) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -1349,11 +1349,11 @@ const Dashboard = () => {
                   </div>
 
                   {/* Confidence Warning */}
-                  {lastPrediction && lastPrediction.confidence < 0.6 && (
+                  {lastPrediction && (lastPrediction.confidence ?? 0) < 0.6 && (
                     <Alert className="border-orange-500 bg-orange-50">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        ⚠️ Confidence baixo ({(lastPrediction.confidence * 100).toFixed(1)}%).
+                        ⚠️ Confidence baixo ({((lastPrediction?.confidence ?? 0) * 100).toFixed(1)}%).
                         Recomendado: {'>'} 60% para trades. Você pode executar mesmo assim em modo paper trading.
                       </AlertDescription>
                     </Alert>
@@ -1671,7 +1671,7 @@ const Dashboard = () => {
 
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          <p className="font-semibold">{(pred.confidence * 100).toFixed(1)}%</p>
+                          <p className="font-semibold">{((pred?.confidence ?? 0) * 100).toFixed(1)}%</p>
                           <p className="text-xs text-muted-foreground">confidence</p>
                         </div>
                         <Badge className={getSignalBadgeColor(pred.signal_strength)} variant="secondary">
@@ -2131,11 +2131,11 @@ const Dashboard = () => {
                         <tr key={row.window} className="border-t hover:bg-muted/50">
                           <td className="px-4 py-2">Window #{row.window}</td>
                           <td className="px-4 py-2 text-right">{row.trades}</td>
-                          <td className="px-4 py-2 text-right">{row.win_rate.toFixed(1)}%</td>
-                          <td className={`px-4 py-2 text-right font-semibold ${row.profit_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {row.profit_pct >= 0 ? '+' : ''}{row.profit_pct.toFixed(1)}%
+                          <td className="px-4 py-2 text-right">{(row.win_rate ?? 0).toFixed(1)}%</td>
+                          <td className={`px-4 py-2 text-right font-semibold ${(row.profit_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {(row.profit_pct ?? 0) >= 0 ? '+' : ''}{(row.profit_pct ?? 0).toFixed(1)}%
                           </td>
-                          <td className="px-4 py-2 text-right">{row.sharpe_ratio.toFixed(1)}</td>
+                          <td className="px-4 py-2 text-right">{(row.sharpe_ratio ?? 0).toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
