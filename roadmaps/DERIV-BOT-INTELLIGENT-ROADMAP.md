@@ -1940,7 +1940,7 @@ def execute_trade(signal):
 
 ### 6.4 Tarefas
 - [ ] Implementar processamento assíncrono
-- [ ] Adicionar caching (Redis) para indicadores
+- [x] Adicionar caching (Redis) para indicadores
 - [ ] Otimizar backtesting (vetorização)
 - [ ] Implementar circuit breakers
 - [ ] Adicionar métricas Prometheus/Grafana

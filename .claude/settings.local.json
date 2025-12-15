@@ -26,9 +26,31 @@
       "Bash(done)",
       "Bash(del:*)",
       "Bash(npm run build:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(claude mcp add --transport stdio sequential-thinking --scope project -- cmd /c npx -y @anthropic-sdk/sequential-thinking)",
+      "Bash(claude mcp list:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(npx --version:*)",
+      "Bash(cmd /c \"echo Testing npx sequential-thinking && npx -y @anthropic-sdk/sequential-thinking\")",
+      "Bash(cmd /c \"npx -y @modelcontextprotocol/server-sequential-thinking\")",
+      "Bash(npx @modelcontextprotocol/inspector cmd /c npx -y @modelcontextprotocol/server-sequential-thinking)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(node database/setup.js:*)",
+      "Bash(pip --version:*)",
+      "Bash(pip install:*)",
+      "Bash(../.venv/Scripts/python.exe:*)",
+      "Bash(.python.exe test_cache_simple.py)",
+      "Bash(python.exe:*)",
+      "Bash(.Scriptspytest.exe:*)",
+      "Bash(Scripts/pytest.exe tests/test_cache_manager.py -v)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "sequential-thinking"
+  ]
 }
