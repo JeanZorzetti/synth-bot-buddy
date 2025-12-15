@@ -267,36 +267,36 @@ export default function BacktestingVisual() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Accuracy</span>
-                  <Badge variant="outline">{windows.summary.avg_metrics.accuracy.toFixed(2)}%</Badge>
+                  <Badge variant="outline">{(windows.summary.avg_metrics?.accuracy ?? 0).toFixed(2)}%</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Precision</span>
-                  <Badge variant="outline">{windows.summary.avg_metrics.precision.toFixed(2)}%</Badge>
+                  <Badge variant="outline">{(windows.summary.avg_metrics?.precision ?? 0).toFixed(2)}%</Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Recall</span>
-                  <Badge variant="outline">{windows.summary.avg_metrics.recall.toFixed(2)}%</Badge>
+                  <Badge variant="outline">{(windows.summary.avg_metrics?.recall ?? 0).toFixed(2)}%</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">F1-Score</span>
-                  <Badge variant="outline">{windows.summary.avg_metrics.f1.toFixed(2)}%</Badge>
+                  <Badge variant="outline">{(windows.summary.avg_metrics?.f1 ?? 0).toFixed(2)}%</Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Win Rate</span>
-                  <Badge variant={windows.summary.avg_trading.win_rate >= 50 ? "default" : "secondary"}>
-                    {windows.summary.avg_trading.win_rate.toFixed(2)}%
+                  <Badge variant={(windows.summary.avg_trading?.win_rate ?? 0) >= 50 ? "default" : "secondary"}>
+                    {(windows.summary.avg_trading?.win_rate ?? 0).toFixed(2)}%
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Profit Médio</span>
-                  <Badge variant={windows.summary.avg_trading.total_profit >= 0 ? "default" : "destructive"}>
-                    {formatPercent(windows.summary.avg_trading.total_profit)}
+                  <Badge variant={(windows.summary.avg_trading?.total_profit ?? 0) >= 0 ? "default" : "destructive"}>
+                    {formatPercent(windows.summary.avg_trading?.total_profit ?? 0)}
                   </Badge>
                 </div>
               </div>
@@ -304,14 +304,14 @@ export default function BacktestingVisual() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Sharpe Ratio</span>
-                  <Badge variant={windows.summary.avg_trading.sharpe_ratio >= 1 ? "default" : "secondary"}>
-                    {windows.summary.avg_trading.sharpe_ratio.toFixed(2)}
+                  <Badge variant={(windows.summary.avg_trading?.sharpe_ratio ?? 0) >= 1 ? "default" : "secondary"}>
+                    {(windows.summary.avg_trading?.sharpe_ratio ?? 0).toFixed(2)}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Max DD Médio</span>
                   <Badge variant="outline">
-                    {formatPercent(-windows.summary.avg_trading.max_drawdown)}
+                    {formatPercent(-(windows.summary.avg_trading?.max_drawdown ?? 0))}
                   </Badge>
                 </div>
               </div>
@@ -357,12 +357,12 @@ export default function BacktestingVisual() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant="outline" className="font-mono">
-                        {window.metrics.accuracy.toFixed(2)}%
+                        {(window.metrics?.accuracy ?? 0).toFixed(2)}%
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant="outline" className="font-mono">
-                        {window.metrics.recall.toFixed(2)}%
+                        {(window.metrics?.recall ?? 0).toFixed(2)}%
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
@@ -370,24 +370,24 @@ export default function BacktestingVisual() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge
-                        variant={window.trading.win_rate >= 50 ? "default" : "secondary"}
+                        variant={(window.trading?.win_rate ?? 0) >= 50 ? "default" : "secondary"}
                         className="font-mono"
                       >
-                        {window.trading.win_rate.toFixed(2)}%
+                        {(window.trading?.win_rate ?? 0).toFixed(2)}%
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <span className={`font-mono font-semibold ${
-                        window.trading.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                        (window.trading?.total_profit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {formatPercent(window.trading.total_profit)}
+                        {formatPercent(window.trading?.total_profit ?? 0)}
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {window.trading.sharpe_ratio.toFixed(2)}
+                      {(window.trading?.sharpe_ratio ?? 0).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-center">
-                      {window.trading.total_profit >= 0 ? (
+                      {(window.trading?.total_profit ?? 0) >= 0 ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
                       ) : (
                         <AlertCircle className="h-5 w-5 text-red-500 inline" />
