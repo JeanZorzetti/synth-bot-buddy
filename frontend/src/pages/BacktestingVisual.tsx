@@ -142,11 +142,12 @@ export default function BacktestingVisual() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Capital Inicial</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+      {equityCurve && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Capital Inicial</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -202,10 +203,12 @@ export default function BacktestingVisual() {
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Equity Curve Chart */}
-      <Card>
+      {equityCurve && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LineChart className="h-5 w-5" />
@@ -247,7 +250,8 @@ export default function BacktestingVisual() {
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Performance Metrics Summary */}
       {windows && (
@@ -399,24 +403,30 @@ export default function BacktestingVisual() {
       )}
 
       {/* Info Note */}
-      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Sobre os Resultados
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                {equityCurve.notes}
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                {windows.notes}
-              </p>
+      {(equityCurve || windows) && (
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex gap-3">
+              <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Sobre os Resultados
+                </p>
+                {equityCurve && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    {equityCurve.notes}
+                  </p>
+                )}
+                {windows && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    {windows.notes}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
