@@ -31,6 +31,7 @@ from kelly_ml_predictor import get_kelly_ml_predictor, initialize_kelly_ml_predi
 from metrics import get_metrics_manager, initialize_metrics_manager
 from prometheus_client import generate_latest, REGISTRY
 from forward_testing import ForwardTestingEngine, get_forward_testing_engine
+from ml_retrain_service import MLRetrainService, get_retrain_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -6146,4 +6147,106 @@ async def generate_forward_testing_report():
 
     except Exception as e:
         logger.error(f"Erro ao gerar relatório: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========================================
+# ML RETRAIN ENDPOINTS
+# ========================================
+
+@app.get("/api/ml/retrain/status")
+async def get_retrain_status():
+    """Retorna status do serviço de retreinamento"""
+    try:
+        service = get_retrain_service()
+        current_version = service.get_current_version()
+        should_retrain, reason = service.should_retrain()
+
+        return {
+            "status": "success",
+            "data": {
+                "current_version": current_version,
+                "should_retrain": should_retrain,
+                "retrain_reason": reason,
+                "total_versions": len(service.versions_history),
+                "retrain_interval_days": service.retrain_interval_days,
+                "min_accuracy_threshold": service.min_accuracy_threshold,
+                "min_improvement_pct": service.min_improvement_pct
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter status de retreinamento: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ml/retrain/versions")
+async def get_model_versions():
+    """Retorna histórico de versões de modelos"""
+    try:
+        service = get_retrain_service()
+        versions = service.get_versions_history()
+
+        return {
+            "status": "success",
+            "data": versions
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter versões: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ml/retrain/execute")
+async def execute_retrain(background_tasks: BackgroundTasks, force: bool = False):
+    """
+    Executa retreinamento do modelo ML
+
+    Query params:
+    - force: Se True, força retreinamento mesmo que não seja necessário
+    """
+    try:
+        service = get_retrain_service()
+
+        # Executar em background
+        def retrain_task():
+            result = service.execute_retrain(force=force)
+            logger.info(f"Retreinamento concluído: {result}")
+
+        background_tasks.add_task(retrain_task)
+
+        return {
+            "status": "success",
+            "message": "Retreinamento iniciado em background",
+            "force": force
+        }
+    except Exception as e:
+        logger.error(f"Erro ao iniciar retreinamento: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ml/retrain/rollback/{version}")
+async def rollback_model(version: str):
+    """
+    Faz rollback para uma versão específica do modelo
+
+    Path params:
+    - version: Nome da versão (ex: v1.2.20241215)
+    """
+    try:
+        service = get_retrain_service()
+
+        success = service.rollback_to_version(version)
+
+        if success:
+            return {
+                "status": "success",
+                "message": f"Rollback para {version} realizado com sucesso",
+                "version": version
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"Versão {version} não encontrada")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao fazer rollback: {e}")
         raise HTTPException(status_code=500, detail=str(e))

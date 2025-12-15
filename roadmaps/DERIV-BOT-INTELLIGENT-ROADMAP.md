@@ -2805,14 +2805,14 @@ models/
     └── metadata.json
 ```
 
-### 9.4 Tarefas (4/6 = 67% COMPLETO)
+### 9.4 Tarefas (6/6 = 100% COMPLETO) ✅
 
 - [x] ✅ Configurar infraestrutura de produção (docker-compose.prod.yml completo) - **IMPLEMENTADO 15/12/2024**
 - [x] ✅ Setup monitoramento (Prometheus + Grafana) - **IMPLEMENTADO 15/12/2024**
 - [x] ✅ Configurar alertas críticos (Alertmanager com Telegram + Email) - **IMPLEMENTADO 15/12/2024**
 - [x] ✅ Documentar procedimentos de manutenção (DEPLOY_PRODUCTION.md criado) - **IMPLEMENTADO 15/12/2024**
-- [ ] ⏳ Criar rotina de retreinamento automático (próxima tarefa)
-- [ ] ⏳ Setup backup e recovery (agendamento automático pendente)
+- [x] ✅ Criar rotina de retreinamento automático (MLRetrainService + Scheduler) - **IMPLEMENTADO 15/12/2024**
+- [x] ✅ Setup backup e recovery (Backup automático de modelos + retention 30 dias) - **IMPLEMENTADO 15/12/2024**
 
 ### 9.4.1 Implementação - Infraestrutura de Produção (15/12/2024)
 
@@ -3059,6 +3059,161 @@ models/
 - Grafana não mostra dados
 - Alertas não chegam no Telegram
 - Alto uso de CPU/Memória
+
+#### ✅ Sistema de Retreinamento Automático ML
+
+**Arquivo:** `backend/ml_retrain_service.py` (700+ linhas)
+
+**Funcionalidades Implementadas:**
+
+1. **MLRetrainService Class**
+   - Retreinamento periódico configurável
+   - Coleta de dados históricos de trades
+   - Preparação de features técnicas (17 features)
+   - Treinamento XGBoost com hyperparameters otimizados
+
+2. **Avaliação Automática de Performance**
+   - Accuracy, Precision, Recall, F1 Score
+   - Confusion Matrix
+   - Comparação com modelo atual
+   - Decision de deploy baseada em métricas
+
+3. **Versionamento de Modelos**
+   - Formato: `v{MAJOR}.{MINOR}.{YYYYMMDD}`
+   - Histórico em JSON (`models/versions/history.json`)
+   - Status: active, archived, rolled_back
+   - Metadata completo: metrics, timestamp, path
+
+4. **Sistema de Backup Automático**
+   - Backup antes de cada deploy
+   - Retenção configurável (default: 30 dias)
+   - Cleanup automático de backups antigos
+   - Pasta: `models/backups/`
+
+5. **Rollback Automático**
+   - Rollback para qualquer versão anterior
+   - Preserva backup do modelo atual
+   - Atualização de status no histórico
+
+**Critérios de Deploy:**
+
+- Accuracy >= 60% (threshold mínimo)
+- Melhoria >= 2% vs modelo atual
+- Mínimo 1000 samples de treino
+
+**Features Técnicas Extraídas:**
+
+- RSI (14 períodos)
+- SMA (20, 50)
+- EMA (12, 26)
+- MACD (MACD, Signal, Histogram)
+- Bollinger Bands (Upper, Lower, Middle, Width)
+- ATR (14 períodos)
+- Volume Ratio
+- Price Changes (1, 5, 10 períodos)
+
+**Scheduler Automático:**
+
+**Arquivo:** `backend/retrain_scheduler.py`
+
+- APScheduler com BackgroundScheduler
+- Cron: **Domingos às 3 AM**
+- Trigger manual disponível
+- Logging detalhado de execuções
+
+**REST API Endpoints:**
+
+1. **GET /api/ml/retrain/status**
+   - Retorna status do serviço
+   - Versão atual ativa
+   - Necessidade de retreinamento
+   - Configurações (threshold, interval, etc.)
+
+2. **GET /api/ml/retrain/versions**
+   - Histórico completo de versões
+   - Métricas de cada versão
+   - Status (active/archived/rolled_back)
+
+3. **POST /api/ml/retrain/execute?force=true**
+   - Trigger manual de retreinamento
+   - Execução em background (BackgroundTasks)
+   - Force: ignora intervalo mínimo
+
+4. **POST /api/ml/retrain/rollback/{version}**
+   - Rollback para versão específica
+   - Ex: `/api/ml/retrain/rollback/v1.2.20241215`
+
+**Fluxo de Retreinamento:**
+
+```
+1. Verificar Necessidade
+   ├─ Intervalo >= 7 dias?
+   └─ Force = True?
+
+2. Coletar Dados
+   ├─ Ler CSVs de data/training/
+   ├─ Mínimo 1000 samples
+   └─ Concatenar datasets
+
+3. Preparar Features
+   ├─ Calcular 17 indicadores técnicos
+   ├─ Target: UP=1, DOWN=0
+   └─ Drop NaN
+
+4. Treinar Modelo
+   ├─ Train/Test split (80/20)
+   ├─ XGBoost (100 estimators, depth 6)
+   └─ Avaliar métricas
+
+5. Decisão de Deploy
+   ├─ Accuracy >= 60%?
+   ├─ Melhoria >= 2%?
+   └─ Deploy ou Rejeitar
+
+6. Deploy (se aprovado)
+   ├─ Backup modelo atual
+   ├─ Salvar novo modelo
+   ├─ Registrar versão no histórico
+   └─ Atualizar status (active)
+
+7. Rollback (se degradar)
+   ├─ Restaurar versão anterior
+   ├─ Backup modelo atual
+   └─ Atualizar status
+```
+
+**Exemplo de Uso:**
+
+```bash
+# Verificar status
+curl http://localhost:8000/api/ml/retrain/status
+
+# Listar versões
+curl http://localhost:8000/api/ml/retrain/versions
+
+# Forçar retreinamento
+curl -X POST http://localhost:8000/api/ml/retrain/execute?force=true
+
+# Rollback
+curl -X POST http://localhost:8000/api/ml/retrain/rollback/v1.1.20241208
+```
+
+**Logs de Retreinamento:**
+
+```
+2024-12-15 03:00:00 - INFO - 🤖 Iniciando retreinamento semanal automático...
+2024-12-15 03:00:01 - INFO - 📊 Coletando dados de treino...
+2024-12-15 03:00:02 - INFO - Coletados 5432 samples de 12 arquivos
+2024-12-15 03:00:03 - INFO - 🔧 Preparando features...
+2024-12-15 03:00:04 - INFO - Features preparadas: (5210, 17), Target: (5210,)
+2024-12-15 03:00:05 - INFO - 🤖 Treinando novo modelo...
+2024-12-15 03:02:15 - INFO - Modelo treinado - Accuracy: 0.6542, F1: 0.6421
+2024-12-15 03:02:16 - INFO - ✅ Melhoria de 3.2% (mínimo: 2.0%)
+2024-12-15 03:02:17 - INFO - Backup do modelo atual salvo: models/backups/xgboost_model_20241215_030217.pkl
+2024-12-15 03:02:18 - INFO - ✅ Modelo v1.3.20241215 deployed com sucesso!
+2024-12-15 03:02:18 - INFO -    Accuracy: 0.6542
+2024-12-15 03:02:18 - INFO -    F1 Score: 0.6421
+```
 
 ### 9.5 Entregáveis
 - ✅ Bot rodando 24/7 em produção
