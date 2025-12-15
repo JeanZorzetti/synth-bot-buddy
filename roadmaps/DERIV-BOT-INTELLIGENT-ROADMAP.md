@@ -1944,7 +1944,7 @@ def execute_trade(signal):
 - [x] Otimizar backtesting (vetorização)
 - [x] Implementar circuit breakers
 - [x] Adicionar métricas Prometheus/Grafana
-- [ ] Configurar alertas (Discord, Telegram, Email)
+- [x] Configurar alertas (Discord, Telegram, Email)
 - [ ] Load testing (suportar 100+ req/s)
 
 ### 6.5 Entregáveis
