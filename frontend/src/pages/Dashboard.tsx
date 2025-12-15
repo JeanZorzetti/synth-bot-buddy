@@ -1522,7 +1522,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Confidence</p>
-                    <p className="font-semibold">{((lastPrediction?.confidence || 0) * 100).toFixed(1)}%</p>
+                    <p className="font-semibold">{((lastPrediction?.confidence ?? 0) * 100).toFixed(1)}%</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Símbolo</p>
@@ -1597,7 +1597,7 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">{stats.high}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats.total > 0 ? ((stats.high / stats.total) * 100).toFixed(1) : 0}% do total
+                  {stats.total > 0 ? (((stats?.high ?? 0) / (stats?.total ?? 1)) * 100).toFixed(1) : 0}% do total
                 </p>
               </CardContent>
             </Card>
@@ -1612,7 +1612,7 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-3xl font-bold text-yellow-600">{stats.medium}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats.total > 0 ? ((stats.medium / stats.total) * 100).toFixed(1) : 0}% do total
+                  {stats.total > 0 ? (((stats?.medium ?? 0) / (stats?.total ?? 1)) * 100).toFixed(1) : 0}% do total
                 </p>
               </CardContent>
             </Card>
@@ -1626,7 +1626,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-blue-600">
-                  {(stats.avgConfidence * 100).toFixed(1)}%
+                  {((stats?.avgConfidence ?? 0) * 100).toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Últimas {stats.total} previsões
@@ -1761,19 +1761,19 @@ const Dashboard = () => {
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Accuracy</p>
                         <p className="text-lg font-bold text-blue-600">
-                          {confusionMatrix ? (confusionMatrix.metrics.accuracy * 100).toFixed(1) : '62.6'}%
+                          {confusionMatrix ? ((confusionMatrix.metrics?.accuracy ?? 0) * 100).toFixed(1) : '62.6'}%
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Precision</p>
                         <p className="text-lg font-bold text-orange-600">
-                          {confusionMatrix ? (confusionMatrix.metrics.precision * 100).toFixed(1) : '56.3'}%
+                          {confusionMatrix ? ((confusionMatrix.metrics?.precision ?? 0) * 100).toFixed(1) : '56.3'}%
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Recall</p>
                         <p className="text-lg font-bold text-green-600">
-                          {confusionMatrix ? (confusionMatrix.metrics.recall * 100).toFixed(1) : '54.1'}%
+                          {confusionMatrix ? ((confusionMatrix.metrics?.recall ?? 0) * 100).toFixed(1) : '54.1'}%
                         </p>
                       </div>
                     </div>
@@ -1848,8 +1848,8 @@ const Dashboard = () => {
                                 return (
                                   <div className="bg-white p-2 rounded shadow-lg border text-xs">
                                     <p className="font-semibold">ROC Point</p>
-                                    <p>FPR: {(payload[0].payload.fpr * 100).toFixed(1)}%</p>
-                                    <p>TPR: {(payload[0].payload.tpr * 100).toFixed(1)}%</p>
+                                    <p>FPR: {((payload[0]?.payload?.fpr ?? 0) * 100).toFixed(1)}%</p>
+                                    <p>TPR: {((payload[0]?.payload?.tpr ?? 0) * 100).toFixed(1)}%</p>
                                   </div>
                                 );
                               }
@@ -1881,7 +1881,7 @@ const Dashboard = () => {
                       <div className="absolute top-6 right-6 bg-white/95 px-3 py-2 rounded-lg shadow-md border-2 border-purple-300">
                         <p className="text-xs text-muted-foreground">AUC</p>
                         <p className="text-2xl font-bold text-purple-600">
-                          {rocCurve?.auc.toFixed(2) || '0.68'}
+                          {(rocCurve?.auc ?? 0).toFixed(2) || '0.68'}
                         </p>
                       </div>
                     </div>
@@ -1891,19 +1891,19 @@ const Dashboard = () => {
                       <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
                         <p className="text-xs text-muted-foreground">True Positive Rate</p>
                         <p className="text-lg font-bold text-purple-600">
-                          {rocCurve ? (rocCurve.current_point.tpr * 100).toFixed(1) : '54.1'}%
+                          {rocCurve ? ((rocCurve.current_point?.tpr ?? 0) * 100).toFixed(1) : '54.1'}%
                         </p>
                         <p className="text-xs text-purple-500">
-                          at threshold {rocCurve?.current_threshold.toFixed(2) || '0.30'}
+                          at threshold {(rocCurve?.current_threshold ?? 0).toFixed(2) || '0.30'}
                         </p>
                       </div>
                       <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                         <p className="text-xs text-muted-foreground">False Positive Rate</p>
                         <p className="text-lg font-bold text-blue-600">
-                          {rocCurve ? (rocCurve.current_point.fpr * 100).toFixed(1) : '37.3'}%
+                          {rocCurve ? ((rocCurve.current_point?.fpr ?? 0) * 100).toFixed(1) : '37.3'}%
                         </p>
                         <p className="text-xs text-blue-500">
-                          at threshold {rocCurve?.current_threshold.toFixed(2) || '0.30'}
+                          at threshold {(rocCurve?.current_threshold ?? 0).toFixed(2) || '0.30'}
                         </p>
                       </div>
                     </div>
@@ -1941,28 +1941,28 @@ const Dashboard = () => {
                 <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-muted-foreground">F1-Score</p>
                   <p className="text-3xl font-bold text-blue-600">
-                    {confusionMatrix?.metrics.f1_score.toFixed(3) || '0.551'}
+                    {(confusionMatrix?.metrics?.f1_score ?? 0).toFixed(3) || '0.551'}
                   </p>
                   <Badge variant="outline" className="mt-2 text-xs">Balanced</Badge>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                   <p className="text-sm text-muted-foreground">Specificity</p>
                   <p className="text-3xl font-bold text-green-600">
-                    {confusionMatrix ? (confusionMatrix.metrics.specificity * 100).toFixed(1) : '62.7'}%
+                    {confusionMatrix ? ((confusionMatrix.metrics?.specificity ?? 0) * 100).toFixed(1) : '62.7'}%
                   </p>
                   <Badge variant="outline" className="mt-2 text-xs">True Negative Rate</Badge>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <p className="text-sm text-muted-foreground">MCC</p>
                   <p className="text-3xl font-bold text-orange-600">
-                    {confusionMatrix?.metrics.mcc.toFixed(3) || '0.167'}
+                    {(confusionMatrix?.metrics?.mcc ?? 0).toFixed(3) || '0.167'}
                   </p>
                   <Badge variant="outline" className="mt-2 text-xs">Matthews Correlation</Badge>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <p className="text-sm text-muted-foreground">Kappa</p>
                   <p className="text-3xl font-bold text-purple-600">
-                    {confusionMatrix?.metrics.kappa.toFixed(3) || '0.167'}
+                    {(confusionMatrix?.metrics?.kappa ?? 0).toFixed(3) || '0.167'}
                   </p>
                   <Badge variant="outline" className="mt-2 text-xs">Cohen's Kappa</Badge>
                 </div>
@@ -2006,22 +2006,22 @@ const Dashboard = () => {
                   </div>
                   <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                     <p className="text-sm text-muted-foreground">Avg Profit</p>
-                    <p className={`text-3xl font-bold ${backtestWindows && backtestWindows.summary.avg_profit_per_window >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {backtestWindows ? `${backtestWindows.summary.avg_profit_per_window >= 0 ? '+' : ''}${backtestWindows.summary.avg_profit_per_window.toFixed(1)}%` : '+417%'}
+                    <p className={`text-3xl font-bold ${backtestWindows && (backtestWindows.summary?.avg_profit_per_window ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {backtestWindows ? `${(backtestWindows.summary?.avg_profit_per_window ?? 0) >= 0 ? '+' : ''}${(backtestWindows.summary?.avg_profit_per_window ?? 0).toFixed(1)}%` : '+417%'}
                     </p>
                     <p className="text-xs text-emerald-500 mt-1">por janela</p>
                   </div>
                   <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-muted-foreground">Total Trades</p>
                     <p className="text-3xl font-bold text-blue-600">
-                      {backtestWindows?.summary.total_trades.toLocaleString() || '1,247'}
+                      {(backtestWindows?.summary?.total_trades ?? 0).toLocaleString() || '1,247'}
                     </p>
                     <p className="text-xs text-blue-500 mt-1">executados</p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                     <p className="text-sm text-muted-foreground">Sharpe Ratio</p>
                     <p className="text-3xl font-bold text-purple-600">
-                      {backtestWindows?.summary.avg_sharpe.toFixed(2) || '3.05'}
+                      {(backtestWindows?.summary?.avg_sharpe ?? 0).toFixed(2) || '3.05'}
                     </p>
                     <p className="text-xs text-purple-500 mt-1">risk-adjusted</p>
                   </div>
@@ -2102,8 +2102,8 @@ const Dashboard = () => {
                   </div>
                   <div className="absolute top-6 right-6 bg-white/95 px-4 py-2 rounded-lg shadow-md border-2 border-emerald-300">
                     <p className="text-xs text-muted-foreground">Total Return</p>
-                    <p className={`text-2xl font-bold ${equityCurve && equityCurve.summary.total_return_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {equityCurve ? `${equityCurve.summary.total_return_pct >= 0 ? '+' : ''}${equityCurve.summary.total_return_pct.toFixed(1)}%` : '+5,832%'}
+                    <p className={`text-2xl font-bold ${equityCurve && (equityCurve.summary?.total_return_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {equityCurve ? `${(equityCurve.summary?.total_return_pct ?? 0) >= 0 ? '+' : ''}${(equityCurve.summary?.total_return_pct ?? 0).toFixed(1)}%` : '+5,832%'}
                     </p>
                   </div>
                 </div>
