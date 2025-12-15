@@ -382,9 +382,9 @@ export default function PaperTrading() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.win_rate_pct.toFixed(1)}%</div>
+              <div className="text-2xl font-bold">{(metrics?.win_rate_pct ?? 0).toFixed(1)}%</div>
               <p className="text-xs text-muted-foreground">
-                {metrics.winning_trades}W / {metrics.losing_trades}L
+                {metrics?.winning_trades ?? 0}W / {metrics?.losing_trades ?? 0}L
               </p>
             </CardContent>
           </Card>
@@ -395,9 +395,9 @@ export default function PaperTrading() {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.sharpe_ratio.toFixed(2)}</div>
+              <div className="text-2xl font-bold">{(metrics?.sharpe_ratio ?? 0).toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                Drawdown: {metrics.max_drawdown_pct.toFixed(2)}%
+                Drawdown: {(metrics?.max_drawdown_pct ?? 0).toFixed(2)}%
               </p>
             </CardContent>
           </Card>
@@ -481,13 +481,13 @@ export default function PaperTrading() {
                         {position.position_type}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatCurrency(position.size)}</TableCell>
-                    <TableCell>{position.entry_price.toFixed(4)}</TableCell>
+                    <TableCell>{formatCurrency(position?.size ?? 0)}</TableCell>
+                    <TableCell>{(position?.entry_price ?? 0).toFixed(4)}</TableCell>
                     <TableCell>
-                      {position.stop_loss ? position.stop_loss.toFixed(4) : '-'}
+                      {position?.stop_loss ? position.stop_loss.toFixed(4) : '-'}
                     </TableCell>
                     <TableCell>
-                      {position.take_profit ? position.take_profit.toFixed(4) : '-'}
+                      {position?.take_profit ? position.take_profit.toFixed(4) : '-'}
                     </TableCell>
                     <TableCell>
                       {new Date(position.entry_time).toLocaleTimeString('pt-BR')}
@@ -531,13 +531,13 @@ export default function PaperTrading() {
                         {trade.position_type}
                       </Badge>
                     </TableCell>
-                    <TableCell>{trade.entry_price.toFixed(4)}</TableCell>
-                    <TableCell>{trade.exit_price.toFixed(4)}</TableCell>
-                    <TableCell className={trade.profit_loss >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {formatCurrency(trade.profit_loss)}
+                    <TableCell>{(trade?.entry_price ?? 0).toFixed(4)}</TableCell>
+                    <TableCell>{(trade?.exit_price ?? 0).toFixed(4)}</TableCell>
+                    <TableCell className={(trade?.profit_loss ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {formatCurrency(trade?.profit_loss ?? 0)}
                     </TableCell>
-                    <TableCell className={trade.profit_loss_pct >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {formatPercent(trade.profit_loss_pct)}
+                    <TableCell className={(trade?.profit_loss_pct ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {formatPercent(trade?.profit_loss_pct ?? 0)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={trade.is_winner ? 'default' : 'destructive'}>
