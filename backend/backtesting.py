@@ -111,6 +111,7 @@ class Backtester:
 
     def __init__(self, technical_analysis):
         self.ta = technical_analysis
+        self.use_vectorized = True  # Flag para usar backtesting vetorizado por padrão
 
     def run_backtest(
         self,
@@ -234,3 +235,200 @@ class Backtester:
         logger.info(f"Backtest completo: {result.total_trades} trades, Win Rate: {result.win_rate:.2f}%, Profit: ${result.final_balance - result.initial_balance:.2f}")
 
         return result
+
+    def run_vectorized_backtest(
+        self,
+        df: pd.DataFrame,
+        strategy_signals: pd.Series,
+        initial_balance: float = 1000.0,
+        position_size_percent: float = 10.0,
+        stop_loss_percent: float = 2.0,
+        take_profit_percent: float = 4.0
+    ) -> BacktestResult:
+        """
+        Backtesting vetorizado usando operações Pandas/NumPy
+        10-100x mais rápido que backtesting iterativo
+
+        Args:
+            df: DataFrame com OHLC data
+            strategy_signals: Series com sinais (-1: SELL, 0: NEUTRAL, 1: BUY)
+            initial_balance: Saldo inicial
+            position_size_percent: % do saldo para cada trade
+            stop_loss_percent: % de stop loss
+            take_profit_percent: % de take profit
+
+        Returns:
+            BacktestResult com métricas de performance
+        """
+        logger.info(f"Iniciando backtest vetorizado com {len(df)} candles")
+
+        result = BacktestResult()
+        result.initial_balance = initial_balance
+
+        # Copiar DataFrame para não modificar original
+        data = df.copy()
+        data['signal'] = strategy_signals
+
+        # Calcular retornos
+        data['returns'] = data['close'].pct_change()
+
+        # Aplicar sinais com lag (sinal em t afeta retorno em t+1)
+        data['positions'] = data['signal'].shift(1)
+
+        # Calcular retornos da estratégia
+        data['strategy_returns'] = data['positions'] * data['returns']
+
+        # Aplicar stop loss e take profit de forma vetorizada
+        data['sl_triggered'] = False
+        data['tp_triggered'] = False
+
+        # Para posições LONG (1)
+        long_mask = data['positions'] == 1
+        data.loc[long_mask, 'sl_triggered'] = data.loc[long_mask, 'returns'] <= -stop_loss_percent / 100
+        data.loc[long_mask, 'tp_triggered'] = data.loc[long_mask, 'returns'] >= take_profit_percent / 100
+
+        # Para posições SHORT (-1)
+        short_mask = data['positions'] == -1
+        data.loc[short_mask, 'sl_triggered'] = data.loc[short_mask, 'returns'] >= stop_loss_percent / 100
+        data.loc[short_mask, 'tp_triggered'] = data.loc[short_mask, 'returns'] <= -take_profit_percent / 100
+
+        # Ajustar retornos quando SL/TP acionados
+        data.loc[data['sl_triggered'], 'strategy_returns'] = -stop_loss_percent / 100 * data.loc[data['sl_triggered'], 'positions']
+        data.loc[data['tp_triggered'], 'strategy_returns'] = take_profit_percent / 100 * data.loc[data['tp_triggered'], 'positions']
+
+        # Aplicar position sizing
+        position_multiplier = position_size_percent / 100
+        data['strategy_returns'] = data['strategy_returns'] * position_multiplier
+
+        # Calcular curva de capital (equity curve)
+        data['cumulative_returns'] = (1 + data['strategy_returns']).cumprod()
+        data['equity'] = initial_balance * data['cumulative_returns']
+
+        # Calcular drawdown vetorizado
+        data['running_max'] = data['equity'].expanding().max()
+        data['drawdown'] = (data['equity'] - data['running_max']) / data['running_max'] * 100
+
+        # Identificar trades individuais (mudanças de posição)
+        data['position_change'] = data['positions'].diff()
+        entries = data[data['position_change'] != 0].copy()
+
+        # Criar lista de trades
+        trades = []
+        for i in range(len(entries) - 1):
+            entry = entries.iloc[i]
+            exit_entry = entries.iloc[i + 1]
+
+            if entry['positions'] != 0:  # Ignora posições flat
+                entry_idx = entry.name
+                exit_idx = exit_entry.name
+
+                # Calcular profit do trade
+                trade_data = data.loc[entry_idx:exit_idx]
+                trade_return = trade_data['strategy_returns'].sum()
+                trade_profit = initial_balance * trade_return
+
+                # Determinar motivo de saída
+                if trade_data['sl_triggered'].any():
+                    exit_reason = 'Stop Loss'
+                elif trade_data['tp_triggered'].any():
+                    exit_reason = 'Take Profit'
+                else:
+                    exit_reason = 'Signal Reversal'
+
+                trade_record = {
+                    'entry_time': entry_idx,
+                    'exit_time': exit_idx,
+                    'signal_type': 'BUY' if entry['positions'] == 1 else 'SELL',
+                    'entry_price': entry['close'],
+                    'exit_price': exit_entry['close'],
+                    'position_size': initial_balance * position_multiplier,
+                    'profit': trade_profit,
+                    'profit_percent': trade_return * 100,
+                    'exit_reason': exit_reason,
+                    'confidence': 75.0,  # Placeholder (não temos dados de confiança em vetorizado)
+                    'reason': 'Vectorized backtest',
+                    'balance_after': data.loc[exit_idx, 'equity']
+                }
+
+                trades.append(trade_record)
+
+        result.trades = trades
+        result.final_balance = data['equity'].iloc[-1]
+
+        # Calcular métricas agregadas
+        result.calculate_metrics()
+
+        # Calcular métricas adicionais de forma vetorizada
+        if len(data['strategy_returns']) > 0:
+            returns = data['strategy_returns'].dropna()
+
+            # Sharpe Ratio
+            if returns.std() > 0:
+                result.sharpe_ratio = (returns.mean() / returns.std()) * np.sqrt(252)
+
+            # Max Drawdown
+            result.max_drawdown = abs(data['drawdown'].min())
+
+            # Win Rate
+            winning_trades = returns[returns > 0]
+            result.win_rate = (len(winning_trades) / len(returns) * 100) if len(returns) > 0 else 0
+
+        logger.info(f"Backtest vetorizado completo: {len(trades)} trades, Win Rate: {result.win_rate:.2f}%, Profit: ${result.final_balance - result.initial_balance:.2f}")
+
+        return result
+
+    @staticmethod
+    def calculate_max_drawdown_vectorized(returns: pd.Series) -> float:
+        """
+        Calcula max drawdown de forma vetorizada
+
+        Args:
+            returns: Series com retornos da estratégia
+
+        Returns:
+            Max drawdown (valor positivo em %)
+        """
+        # Calcular curva de capital
+        cumulative = (1 + returns).cumprod()
+
+        # Calcular running maximum
+        running_max = cumulative.expanding().max()
+
+        # Calcular drawdown
+        drawdown = (cumulative - running_max) / running_max * 100
+
+        return abs(drawdown.min())
+
+    def compare_strategies(
+        self,
+        df: pd.DataFrame,
+        strategies: Dict[str, pd.Series]
+    ) -> Dict[str, BacktestResult]:
+        """
+        Compara múltiplas estratégias usando backtesting vetorizado
+
+        Args:
+            df: DataFrame com OHLC data
+            strategies: Dict com nome da estratégia -> Series de sinais
+
+        Returns:
+            Dict com nome -> BacktestResult
+        """
+        results = {}
+
+        for name, signals in strategies.items():
+            logger.info(f"Testando estratégia: {name}")
+            results[name] = self.run_vectorized_backtest(df, signals)
+
+        # Ranking por Sharpe Ratio
+        ranked = sorted(
+            results.items(),
+            key=lambda x: x[1].sharpe_ratio,
+            reverse=True
+        )
+
+        logger.info("\n=== RANKING DE ESTRATÉGIAS (por Sharpe Ratio) ===")
+        for i, (name, result) in enumerate(ranked, 1):
+            logger.info(f"{i}. {name}: Sharpe={result.sharpe_ratio:.2f}, Win Rate={result.win_rate:.2f}%, Profit=${result.final_balance - result.initial_balance:.2f}")
+
+        return results
