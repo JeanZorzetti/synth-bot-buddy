@@ -508,37 +508,37 @@ const Dashboard = () => {
       // Load AI metrics from real API
       const aiData = await apiClient.getAIStatus();
       setAiMetrics({
-        accuracy: aiData.accuracy || 0,
-        confidence_avg: aiData.confidence_avg || 0,
-        signals_generated: aiData.signals_generated || 0,
-        patterns_detected: aiData.patterns_detected || 0,
-        model_version: aiData.model_version || 'v2.1.3',
-        last_prediction: aiData.last_prediction
+        accuracy: aiData?.accuracy ?? 0,
+        confidence_avg: aiData?.confidence_avg ?? 0,
+        signals_generated: aiData?.signals_generated ?? 0,
+        patterns_detected: aiData?.patterns_detected ?? 0,
+        model_version: aiData?.model_version ?? 'v2.1.3',
+        last_prediction: aiData?.last_prediction ?? undefined
       });
 
       // Load trading metrics from real API
       const tradingData = await apiClient.getTradingMetrics();
       setTradingMetrics({
-        total_trades: tradingData.total_trades || 0,
-        winning_trades: tradingData.winning_trades || 0,
-        losing_trades: tradingData.losing_trades || 0,
-        win_rate: tradingData.win_rate || 0,
-        total_pnl: tradingData.total_pnl || 0,
-        session_pnl: tradingData.session_pnl || 0,
-        sharpe_ratio: tradingData.sharpe_ratio || 0,
-        max_drawdown: tradingData.max_drawdown || 0,
-        current_balance: tradingData.current_balance || 0
+        total_trades: tradingData?.total_trades ?? 0,
+        winning_trades: tradingData?.winning_trades ?? 0,
+        losing_trades: tradingData?.losing_trades ?? 0,
+        win_rate: tradingData?.win_rate ?? 0,
+        total_pnl: tradingData?.total_pnl ?? 0,
+        session_pnl: tradingData?.session_pnl ?? 0,
+        sharpe_ratio: tradingData?.sharpe_ratio ?? 0,
+        max_drawdown: tradingData?.max_drawdown ?? 0,
+        current_balance: tradingData?.current_balance ?? 0
       });
 
       // Load system metrics from real API
       const systemData = await apiClient.getSystemMetrics();
       setSystemMetrics({
-        uptime_hours: systemData.uptime_hours || 0,
-        ticks_processed: systemData.ticks_processed || 0,
-        processing_speed: systemData.processing_speed || 0,
-        api_latency: systemData.api_latency || 0,
-        websocket_status: systemData.websocket_status || 'disconnected',
-        deriv_api_status: systemData.deriv_api_status || 'disconnected'
+        uptime_hours: systemData?.uptime_hours ?? 0,
+        ticks_processed: systemData?.ticks_processed ?? 0,
+        processing_speed: systemData?.processing_speed ?? 0,
+        api_latency: systemData?.api_latency ?? 0,
+        websocket_status: systemData?.websocket_status ?? 'disconnected',
+        deriv_api_status: systemData?.deriv_api_status ?? 'disconnected'
       });
 
       // Load real-time logs
@@ -617,13 +617,29 @@ const Dashboard = () => {
 
             switch (data.type) {
               case 'ai_metrics':
-                setAiMetrics(prev => ({ ...prev, ...data.payload }));
+                if (data.payload) {
+                  // Filtrar valores undefined do payload
+                  const cleanPayload = Object.fromEntries(
+                    Object.entries(data.payload).filter(([_, v]) => v !== undefined)
+                  );
+                  setAiMetrics(prev => ({ ...prev, ...cleanPayload }));
+                }
                 break;
               case 'trading_metrics':
-                setTradingMetrics(prev => ({ ...prev, ...data.payload }));
+                if (data.payload) {
+                  const cleanPayload = Object.fromEntries(
+                    Object.entries(data.payload).filter(([_, v]) => v !== undefined)
+                  );
+                  setTradingMetrics(prev => ({ ...prev, ...cleanPayload }));
+                }
                 break;
               case 'system_metrics':
-                setSystemMetrics(prev => ({ ...prev, ...data.payload }));
+                if (data.payload) {
+                  const cleanPayload = Object.fromEntries(
+                    Object.entries(data.payload).filter(([_, v]) => v !== undefined)
+                  );
+                  setSystemMetrics(prev => ({ ...prev, ...cleanPayload }));
+                }
                 break;
               case 'new_log':
                 setRealtimeLog(prev => [data.payload, ...prev.slice(0, 9)]);
