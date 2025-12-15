@@ -2672,28 +2672,39 @@ curl -X POST http://localhost:8000/api/forward-testing/report
 curl -X POST http://localhost:8000/api/forward-testing/stop
 ```
 
+### 8.4.3 Forward Testing Frontend (15/12/2024)
+
+#### ✅ Interface Visual Completa
+
+**Arquivo**: `frontend/src/pages/ForwardTesting.tsx` (600+ linhas)
+
+**Acesso**: Menu lateral → "Forward Testing" (ícone Brain, badge "Fase 8")
+
+**Funcionalidades:**
+
+1. **Controles**: Iniciar, Parar, Gerar Relatório
+2. **Status Banner**: Indicador visual + contadores em tempo real
+3. **Metrics Cards**: Capital, Win Rate, Sharpe, Drawdown
+4. **Tabela Previsões ML**: Últimas 20 com confidence e status
+5. **Tabela Bugs**: Erros por severidade
+6. **Auto-refresh**: Status a cada 5 segundos
+
 #### Próximos Passos
 
 1. **Executar Forward Testing** (4 semanas)
-   - ✅ Sistema pronto e testado
-   - ⏳ Iniciar via endpoint REST
-   - ⏳ Monitorar diariamente via status endpoint
-   - ⏳ Validar win rate > 60% e Sharpe > 1.5
+   - ✅ Sistema backend + frontend completo
+   - ⏳ Acessar /forward-testing
+   - ⏳ Clicar "Iniciar Forward Testing"
+   - ⏳ Monitorar diariamente
+   - ⏳ Validar critérios (Win Rate > 60%, Sharpe > 1.5)
 
-2. **Análise de Bugs Registrados**
-   - ⏳ Revisar bugs.jsonl diariamente
-   - ⏳ Priorizar bugs CRITICAL
-   - ⏳ Implementar fixes incrementais
+2. **Análise e Otimização**
+   - ⏳ Revisar bugs na interface
+   - ⏳ Analisar previsões ML
+   - ⏳ Ajustar parâmetros baseado em dados
 
-3. **Otimização Baseada em Dados**
-   - ⏳ Analisar relatórios semanais
-   - ⏳ Ajustar threshold de confidence se necessário
-   - ⏳ Otimizar stop loss / take profit
-   - ⏳ Testar diferentes position sizing
-
-4. **Aprovação para Produção**
-   - ⏳ Aguardar 4 semanas de dados
-   - ⏳ Compilar relatório final
+3. **Aprovação para Produção**
+   - ⏳ Gerar relatório final após 4 semanas
    - ⏳ Validar todos os 4 critérios
    - ⏳ Decisão go/no-go
 
