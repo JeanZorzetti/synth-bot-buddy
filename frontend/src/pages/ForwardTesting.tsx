@@ -77,6 +77,8 @@ export default function ForwardTesting() {
   const [isStopping, setIsStopping] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
+
   useEffect(() => {
     loadStatus();
     const interval = setInterval(loadStatus, 5000); // Atualizar a cada 5 segundos
@@ -85,7 +87,7 @@ export default function ForwardTesting() {
 
   const loadStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/forward-testing/status');
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/status`);
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -106,7 +108,7 @@ export default function ForwardTesting() {
 
   const loadPredictions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/forward-testing/predictions?limit=20');
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/predictions?limit=20`);
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -119,7 +121,7 @@ export default function ForwardTesting() {
 
   const loadBugs = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/forward-testing/bugs');
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/bugs`);
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -134,7 +136,7 @@ export default function ForwardTesting() {
     try {
       setIsStarting(true);
 
-      const response = await fetch('http://localhost:8000/api/forward-testing/start', {
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/start`, {
         method: 'POST',
       });
 
@@ -166,7 +168,7 @@ export default function ForwardTesting() {
     try {
       setIsStopping(true);
 
-      const response = await fetch('http://localhost:8000/api/forward-testing/stop', {
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/stop`, {
         method: 'POST',
       });
 
@@ -198,7 +200,7 @@ export default function ForwardTesting() {
     try {
       setIsGeneratingReport(true);
 
-      const response = await fetch('http://localhost:8000/api/forward-testing/report', {
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/report`, {
         method: 'POST',
       });
 
