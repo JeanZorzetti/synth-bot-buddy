@@ -13,6 +13,7 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import TechnicalAnalysis from "./pages/TechnicalAnalysis";
 import RiskManagement from "./pages/RiskManagement";
+import OrderFlow from "./pages/OrderFlow";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,11 @@ const App = () => (
           <Route path="/risk-management" element={
             <ProtectedRoute>
               <RiskManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/order-flow" element={
+            <ProtectedRoute>
+              <OrderFlow />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

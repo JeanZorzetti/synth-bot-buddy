@@ -8,7 +8,8 @@ import {
   Settings,
   Brain,
   Activity,
-  Shield
+  Shield,
+  Layers
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -55,6 +56,14 @@ const navItems: NavItem[] = [
     icon: Shield,
     description: 'Gestão de Risco Inteligente',
     badge: 'Fase 4',
+    badgeVariant: 'default'
+  },
+  {
+    title: 'Order Flow',
+    href: '/order-flow',
+    icon: Layers,
+    description: 'Análise Institucional',
+    badge: 'Fase 5',
     badgeVariant: 'default'
   },
   {
