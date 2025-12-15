@@ -6,6 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,11 +31,15 @@ import {
   ChevronRight,
   DollarSign,
   BarChart3,
-  Activity
+  Activity,
+  FileText,
+  FileSpreadsheet,
+  ChevronDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { tradesApi, type Trade } from '@/services/api';
 import { format } from 'date-fns';
+import { exportUtils } from '@/utils/exporters';
 
 export default function TradeHistory() {
   const { toast } = useToast();
@@ -118,6 +128,103 @@ export default function TradeHistory() {
     setStartDate('');
     setEndDate('');
     setPage(1);
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const exportData = trades.map(trade => ({
+        ID: trade.id,
+        'Data/Hora': formatDate(trade.timestamp),
+        'Símbolo': trade.symbol,
+        'Tipo': trade.trade_type,
+        'Entrada': trade.entry_price,
+        'Saída': trade.exit_price || '-',
+        'Stake': trade.stake,
+        'P&L': trade.profit_loss || 0,
+        'Resultado': trade.result,
+        'Confiança': trade.confidence ? `${trade.confidence}%` : '-',
+        'Estratégia': trade.strategy || '-',
+      }));
+
+      exportUtils.toCSV(exportData, `trade-history-${new Date().toISOString().split('T')[0]}`);
+
+      toast({
+        title: "Exportação concluída",
+        description: `${trades.length} trades exportados para CSV`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível exportar os dados para CSV",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const exportData = trades.map(trade => ({
+        ID: trade.id,
+        'Data/Hora': formatDate(trade.timestamp),
+        'Símbolo': trade.symbol,
+        'Tipo': trade.trade_type,
+        'Entrada': trade.entry_price,
+        'Saída': trade.exit_price || '-',
+        'Stake': trade.stake,
+        'P&L': trade.profit_loss || 0,
+        'Resultado': trade.result,
+        'Confiança (%)': trade.confidence || '-',
+        'Estratégia': trade.strategy || '-',
+      }));
+
+      exportUtils.toExcel(exportData, `trade-history-${new Date().toISOString().split('T')[0]}`, 'Trades');
+
+      toast({
+        title: "Exportação concluída",
+        description: `${trades.length} trades exportados para Excel`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível exportar os dados para Excel",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const exportData = trades.map(trade => ({
+        ID: trade.id,
+        'Data/Hora': formatDate(trade.timestamp),
+        'Símbolo': trade.symbol,
+        'Tipo': trade.trade_type,
+        'Entrada': formatPrice(trade.entry_price),
+        'Saída': formatPrice(trade.exit_price),
+        'Stake': formatPrice(trade.stake),
+        'P&L': formatPnL(trade.profit_loss),
+        'Resultado': trade.result,
+        'Confiança': trade.confidence ? `${trade.confidence.toFixed(1)}%` : '-',
+        'Estratégia': trade.strategy || '-',
+      }));
+
+      exportUtils.dataToPDF(
+        exportData,
+        `trade-history-${new Date().toISOString().split('T')[0]}`,
+        'Trade History Report'
+      );
+
+      toast({
+        title: "Exportação concluída",
+        description: `${trades.length} trades exportados para PDF`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível exportar os dados para PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatPrice = (price?: number) => {
@@ -388,10 +495,29 @@ export default function TradeHistory() {
                 {total} trades encontrados {symbolFilter || typeFilter || resultFilter ? '(filtrado)' : ''}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent>
