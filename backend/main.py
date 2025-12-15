@@ -133,6 +133,18 @@ class SettingsRequest(BaseModel):
     aggressiveness: str
     indicators: dict
     selected_assets: dict
+    # Advanced Risk Management (FASE 7)
+    max_daily_loss: Optional[float] = 5.0
+    max_concurrent_trades: Optional[int] = 3
+    position_sizing: Optional[str] = 'fixed_fractional'
+    stop_loss_type: Optional[str] = 'fixed'
+    take_profit_type: Optional[str] = 'fixed'
+    # ML Configuration (FASE 7)
+    ml: Optional[dict] = None
+    # Order Flow Configuration (FASE 7)
+    order_flow: Optional[dict] = None
+    # Execution Settings (FASE 7)
+    execution: Optional[dict] = None
 
 # OAuth request models
 class OAuthStartRequest(BaseModel):
@@ -2015,7 +2027,19 @@ async def update_settings(settings: SettingsRequest):
             "stake_amount": settings.stake_amount,
             "aggressiveness": settings.aggressiveness,
             "indicators": settings.indicators,
-            "selected_assets": settings.selected_assets
+            "selected_assets": settings.selected_assets,
+            # Advanced Risk Management (FASE 7)
+            "max_daily_loss": settings.max_daily_loss,
+            "max_concurrent_trades": settings.max_concurrent_trades,
+            "position_sizing": settings.position_sizing,
+            "stop_loss_type": settings.stop_loss_type,
+            "take_profit_type": settings.take_profit_type,
+            # ML Configuration (FASE 7)
+            "ml": settings.ml or {"enabled": True, "model": "ensemble", "confidence_threshold": 70},
+            # Order Flow (FASE 7)
+            "order_flow": settings.order_flow or {"enabled": True, "weight": 30},
+            # Execution (FASE 7)
+            "execution": settings.execution or {"auto_trade": False, "min_signal_confidence": 75, "order_type": "market", "slippage_tolerance": 0.5}
         })
         
         # Update trading engine settings if it exists
