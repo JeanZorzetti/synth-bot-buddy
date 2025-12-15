@@ -33,3 +33,6 @@ scikit-learn==1.7.2
 # pandas-ta removed (requires Python 3.12+, using manual calculations instead)
 numba==0.61.2
 joblib==1.5.2
+
+# System monitoring dependencies (Phase 5)
+psutil==7.1.3
