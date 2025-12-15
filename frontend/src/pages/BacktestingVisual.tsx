@@ -250,81 +250,84 @@ export default function BacktestingVisual() {
       </Card>
 
       {/* Performance Metrics Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Métricas Agregadas (Média de {windows.summary.total_windows} Janelas)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Accuracy</span>
-                <Badge variant="outline">{windows.summary.avg_metrics.accuracy.toFixed(2)}%</Badge>
+      {windows && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Métricas Agregadas (Média de {windows.summary.total_windows} Janelas)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Accuracy</span>
+                  <Badge variant="outline">{windows.summary.avg_metrics.accuracy.toFixed(2)}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Precision</span>
+                  <Badge variant="outline">{windows.summary.avg_metrics.precision.toFixed(2)}%</Badge>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Precision</span>
-                <Badge variant="outline">{windows.summary.avg_metrics.precision.toFixed(2)}%</Badge>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Recall</span>
-                <Badge variant="outline">{windows.summary.avg_metrics.recall.toFixed(2)}%</Badge>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Recall</span>
+                  <Badge variant="outline">{windows.summary.avg_metrics.recall.toFixed(2)}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">F1-Score</span>
+                  <Badge variant="outline">{windows.summary.avg_metrics.f1.toFixed(2)}%</Badge>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">F1-Score</span>
-                <Badge variant="outline">{windows.summary.avg_metrics.f1.toFixed(2)}%</Badge>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Win Rate</span>
-                <Badge variant={windows.summary.avg_trading.win_rate >= 50 ? "default" : "secondary"}>
-                  {windows.summary.avg_trading.win_rate.toFixed(2)}%
-                </Badge>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Win Rate</span>
+                  <Badge variant={windows.summary.avg_trading.win_rate >= 50 ? "default" : "secondary"}>
+                    {windows.summary.avg_trading.win_rate.toFixed(2)}%
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Profit Médio</span>
+                  <Badge variant={windows.summary.avg_trading.total_profit >= 0 ? "default" : "destructive"}>
+                    {formatPercent(windows.summary.avg_trading.total_profit)}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Profit Médio</span>
-                <Badge variant={windows.summary.avg_trading.total_profit >= 0 ? "default" : "destructive"}>
-                  {formatPercent(windows.summary.avg_trading.total_profit)}
-                </Badge>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Sharpe Ratio</span>
-                <Badge variant={windows.summary.avg_trading.sharpe_ratio >= 1 ? "default" : "secondary"}>
-                  {windows.summary.avg_trading.sharpe_ratio.toFixed(2)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Max DD Médio</span>
-                <Badge variant="outline">
-                  {formatPercent(-windows.summary.avg_trading.max_drawdown)}
-                </Badge>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Sharpe Ratio</span>
+                  <Badge variant={windows.summary.avg_trading.sharpe_ratio >= 1 ? "default" : "secondary"}>
+                    {windows.summary.avg_trading.sharpe_ratio.toFixed(2)}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Max DD Médio</span>
+                  <Badge variant="outline">
+                    {formatPercent(-windows.summary.avg_trading.max_drawdown)}
+                  </Badge>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Windows Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Resultados por Janela Walk-Forward
-          </CardTitle>
-          <CardDescription>
-            Performance detalhada de cada janela de validação ({windows.windows.length} janelas)
-          </CardDescription>
-        </CardHeader>
+      {windows && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Resultados por Janela Walk-Forward
+            </CardTitle>
+            <CardDescription>
+              Performance detalhada de cada janela de validação ({windows.windows.length} janelas)
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <div className="relative overflow-x-auto">
             <Table>
@@ -392,7 +395,8 @@ export default function BacktestingVisual() {
             </Table>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Info Note */}
       <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
