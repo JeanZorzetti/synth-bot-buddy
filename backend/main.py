@@ -28,6 +28,8 @@ from backtesting import Backtester, BacktestResult
 from background_tasks import task_manager
 from risk_manager import RiskManager, RiskLimits, TrailingStop
 from kelly_ml_predictor import get_kelly_ml_predictor, initialize_kelly_ml_predictor
+from metrics import get_metrics_manager, initialize_metrics_manager
+from prometheus_client import generate_latest, REGISTRY
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -293,10 +295,14 @@ async def lifespan(app: FastAPI):
     proposals_engine = get_proposals_engine(deriv_adapter.deriv_api)
     await initialize_proposals_engine(deriv_adapter.deriv_api)
     
+    # Initialize Metrics Manager
+    initialize_metrics_manager()
+    logger.info("Metrics manager initialized")
+
     # WebSocket manager will be initialized when /connect is called with token
     # This allows dynamic token configuration from frontend
     logger.info("Trading engine, WebSocket manager and Deriv adapter initialized")
-    
+
     yield
     
     # Shutdown
@@ -5133,3 +5139,23 @@ async def get_order_flow_info():
             "GET /api/order-flow/info"
         ]
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """
+    Endpoint Prometheus para métricas de monitoramento
+
+    GET /metrics
+
+    Retorna métricas em formato Prometheus para scraping por Grafana/Prometheus
+    """
+    # Atualizar uptime
+    metrics_manager = get_metrics_manager()
+    metrics_manager.update_uptime()
+
+    # Gerar métricas em formato Prometheus
+    return Response(
+        content=generate_latest(REGISTRY),
+        media_type="text/plain; charset=utf-8"
+    )
