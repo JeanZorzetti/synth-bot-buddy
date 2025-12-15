@@ -2098,11 +2098,11 @@ class AlertManager:
 ### 7.5 Tarefas
 
 - [x] Criar dashboard com gráficos em tempo real (ML Monitoring Dashboard - Fase 7.1 ✅)
-- [ ] Interface de configuração de estratégias
+- [x] Interface de configuração de estratégias (Settings.tsx expandido com ML, Order Flow, Advanced Risk ✅)
+- [x] Histórico de trades com filtros (TradeHistory.tsx com paginação e backend SQLite ✅)
 - [ ] Sistema de backtesting visual
-- [ ] Integração com TradingView
-- [ ] Sistema de alertas (Telegram, Discord, Email)
-- [ ] Histórico de trades com filtros
+- [ ] Integração com TradingView (Opcional)
+- [ ] Sistema de alertas frontend (backend já existe - Fase 6 ✅)
 - [ ] Exportação de relatórios (PDF, Excel)
 
 ### 7.6 Entregáveis
