@@ -272,83 +272,123 @@ class TradesHistoryManager:
 
     def get_trade_stats(self) -> Dict[str, Any]:
         """Get overall trading statistics"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-        # Overall stats
-        cursor.execute("""
-            SELECT
-                COUNT(*) as total_trades,
-                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
-                SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as losses,
-                SUM(CASE WHEN result = 'pending' THEN 1 ELSE 0 END) as pending,
-                SUM(profit_loss) as total_pnl,
-                AVG(profit_loss) as avg_pnl,
-                MAX(profit_loss) as max_profit,
-                MIN(profit_loss) as max_loss,
-                AVG(confidence) as avg_confidence
-            FROM trades_history
-        """)
+            # Overall stats
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total_trades,
+                    SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
+                    SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as losses,
+                    SUM(CASE WHEN result = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(profit_loss) as total_pnl,
+                    AVG(profit_loss) as avg_pnl,
+                    MAX(profit_loss) as max_profit,
+                    MIN(profit_loss) as max_loss,
+                    AVG(confidence) as avg_confidence
+                FROM trades_history
+            """)
 
-        overall = dict(cursor.fetchone())
+            row = cursor.fetchone()
+            if row is None:
+                overall = {
+                    'total_trades': 0,
+                    'wins': 0,
+                    'losses': 0,
+                    'pending': 0,
+                    'total_pnl': 0,
+                    'avg_pnl': 0,
+                    'max_profit': 0,
+                    'max_loss': 0,
+                    'avg_confidence': 0,
+                    'win_rate': 0
+                }
+            else:
+                overall = dict(row)
 
-        # Calculate win rate
-        total_completed = (overall['wins'] or 0) + (overall['losses'] or 0)
-        overall['win_rate'] = (overall['wins'] / total_completed * 100) if total_completed > 0 else 0
+            # Calculate win rate
+            total_completed = (overall['wins'] or 0) + (overall['losses'] or 0)
+            overall['win_rate'] = (overall['wins'] / total_completed * 100) if total_completed > 0 else 0
 
-        # Stats by symbol
-        cursor.execute("""
-            SELECT
-                symbol,
-                COUNT(*) as trades,
-                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
-                SUM(profit_loss) as pnl
-            FROM trades_history
-            GROUP BY symbol
-            ORDER BY trades DESC
-        """)
+            # Stats by symbol
+            cursor.execute("""
+                SELECT
+                    symbol,
+                    COUNT(*) as trades,
+                    SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
+                    SUM(profit_loss) as pnl
+                FROM trades_history
+                GROUP BY symbol
+                ORDER BY trades DESC
+            """)
 
-        by_symbol = [dict(row) for row in cursor.fetchall()]
+            by_symbol = [dict(row) for row in cursor.fetchall()]
 
-        # Stats by strategy
-        cursor.execute("""
-            SELECT
-                strategy,
-                COUNT(*) as trades,
-                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
-                SUM(profit_loss) as pnl,
-                AVG(confidence) as avg_confidence
-            FROM trades_history
-            WHERE strategy IS NOT NULL
-            GROUP BY strategy
-            ORDER BY trades DESC
-        """)
+            # Stats by strategy
+            cursor.execute("""
+                SELECT
+                    strategy,
+                    COUNT(*) as trades,
+                    SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
+                    SUM(profit_loss) as pnl,
+                    AVG(confidence) as avg_confidence
+                FROM trades_history
+                WHERE strategy IS NOT NULL
+                GROUP BY strategy
+                ORDER BY trades DESC
+            """)
 
-        by_strategy = [dict(row) for row in cursor.fetchall()]
+            by_strategy = [dict(row) for row in cursor.fetchall()]
 
-        # Recent performance (last 7 days)
-        cursor.execute("""
-            SELECT
-                DATE(timestamp) as date,
-                COUNT(*) as trades,
-                SUM(profit_loss) as pnl
-            FROM trades_history
-            WHERE timestamp >= datetime('now', '-7 days')
-            GROUP BY DATE(timestamp)
-            ORDER BY date DESC
-        """)
+            # Recent performance (last 7 days)
+            cursor.execute("""
+                SELECT
+                    DATE(timestamp) as date,
+                    COUNT(*) as trades,
+                    SUM(profit_loss) as pnl
+                FROM trades_history
+                WHERE timestamp >= datetime('now', '-7 days')
+                GROUP BY DATE(timestamp)
+                ORDER BY date DESC
+            """)
 
-        recent_performance = [dict(row) for row in cursor.fetchall()]
+            recent_performance = [dict(row) for row in cursor.fetchall()]
 
-        conn.close()
+            conn.close()
 
-        return {
-            'overall': overall,
-            'by_symbol': by_symbol,
-            'by_strategy': by_strategy,
-            'recent_performance': recent_performance
-        }
+            return {
+                'overall': overall,
+                'by_symbol': by_symbol,
+                'by_strategy': by_strategy,
+                'recent_performance': recent_performance
+            }
+
+        except sqlite3.OperationalError as e:
+            logger.error(f"Database error in get_trade_stats: {e}")
+            # Return empty stats if table doesn't exist
+            return {
+                'overall': {
+                    'total_trades': 0,
+                    'wins': 0,
+                    'losses': 0,
+                    'pending': 0,
+                    'total_pnl': 0,
+                    'avg_pnl': 0,
+                    'max_profit': 0,
+                    'max_loss': 0,
+                    'avg_confidence': 0,
+                    'win_rate': 0
+                },
+                'by_symbol': [],
+                'by_strategy': [],
+                'recent_performance': []
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error in get_trade_stats: {e}")
+            raise
 
     def delete_trade(self, trade_id: int) -> bool:
         """Delete a trade by ID"""
