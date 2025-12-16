@@ -260,12 +260,12 @@ class ForwardTestingEngine:
 
             return {
                 'timestamp': datetime.fromtimestamp(tick_time).isoformat(),
-                'open': current_price,  # Simplificação
+                'open': current_price,
                 'high': current_price,
                 'low': current_price,
                 'close': current_price,
-                'volume': 1000,  # Volume não disponível em ticks
-                'symbol': tick['symbol']
+                'volume': 1000,
+                'symbol': self.symbol
             }
 
         except Exception as e:
