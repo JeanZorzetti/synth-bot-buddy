@@ -187,9 +187,15 @@ class ForwardTestingEngine:
                     await asyncio.sleep(5)
                     continue
 
+                # Pular previsões de warm-up (não registrar no log de estatísticas)
+                if 'reason' in prediction and 'Aguardando histórico' in prediction.get('reason', ''):
+                    logger.debug(f"⏳ Warm-up: {prediction['reason']}")
+                    await asyncio.sleep(10)
+                    continue
+
                 self.last_prediction_time = datetime.now()
 
-                # Registrar previsão
+                # Registrar apenas previsões VÁLIDAS (após warm-up)
                 self.prediction_log.append({
                     'timestamp': self.last_prediction_time.isoformat(),
                     'prediction': prediction['prediction'],
