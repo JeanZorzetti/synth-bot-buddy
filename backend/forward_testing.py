@@ -222,6 +222,15 @@ class ForwardTestingEngine:
 
                 await self.deriv_api.connect()
                 await self.deriv_api.authorize(self.deriv_api_token)
+
+                # IMPORTANTE: Cancelar TODAS as subscrições antigas ao conectar
+                # Isso previne erro "You are already subscribed to R_100"
+                try:
+                    await self.deriv_api._send_request({"forget_all": "ticks"})
+                    logger.info("🧹 Subscrições antigas canceladas")
+                except Exception as e:
+                    logger.debug(f"Nenhuma subscrição antiga para cancelar: {e}")
+
                 self.deriv_connected = True
                 logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
