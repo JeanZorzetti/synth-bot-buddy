@@ -243,8 +243,9 @@ class ForwardTestingEngine:
 
             # Obter último tick via ticks_history (NUNCA cria subscrição)
             # Mais seguro que ticks() - evita "already subscribed" definitivamente
-            logger.debug(f"📊 Solicitando último tick para {self.symbol}")
+            logger.info(f"📊 Solicitando último tick para {self.symbol}")
             response = await self.deriv_api.get_latest_tick(self.symbol)
+            logger.info(f"✅ Resposta recebida da Deriv API")
 
             if 'history' not in response or not response['history'].get('prices'):
                 logger.warning(f"Resposta sem histórico: {response}")
