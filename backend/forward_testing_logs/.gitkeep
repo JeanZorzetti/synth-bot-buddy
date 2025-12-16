@@ -1,0 +1,6 @@
+# Este diretório armazena logs do Forward Testing
+# Os arquivos gerados incluem:
+# - bugs.jsonl: Bugs encontrados durante execução
+# - predictions_*.jsonl: Log de previsões do ML
+# - trades_*.jsonl: Log de trades executados
+# - validation_report_*.md: Relatórios de validação
