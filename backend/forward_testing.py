@@ -109,10 +109,17 @@ class ForwardTestingEngine:
         logger.info(f"Início: {self.start_time.isoformat()}")
         logger.info(f"Símbolo: {self.symbol}")
         logger.info(f"Capital Inicial: ${self.paper_trading.initial_capital:,.2f}")
+        logger.info(f"Token Deriv configurado: {'SIM' if self.deriv_api_token else 'NÃO ❌'}")
+        logger.info(f"Modelo ML carregado: {self.ml_predictor.model_path.name}")
         logger.info("="*60)
 
         # Iniciar loop de trading
-        await self._trading_loop()
+        try:
+            await self._trading_loop()
+        except Exception as e:
+            logger.error(f"❌ ERRO CRÍTICO no trading loop: {e}", exc_info=True)
+            self.is_running = False
+            raise
 
     async def stop(self):
         """Para sessão de forward testing"""
@@ -620,5 +627,16 @@ def get_forward_testing_engine() -> ForwardTestingEngine:
     """Retorna instância singleton do forward testing engine"""
     global _forward_testing_instance
     if _forward_testing_instance is None:
-        _forward_testing_instance = ForwardTestingEngine()
+        try:
+            logger.info("🚀 Inicializando Forward Testing Engine...")
+            _forward_testing_instance = ForwardTestingEngine()
+            logger.info("✅ Forward Testing Engine inicializado com sucesso")
+        except FileNotFoundError as e:
+            logger.error(f"❌ CRÍTICO: Modelo ML não encontrado: {e}")
+            logger.error("   Procurar por: backend/ml/models/xgboost_improved_learning_rate_*.pkl")
+            logger.error("   O Forward Testing NÃO PODE funcionar sem o modelo ML!")
+            raise
+        except Exception as e:
+            logger.error(f"❌ CRÍTICO: Falha ao inicializar Forward Testing Engine: {e}", exc_info=True)
+            raise
     return _forward_testing_instance
