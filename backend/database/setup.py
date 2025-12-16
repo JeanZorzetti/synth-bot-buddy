@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Script para criar database SQLite trades.db com schema inicial
+Script para criar database SQLite trades_history.db com schema inicial
 
 Execução: python database/setup.py
 """
 
+import sys
+import io
 import sqlite3
+
+# Force UTF-8 encoding for Windows compatibility
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 import os
 from pathlib import Path
 from datetime import datetime, timedelta
 import json
 
-# Path para o database
-DB_PATH = Path(__file__).parent.parent / "trades.db"
+# Path para o database (DEVE SER trades_history.db para coincidir com trades_history_manager.py)
+DB_PATH = Path(__file__).parent.parent / "trades_history.db"
 
 # Verificar se já existe
 if DB_PATH.exists():
@@ -26,30 +33,29 @@ print(f"✅ Criando database em: {DB_PATH}")
 conn = sqlite3.connect(str(DB_PATH))
 cursor = conn.cursor()
 
-# Schema da tabela trades_history
+# Schema da tabela trades_history (EXATO como em trades_history_manager.py)
 CREATE_TRADES_TABLE = """
 CREATE TABLE IF NOT EXISTS trades_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     symbol TEXT NOT NULL,
-    direction TEXT NOT NULL CHECK(direction IN ('UP', 'DOWN', 'CALL', 'PUT')),
+    trade_type TEXT NOT NULL CHECK(trade_type IN ('BUY', 'SELL', 'CALL', 'PUT')),
     entry_price REAL NOT NULL,
     exit_price REAL,
-    quantity REAL NOT NULL DEFAULT 1.0,
-    position_size REAL NOT NULL,
+    stake REAL NOT NULL,
+    profit_loss REAL,
+    result TEXT CHECK(result IN ('win', 'loss', 'pending')),
+    confidence REAL CHECK(confidence >= 0 AND confidence <= 100),
+    strategy TEXT CHECK(strategy IN ('ml', 'technical', 'hybrid', 'order_flow')),
+    indicators_used TEXT,
+    ml_prediction REAL,
+    order_flow_signal TEXT,
     stop_loss REAL,
     take_profit REAL,
-    profit_loss REAL,
-    profit_loss_pct REAL,
-    result TEXT CHECK(result IN ('win', 'loss', 'pending', 'breakeven')),
-    strategy TEXT,
-    confidence REAL,
-    ml_prediction TEXT,
-    indicators TEXT,
+    exit_reason TEXT,
     notes TEXT,
-    closed_at TEXT,
-    duration_seconds INTEGER,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -71,91 +77,84 @@ for i, index_sql in enumerate(CREATE_INDEXES, 1):
     cursor.execute(index_sql)
     print(f"✅ Índice {i}/{len(CREATE_INDEXES)} criado")
 
-# Trades de exemplo
+# Trades de exemplo (schema correto: trade_type, stake, indicators_used, ml_prediction REAL)
 now = datetime.now()
 sample_trades = [
     {
         'timestamp': (now - timedelta(days=1)).isoformat(),
         'symbol': 'R_100',
-        'direction': 'UP',
+        'trade_type': 'CALL',
         'entry_price': 100.50,
         'exit_price': 101.25,
-        'quantity': 1.0,
-        'position_size': 1000,
+        'stake': 10.0,
+        'profit_loss': 7.5,
+        'result': 'win',
+        'confidence': 75.0,
+        'strategy': 'ml',
+        'indicators_used': json.dumps({'rsi': 65, 'macd': 'bullish'}),
+        'ml_prediction': 0.75,
+        'order_flow_signal': 'bullish',
         'stop_loss': 99.50,
         'take_profit': 102.50,
-        'profit_loss': 7.5,
-        'profit_loss_pct': 0.75,
-        'result': 'win',
-        'strategy': 'ML_Predictor',
-        'confidence': 0.75,
-        'ml_prediction': 'UP',
-        'indicators': json.dumps({'rsi': 65, 'macd': 'bullish'}),
-        'notes': 'Trade de exemplo - Paper Trading',
-        'closed_at': (now - timedelta(hours=23)).isoformat(),
-        'duration_seconds': 3600
+        'exit_reason': 'take_profit',
+        'notes': 'Trade de exemplo - Paper Trading'
     },
     {
         'timestamp': (now - timedelta(hours=12)).isoformat(),
         'symbol': 'R_100',
-        'direction': 'DOWN',
+        'trade_type': 'PUT',
         'entry_price': 99.75,
         'exit_price': 99.50,
-        'quantity': 1.0,
-        'position_size': 1000,
+        'stake': 10.0,
+        'profit_loss': 2.5,
+        'result': 'win',
+        'confidence': 68.0,
+        'strategy': 'ml',
+        'indicators_used': json.dumps({'rsi': 35, 'macd': 'bearish'}),
+        'ml_prediction': 0.68,
+        'order_flow_signal': 'bearish',
         'stop_loss': 100.75,
         'take_profit': 97.75,
-        'profit_loss': 2.5,
-        'profit_loss_pct': 0.25,
-        'result': 'win',
-        'strategy': 'ML_Predictor',
-        'confidence': 0.68,
-        'ml_prediction': 'DOWN',
-        'indicators': json.dumps({'rsi': 35, 'macd': 'bearish'}),
-        'notes': 'Trade de exemplo - Paper Trading',
-        'closed_at': (now - timedelta(hours=11)).isoformat(),
-        'duration_seconds': 3600
+        'exit_reason': 'take_profit',
+        'notes': 'Trade de exemplo - Paper Trading'
     },
     {
         'timestamp': (now - timedelta(hours=2)).isoformat(),
         'symbol': 'R_100',
-        'direction': 'UP',
+        'trade_type': 'CALL',
         'entry_price': 101.00,
         'exit_price': 100.50,
-        'quantity': 1.0,
-        'position_size': 1000,
+        'stake': 10.0,
+        'profit_loss': -5.0,
+        'result': 'loss',
+        'confidence': 62.0,
+        'strategy': 'ml',
+        'indicators_used': json.dumps({'rsi': 70, 'macd': 'bullish'}),
+        'ml_prediction': 0.62,
+        'order_flow_signal': 'bullish',
         'stop_loss': 100.00,
         'take_profit': 103.00,
-        'profit_loss': -5.0,
-        'profit_loss_pct': -0.50,
-        'result': 'loss',
-        'strategy': 'ML_Predictor',
-        'confidence': 0.62,
-        'ml_prediction': 'UP',
-        'indicators': json.dumps({'rsi': 70, 'macd': 'bullish'}),
-        'notes': 'Trade de exemplo - Stop Loss acionado',
-        'closed_at': (now - timedelta(hours=1)).isoformat(),
-        'duration_seconds': 3600
+        'exit_reason': 'stop_loss',
+        'notes': 'Trade de exemplo - Stop Loss acionado'
     }
 ]
 
 # Inserir trades de exemplo
 INSERT_SQL = """
     INSERT INTO trades_history (
-        timestamp, symbol, direction, entry_price, exit_price, quantity,
-        position_size, stop_loss, take_profit, profit_loss, profit_loss_pct,
-        result, strategy, confidence, ml_prediction, indicators, notes,
-        closed_at, duration_seconds
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        timestamp, symbol, trade_type, entry_price, exit_price, stake,
+        profit_loss, result, confidence, strategy, indicators_used,
+        ml_prediction, order_flow_signal, stop_loss, take_profit, exit_reason, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 for i, trade in enumerate(sample_trades, 1):
     cursor.execute(INSERT_SQL, (
-        trade['timestamp'], trade['symbol'], trade['direction'], trade['entry_price'],
-        trade['exit_price'], trade['quantity'], trade['position_size'], trade['stop_loss'],
-        trade['take_profit'], trade['profit_loss'], trade['profit_loss_pct'], trade['result'],
-        trade['strategy'], trade['confidence'], trade['ml_prediction'], trade['indicators'],
-        trade['notes'], trade['closed_at'], trade['duration_seconds']
+        trade['timestamp'], trade['symbol'], trade['trade_type'], trade['entry_price'],
+        trade['exit_price'], trade['stake'], trade['profit_loss'], trade['result'],
+        trade['confidence'], trade['strategy'], trade['indicators_used'],
+        trade['ml_prediction'], trade['order_flow_signal'], trade['stop_loss'],
+        trade['take_profit'], trade['exit_reason'], trade['notes']
     ))
     print(f"✅ Trade de exemplo {i}/{len(sample_trades)} inserido")
 
@@ -170,7 +169,7 @@ conn.close()
 
 print(f"\n✅ Setup completo! Database tem {count} trades de exemplo")
 print("\nPróximos passos:")
-print("1. Verificar arquivo existe: ls -lh backend/trades.db")
+print("1. Verificar arquivo existe: ls -lh backend/trades_history.db")
 print("2. Testar endpoint: curl http://localhost:8000/api/trades/stats")
 print("3. Verificar frontend: https://botderiv.roilabs.com.br/trade-history\n")
-print("🔒 Database criado com sucesso")
+print("🔒 Database trades_history.db criado com sucesso")
