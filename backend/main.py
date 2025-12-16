@@ -456,11 +456,23 @@ async def root():
 async def health_check():
     """Detailed health check endpoint for monitoring."""
     global ws_manager, bot_status
-    
+
+    # Get git commit hash to verify deployment version
+    git_commit = "unknown"
+    try:
+        import subprocess
+        result = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'],
+                                capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            git_commit = result.stdout.strip()
+    except:
+        pass
+
     health_info = {
         "status": "healthy",
         "timestamp": time.time(),
         "version": "0.1.0",
+        "git_commit": git_commit,  # NOVO: rastrear versão do código
         "environment": os.getenv("ENVIRONMENT", "development"),
         "websocket_manager": {
             "initialized": ws_manager is not None,
@@ -473,7 +485,7 @@ async def health_check():
             "deriv_token_configured": bool(os.getenv("DERIV_API_TOKEN"))
         }
     }
-    
+
     return health_info
 
 @app.get("/routes")
