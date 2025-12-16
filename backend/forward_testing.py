@@ -72,7 +72,6 @@ class ForwardTestingEngine:
         self.deriv_api = DerivAPI()
         self.deriv_connected = False
         self.deriv_api_token = os.getenv("DERIV_API_TOKEN", "")
-        self.tick_subscription_active = False  # Track subscription status
 
         # Estado
         self.is_running = False
@@ -122,15 +121,6 @@ class ForwardTestingEngine:
 
         # Desconectar da Deriv API
         if self.deriv_connected:
-            # Cancelar todas as subscrições antes de desconectar
-            if self.tick_subscription_active:
-                try:
-                    await self.deriv_api._send_request({"forget_all": "ticks"})
-                    self.tick_subscription_active = False
-                    logger.info("📴 Subscrições de ticks canceladas")
-                except Exception as e:
-                    logger.warning(f"Erro ao cancelar subscrições: {e}")
-
             await self.deriv_api.disconnect()
             self.deriv_connected = False
             logger.info("🔌 Desconectado da Deriv API")
@@ -235,26 +225,14 @@ class ForwardTestingEngine:
                 self.deriv_connected = True
                 logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
-            # Obter tick atual (preço real)
-            # Se já temos subscrição ativa, reutilizar. Caso contrário, fazer uma nova subscrição
-            if not self.tick_subscription_active:
-                tick_response = await self.deriv_api.ticks(self.symbol, subscribe=True)
-                self.tick_subscription_active = True
-            else:
-                # Reutilizar subscrição existente - apenas aguardar próximo tick
-                # Para isso, vamos fazer um forget_all e resubscrever
-                try:
-                    await self.deriv_api._send_request({"forget_all": "ticks"})
-                    self.tick_subscription_active = False
-                except:
-                    pass  # Ignorar erro de forget
-
-                tick_response = await self.deriv_api.ticks(self.symbol, subscribe=True)
-                self.tick_subscription_active = True
+            # Obter tick atual via API simples (sem subscrição streaming)
+            # Rate limiting: Fazer apenas 1 requisição a cada 10 segundos
+            logger.debug(f"📊 Solicitando tick para {self.symbol}")
+            tick_response = await self.deriv_api.ticks(self.symbol, subscribe=False)
 
             if 'tick' not in tick_response:
                 logger.warning(f"Resposta sem tick: {tick_response}")
-                self._log_bug("tick_response_invalid", "Tick não encontrado na resposta")
+                self._log_bug("tick_response_invalid", f"Resposta sem tick: {tick_response}")
                 return None
 
             tick = tick_response['tick']
