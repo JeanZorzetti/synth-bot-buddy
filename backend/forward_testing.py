@@ -22,7 +22,7 @@ import numpy as np
 
 from ml_predictor import MLPredictor
 from paper_trading_engine import PaperTradingEngine, PositionType
-from deriv_api_legacy import DerivAPILegacy
+from deriv_api_legacy import DerivAPI
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class ForwardTestingEngine:
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
 
         # Deriv API para dados reais
-        self.deriv_api = DerivAPILegacy()
+        self.deriv_api = DerivAPI()
         self.deriv_connected = False
 
         # Estado
