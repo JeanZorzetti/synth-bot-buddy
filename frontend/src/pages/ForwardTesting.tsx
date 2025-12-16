@@ -24,6 +24,8 @@ import {
   BarChart3,
   Bug,
   Clock,
+  Download,
+  FileDown,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -67,20 +69,31 @@ interface Bug {
   severity: string;
 }
 
+interface LogFile {
+  filename: string;
+  size_bytes: number;
+  size_mb: number;
+  modified_at: string;
+  download_url: string;
+}
+
 export default function ForwardTesting() {
   const { toast } = useToast();
   const [status, setStatus] = useState<ForwardTestingStatus | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [bugs, setBugs] = useState<Bug[]>([]);
+  const [logs, setLogs] = useState<LogFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
 
   useEffect(() => {
     loadStatus();
+    loadLogs(); // Carregar logs ao montar
     const interval = setInterval(loadStatus, 5000); // Atualizar a cada 5 segundos
     return () => clearInterval(interval);
   }, []);
@@ -223,6 +236,49 @@ export default function ForwardTesting() {
     } finally {
       setIsGeneratingReport(false);
     }
+  };
+
+  const loadLogs = async () => {
+    try {
+      setIsLoadingLogs(true);
+      const response = await fetch(`${API_BASE_URL}/api/forward-testing/logs`);
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setLogs(data.data.logs || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar logs:', error);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const handleDownloadLog = (filename: string) => {
+    const downloadUrl = `${API_BASE_URL}/api/forward-testing/logs/${filename}`;
+    window.open(downloadUrl, '_blank');
+
+    toast({
+      title: 'Download Iniciado',
+      description: `Baixando ${filename}`,
+    });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const formatDuration = (seconds: number) => {
@@ -496,6 +552,82 @@ export default function ForwardTesting() {
           </CardContent>
         </Card>
       )}
+
+      {/* Logs Download */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileDown className="h-5 w-5" />
+                Logs do Forward Testing
+              </CardTitle>
+              <CardDescription>
+                Download dos arquivos de log das execuções
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadLogs}
+              disabled={isLoadingLogs}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingLogs ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingLogs ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              Carregando logs...
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>Nenhum log disponível</p>
+              <p className="text-sm">Inicie o Forward Testing para gerar logs</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome do Arquivo</TableHead>
+                  <TableHead>Tamanho</TableHead>
+                  <TableHead>Última Modificação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log.filename}>
+                    <TableCell className="font-mono text-sm">
+                      {log.filename}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {formatFileSize(log.size_bytes)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {formatDate(log.modified_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadLog(log.filename)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Info Card */}
       <Card className="border-blue-200 bg-blue-50">
