@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -70,6 +71,7 @@ class ForwardTestingEngine:
         # Deriv API para dados reais
         self.deriv_api = DerivAPI()
         self.deriv_connected = False
+        self.deriv_api_token = os.getenv("DERIV_API_TOKEN", "")
 
         # Estado
         self.is_running = False
@@ -209,10 +211,13 @@ class ForwardTestingEngine:
         try:
             # Conectar à Deriv API se ainda não conectado
             if not self.deriv_connected:
+                if not self.deriv_api_token:
+                    raise ValueError("DERIV_API_TOKEN não configurado nas variáveis de ambiente")
+
                 await self.deriv_api.connect()
-                await self.deriv_api.authorize()
+                await self.deriv_api.authorize(self.deriv_api_token)
                 self.deriv_connected = True
-                logger.info("✅ Conectado à Deriv API para dados reais")
+                logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
             # Obter tick atual (preço real)
             tick_response = await self.deriv_api.ticks(self.symbol, subscribe=False)
