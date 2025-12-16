@@ -560,10 +560,10 @@ export default function ForwardTesting() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileDown className="h-5 w-5" />
-                Logs do Forward Testing
+                Logs e Relatórios
               </CardTitle>
               <CardDescription>
-                Download dos arquivos de log das execuções
+                Download de logs de execução (.log) e relatórios de validação (.md)
               </CardDescription>
             </div>
             <Button
@@ -603,7 +603,14 @@ export default function ForwardTesting() {
                 {logs.map((log) => (
                   <TableRow key={log.filename}>
                     <TableCell className="font-mono text-sm">
-                      {log.filename}
+                      <div className="flex items-center gap-2">
+                        {log.filename}
+                        {log.filename.endsWith('.md') && (
+                          <Badge variant="secondary" className="text-xs">
+                            Relatório
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm">
                       {formatFileSize(log.size_bytes)}

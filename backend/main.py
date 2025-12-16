@@ -6095,15 +6095,20 @@ async def list_forward_testing_logs():
             }
 
         logs = []
-        for log_file in sorted(logs_dir.glob("*.log"), key=lambda x: x.stat().st_mtime, reverse=True):
-            stat = log_file.stat()
-            logs.append({
-                "filename": log_file.name,
-                "size_bytes": stat.st_size,
-                "size_mb": round(stat.st_size / (1024 * 1024), 2),
-                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                "download_url": f"/api/forward-testing/logs/{log_file.name}"
-            })
+        # Incluir arquivos .log e .md (relatórios)
+        for pattern in ["*.log", "*.md"]:
+            for log_file in logs_dir.glob(pattern):
+                stat = log_file.stat()
+                logs.append({
+                    "filename": log_file.name,
+                    "size_bytes": stat.st_size,
+                    "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "download_url": f"/api/forward-testing/logs/{log_file.name}"
+                })
+
+        # Ordenar por data de modificação (mais recente primeiro)
+        logs.sort(key=lambda x: x["modified_at"], reverse=True)
 
         return {
             "status": "success",
