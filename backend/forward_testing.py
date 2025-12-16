@@ -299,22 +299,52 @@ class ForwardTestingEngine:
             Dict com prediction e confidence ou None se falhar
         """
         try:
-            # Preparar features (simplificado - expandir com indicadores técnicos)
-            features = {
+            # Criar DataFrame com histórico de candles
+            # Acumular ticks em buffer para formar candles
+            if not hasattr(self, 'price_buffer'):
+                self.price_buffer = []
+
+            self.price_buffer.append({
+                'timestamp': market_data['timestamp'],
                 'close': market_data['close'],
                 'high': market_data['high'],
                 'low': market_data['low'],
                 'volume': market_data['volume']
-            }
+            })
 
-            # Gerar previsão
-            prediction = self.ml_predictor.predict(self.symbol, features)
+            # Manter buffer de 250 pontos (ML precisa de 200+ para features)
+            if len(self.price_buffer) > 250:
+                self.price_buffer = self.price_buffer[-250:]
+
+            # Precisa de pelo menos 200 pontos para features
+            if len(self.price_buffer) < 200:
+                logger.debug(f"Buffer insuficiente: {len(self.price_buffer)}/200 pontos")
+                return {
+                    'prediction': 'NO_MOVE',
+                    'confidence': 0.0,
+                    'signal_strength': 'NONE',
+                    'reason': f'Aguardando histórico ({len(self.price_buffer)}/200)'
+                }
+
+            # Converter buffer para DataFrame
+            df = pd.DataFrame(self.price_buffer)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.set_index('timestamp')
+
+            # Adicionar coluna 'open' se não existir (usar close anterior)
+            if 'open' not in df.columns:
+                df['open'] = df['close'].shift(1).fillna(df['close'])
+
+            # Gerar previsão usando ML Predictor
+            prediction = self.ml_predictor.predict(df, return_confidence=True)
+
+            logger.info(f"✅ Previsão ML: {prediction['prediction']} (confidence: {prediction['confidence']:.2%})")
 
             return prediction
 
         except Exception as e:
-            logger.error(f"Erro ao gerar previsão: {e}")
-            self._log_bug("prediction_generation_error", str(e))
+            logger.error(f"Erro ao gerar previsão: {e}", exc_info=True)
+            self._log_bug("prediction_generation_error", str(e), severity="ERROR")
             return None
 
     async def _execute_trade(self, prediction: Dict, current_price: float):
