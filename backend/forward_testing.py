@@ -234,25 +234,32 @@ class ForwardTestingEngine:
                 self.deriv_connected = True
                 logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
-            # Obter tick atual via API simples (sem subscrição streaming)
-            # Rate limiting: Fazer apenas 1 requisição a cada 10 segundos
-            logger.debug(f"📊 Solicitando tick para {self.symbol}")
-            tick_response = await self.deriv_api.ticks(self.symbol, subscribe=False)
+            # Obter último tick via ticks_history (NUNCA cria subscrição)
+            # Mais seguro que ticks() - evita "already subscribed" definitivamente
+            logger.debug(f"📊 Solicitando último tick para {self.symbol}")
+            response = await self.deriv_api.get_latest_tick(self.symbol)
 
-            if 'tick' not in tick_response:
-                logger.warning(f"Resposta sem tick: {tick_response}")
-                self._log_bug("tick_response_invalid", f"Resposta sem tick: {tick_response}")
+            if 'history' not in response or not response['history'].get('prices'):
+                logger.warning(f"Resposta sem histórico: {response}")
+                self._log_bug("tick_response_invalid", f"Resposta sem histórico: {response}")
                 return None
 
-            tick = tick_response['tick']
-            current_price = float(tick['quote'])
+            # Extrair último tick do histórico
+            history = response['history']
+            prices = history['prices']
+            times = history['times']
 
-            # Para OHLC, precisamos manter histórico de ticks
-            # Por simplicidade, usamos o preço atual como aproximação
-            # Em produção real, usar candles history API
+            if not prices or not times:
+                logger.warning("Histórico vazio")
+                return None
+
+            current_price = float(prices[-1])
+            tick_time = int(times[-1])
+
+            logger.debug(f"✅ Tick recebido: {current_price} @ {tick_time}")
 
             return {
-                'timestamp': datetime.fromtimestamp(tick['epoch']).isoformat(),
+                'timestamp': datetime.fromtimestamp(tick_time).isoformat(),
                 'open': current_price,  # Simplificação
                 'high': current_price,
                 'low': current_price,

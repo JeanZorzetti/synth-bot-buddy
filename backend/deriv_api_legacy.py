@@ -306,7 +306,20 @@ class DerivAPI:
             # Adicionar handler para ticks
             if 'tick' not in self.subscriptions:
                 self.subscriptions['tick'] = []
-        
+
+        return await self._send_request(request)
+
+    async def get_latest_tick(self, symbol: str) -> Dict[str, Any]:
+        """
+        Obter último tick sem criar subscrição
+        Usa ticks_history com count=1 para evitar problemas de subscrição duplicada
+        """
+        request = {
+            "ticks_history": symbol,
+            "count": 1,
+            "end": "latest",
+            "style": "ticks"
+        }
         return await self._send_request(request)
     
     async def trading_durations(self, symbol: str, contract_type: str = "CALL") -> Dict[str, Any]:
