@@ -1,8 +1,10 @@
-# 🗄️ Como Criar Database trades.db em Produção
+# 🗄️ Como Criar Database trades_history.db em Produção
 
-**Status**: ⚠️ Database trades.db não existe no servidor
+**Status**: ⚠️ Database trades_history.db não existe no servidor
 **Impacto**: Trade History page vazia (não mostra os 3 trades de exemplo)
 **Solução**: Executar script Python no servidor
+
+**IMPORTANTE**: O database DEVE ser `trades_history.db` (não `trades.db`) para coincidir com `trades_history_manager.py`
 
 ---
 
@@ -20,13 +22,14 @@
 No terminal que abrir, execute:
 
 ```bash
-cd /app
-python backend/database/setup.py
+# Ir para diretório backend (Easypanel usa /backend como build path)
+cd /backend
+python database/setup.py
 ```
 
 **Saída esperada:**
 ```
-✅ Criando database em: /app/backend/trades.db
+✅ Criando database em: /backend/trades_history.db
 ✅ Tabela trades_history criada
 ✅ Índice 1/5 criado
 ✅ Índice 2/5 criado
@@ -43,8 +46,8 @@ python backend/database/setup.py
 ### Passo 3: Verificar Criação
 
 ```bash
-ls -lh /app/backend/trades.db
-# Deve mostrar: -rw-r--r-- ... 32K ... trades.db
+ls -lh /backend/trades_history.db
+# Deve mostrar: -rw-r--r-- ... 32K ... trades_history.db
 ```
 
 ### Passo 4: Testar API
@@ -92,7 +95,7 @@ cd /app
 python backend/database/setup.py
 
 # Verificar
-ls -lh backend/trades.db
+ls -lh backend/trades_history.db
 curl http://localhost:8000/api/trades/stats
 ```
 
@@ -116,7 +119,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DB_PATH = Path("/app/backend/trades.db")
+DB_PATH = Path("/app/backend/trades_history.db")
 conn = sqlite3.connect(str(DB_PATH))
 cursor = conn.cursor()
 
@@ -231,7 +234,7 @@ docker exec -u root -it <container-id> python /app/backend/database/setup.py
 
 O database foi criado! Para recriar:
 ```bash
-rm /app/backend/trades.db
+rm /app/backend/trades_history.db
 python backend/database/setup.py
 ```
 
