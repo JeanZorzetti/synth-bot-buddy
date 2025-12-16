@@ -6074,6 +6074,13 @@ async def get_forward_testing_status():
         engine = get_forward_testing_engine()
         status = engine.get_status()
 
+        # Adicionar informação de versão do código
+        status['code_version'] = {
+            'ticks_history_fix': True,  # Confirma que fix de subscrição está presente
+            'warm_up_filter_fix': True,  # Confirma que filtro de warm-up está presente
+            'commit': '9ec01f0'  # Versão esperada
+        }
+
         return {
             "status": "success",
             "data": status
