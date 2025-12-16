@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import os
@@ -6065,9 +6066,93 @@ async def get_forward_testing_status():
             "status": "success",
             "data": status
         }
-
     except Exception as e:
         logger.error(f"Erro ao obter status do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forward-testing/logs")
+async def list_forward_testing_logs():
+    """
+    Lista todos os arquivos de log do Forward Testing
+
+    Returns:
+        Lista de arquivos de log com tamanho e data de modificação
+    """
+    try:
+        import os
+        from pathlib import Path
+
+        logs_dir = Path("forward_testing_logs")
+
+        if not logs_dir.exists():
+            return {
+                "status": "success",
+                "data": {
+                    "logs": [],
+                    "message": "Diretório de logs não existe"
+                }
+            }
+
+        logs = []
+        for log_file in sorted(logs_dir.glob("*.log"), key=lambda x: x.stat().st_mtime, reverse=True):
+            stat = log_file.stat()
+            logs.append({
+                "filename": log_file.name,
+                "size_bytes": stat.st_size,
+                "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "download_url": f"/api/forward-testing/logs/{log_file.name}"
+            })
+
+        return {
+            "status": "success",
+            "data": {
+                "logs": logs,
+                "total": len(logs)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro ao listar logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/forward-testing/logs/{filename}")
+async def download_forward_testing_log(filename: str):
+    """
+    Baixa um arquivo de log específico do Forward Testing
+
+    Args:
+        filename: Nome do arquivo de log
+
+    Returns:
+        Arquivo de log para download
+    """
+    try:
+        import os
+        from pathlib import Path
+
+        # Validar filename para prevenir directory traversal
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="Nome de arquivo inválido")
+
+        log_path = Path("forward_testing_logs") / filename
+
+        if not log_path.exists():
+            raise HTTPException(status_code=404, detail="Log não encontrado")
+
+        if not log_path.is_file():
+            raise HTTPException(status_code=400, detail="Caminho não é um arquivo")
+
+        return FileResponse(
+            path=str(log_path),
+            filename=filename,
+            media_type="text/plain"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao baixar log: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
