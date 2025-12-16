@@ -1,21 +1,30 @@
-# 🚨 AÇÃO URGENTE: Reiniciar Servidor em Produção
+# 🚨 PROBLEMA: Logs em DEBUG (Invisível em Produção)
 
-**Status**: ⚠️ Backend em produção rodando código DESATUALIZADO
-**Último erro visto**: `16/12/2025, 13:51:48 - DerivAPI.authorize() missing 1 required positional argument: 'token'`
+**Status**: 🔴 Sistema travado mas logs críticos estavam invisíveis
+**Fix aplicado**: Commit `44a0283` - Mudado logger.debug → logger.info
+**Ação necessária**: REBUILD + RESTART
 
 ---
 
-## 📊 Situação Atual
+## 📊 O Que Aconteceu
 
-### Código no GitHub (Atualizado) ✅
-- **Último commit**: `e19f5ed` - "fix: Adicionar token ao authorize() em Forward Testing"
-- **Push realizado**: 2025-12-16 ~10:20 BRT
-- **Status**: ✅ Código correto no repositório
+Forward Testing iniciou corretamente:
+- ✅ Token Deriv configurado: SIM
+- ✅ Modelo ML carregado: xgboost_improved_learning_rate_20251117_160409.pkl
+- ✅ Conectado à Deriv API
+- ✅ Autenticado (LoginID: VRTC14275364)
+- ✅ Subscrições antigas canceladas
 
-### Servidor em Produção (Desatualizado) ❌
-- **Commit rodando**: `ebb5a96` (anterior ao fix do token)
-- **Erro ativo**: `authorize() missing 1 required positional argument: 'token'`
-- **Consequência**: Forward Testing usando dados MOCK (fallback)
+MAS depois só apareceram logs HTTP (polling do frontend).
+
+**Causa**: Logs críticos estavam em `logger.debug()` (invisível em produção)
+
+**Evidência**: Não apareceu nos logs:
+```
+📊 Solicitando último tick para R_100
+✅ Resposta recebida da Deriv API
+⏳ Warm-up: Aguardando histórico (1/200)
+```
 
 ---
 
