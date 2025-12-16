@@ -6027,8 +6027,8 @@ async def stop_forward_testing():
                 detail="Forward testing não está rodando"
             )
 
-        # Parar engine
-        engine.stop()
+        # Parar engine (agora é async)
+        await engine.stop()
 
         # Gerar relatório
         report_path = engine.generate_validation_report()
