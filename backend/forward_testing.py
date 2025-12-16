@@ -276,24 +276,19 @@ class ForwardTestingEngine:
             }
 
         except Exception as e:
-            logger.error(f"Erro ao coletar dados REAIS do mercado: {e}", exc_info=True)
+            logger.error(f"❌ CRÍTICO: Falha ao coletar dados REAIS do mercado: {e}", exc_info=True)
             self._log_bug("market_data_fetch_error", str(e), severity="CRITICAL")
 
-            # Fallback para mock apenas em caso de erro crítico
-            logger.warning("⚠️ Usando dados mock como fallback temporário")
-            base_price = 100.0
-            volatility = np.random.normal(0, 0.5)
-            close_price = base_price * (1 + volatility / 100)
+            # NÃO usar fallback mock - Forward Testing PRECISA de dados reais
+            logger.error("❌ Forward Testing NÃO PODE funcionar sem dados reais da Deriv API!")
+            logger.error("   Possíveis causas:")
+            logger.error("   1. DERIV_API_TOKEN não configurado ou inválido")
+            logger.error("   2. Deriv API está offline ou rejeitando requisições")
+            logger.error("   3. Símbolo inválido ou não disponível")
+            logger.error("   4. Problema de rede/conectividade")
 
-            return {
-                'timestamp': datetime.now().isoformat(),
-                'open': close_price * 0.999,
-                'high': close_price * 1.001,
-                'low': close_price * 0.998,
-                'close': close_price,
-                'volume': 1000,
-                'symbol': self.symbol
-            }
+            # Retornar None para forçar retry no próximo ciclo
+            return None
 
     async def _generate_prediction(self, market_data: Dict) -> Optional[Dict]:
         """
