@@ -43,7 +43,7 @@ class ForwardTestingEngine:
         confidence_threshold: float = 0.60,
         max_position_size_pct: float = 2.0,  # 2% do capital por trade
         stop_loss_pct: float = 2.0,  # 2% stop loss
-        take_profit_pct: float = 2.0,  # 2% take profit (risk:reward 1:1)
+        take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
         log_dir: str = "forward_testing_logs"
     ):
         """
