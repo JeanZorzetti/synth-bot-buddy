@@ -387,25 +387,30 @@ class PaperTradingEngine:
 
             current_price = current_prices[position.symbol]
 
+            # LOG DETALHADO: Mostrar posição e preços
+            logger.info(f"🔍 Verificando posição {position_id[-8:]}:")
+            logger.info(f"   Tipo: {position.position_type.value} | Entry: ${position.entry_price:.5f} | Current: ${current_price:.5f}")
+            logger.info(f"   SL: ${position.stop_loss:.5f} | TP: ${position.take_profit:.5f}")
+
             # Verificar stop loss
             if position.stop_loss:
                 if position.position_type == PositionType.LONG and current_price <= position.stop_loss:
-                    logger.info(f"Stop loss atingido para {position_id}")
+                    logger.info(f"🛑 Stop loss atingido para {position_id[-8:]}: {current_price:.5f} <= {position.stop_loss:.5f}")
                     self.close_position(position_id, current_price)
                     continue
                 elif position.position_type == PositionType.SHORT and current_price >= position.stop_loss:
-                    logger.info(f"Stop loss atingido para {position_id}")
+                    logger.info(f"🛑 Stop loss atingido para {position_id[-8:]}: {current_price:.5f} >= {position.stop_loss:.5f}")
                     self.close_position(position_id, current_price)
                     continue
 
             # Verificar take profit
             if position.take_profit:
                 if position.position_type == PositionType.LONG and current_price >= position.take_profit:
-                    logger.info(f"Take profit atingido para {position_id}")
+                    logger.info(f"🎯 Take profit atingido para {position_id[-8:]}: {current_price:.5f} >= {position.take_profit:.5f}")
                     self.close_position(position_id, current_price)
                     continue
                 elif position.position_type == PositionType.SHORT and current_price <= position.take_profit:
-                    logger.info(f"Take profit atingido para {position_id}")
+                    logger.info(f"🎯 Take profit atingido para {position_id[-8:]}: {current_price:.5f} <= {position.take_profit:.5f}")
                     self.close_position(position_id, current_price)
                     continue
 
