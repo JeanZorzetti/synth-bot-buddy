@@ -341,9 +341,14 @@ Preço cai para $751:
   - [x] Backend endpoint `/api/forward-testing/live-metrics`
   - [x] Polling automático a cada 5 segundos
   - [x] Integração completa em ForwardTesting.tsx
-- [ ] Sistema de Alertas
-  - [ ] Alert logic (drawdown, win rate, etc.)
-  - [ ] Toast notifications no frontend
+- [x] **Sistema de Alertas** ✅ (Commit: f488702 - 17/12/2024)
+  - [x] AlertSystem backend (9 tipos de alertas: CRITICAL/WARNING/INFO)
+  - [x] Alert logic (drawdown, win rate, timeout, SL, TP, milestones)
+  - [x] 3 endpoints API (get alerts, mark read, mark all read)
+  - [x] AlertNotifications component (308 linhas)
+  - [x] Toast notifications automáticos para CRITICAL/WARNING
+  - [x] Polling a cada 10 segundos
+  - [x] Integração em ForwardTesting.tsx
   - [ ] (Opcional) Email/Telegram integration
 
 ### Sprint 2 (Semana 3-4)
