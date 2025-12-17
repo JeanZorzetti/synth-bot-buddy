@@ -89,6 +89,45 @@ const DERIV_SYMBOLS = [
   { value: 'CRASH300N', label: 'Crash 300', volatility: 'Alta', description: 'Crashes a cada ~300 ticks' },
 ];
 
+const TRADING_MODES = [
+  {
+    id: 'scalping_aggressive',
+    name: 'Scalping Agressivo 🔥',
+    description: 'Entradas/saídas ultra-rápidas',
+    stopLoss: 0.5,
+    takeProfit: 0.75,
+    timeout: 3,
+    riskReward: '1:1.5',
+    avgDuration: '1-3 min',
+    tradesPerDay: '20-50',
+    recommended: ['1HZ100V', '1HZ75V'],
+  },
+  {
+    id: 'scalping_moderate',
+    name: 'Scalping Moderado ⚡',
+    description: 'Equilíbrio entre velocidade e segurança',
+    stopLoss: 1.0,
+    takeProfit: 1.5,
+    timeout: 5,
+    riskReward: '1:1.5',
+    avgDuration: '3-8 min',
+    tradesPerDay: '10-30',
+    recommended: ['1HZ75V', '1HZ50V', 'BOOM300N'],
+  },
+  {
+    id: 'swing',
+    name: 'Swing Trading 📈',
+    description: 'Posições de médio prazo',
+    stopLoss: 2.0,
+    takeProfit: 4.0,
+    timeout: 30,
+    riskReward: '1:2',
+    avgDuration: '30-120 min',
+    tradesPerDay: '3-10',
+    recommended: ['1HZ50V', '1HZ25V', 'R_100'],
+  },
+];
+
 export default function ForwardTesting() {
   const { toast } = useToast();
   const [status, setStatus] = useState<ForwardTestingStatus | null>(null);
@@ -101,6 +140,7 @@ export default function ForwardTesting() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState('1HZ75V');
+  const [selectedMode, setSelectedMode] = useState('scalping_moderate');
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
 
@@ -162,6 +202,9 @@ export default function ForwardTesting() {
     try {
       setIsStarting(true);
 
+      const mode = TRADING_MODES.find(m => m.id === selectedMode);
+      if (!mode) throw new Error('Modo inválido');
+
       const response = await fetch(`${API_BASE_URL}/api/forward-testing/start`, {
         method: 'POST',
         headers: {
@@ -169,6 +212,10 @@ export default function ForwardTesting() {
         },
         body: JSON.stringify({
           symbol: selectedSymbol,
+          mode: selectedMode,
+          stop_loss_pct: mode.stopLoss,
+          take_profit_pct: mode.takeProfit,
+          position_timeout_minutes: mode.timeout,
         }),
       });
 
@@ -178,7 +225,7 @@ export default function ForwardTesting() {
         const symbolLabel = DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.label || selectedSymbol;
         toast({
           title: 'Forward Testing Iniciado',
-          description: `Sistema rodando com ${symbolLabel}`,
+          description: `${mode.name} com ${symbolLabel}`,
         });
 
         // Recarregar status
@@ -404,6 +451,88 @@ export default function ForwardTesting() {
               <AlertDescription className="text-blue-900">
                 <strong>Selecionado:</strong> {DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.label} -
                 Volatilidade {DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.volatility}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trading Mode Selector */}
+      {!status?.is_running && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              <CardTitle>Modo de Trading</CardTitle>
+            </div>
+            <CardDescription>
+              Escolha a estratégia de entrada/saída. Scalping = rápido, Swing = posições longas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {TRADING_MODES.map((mode) => {
+                const isRecommended = mode.recommended.includes(selectedSymbol);
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSelectedMode(mode.id)}
+                    className={`p-5 border-2 rounded-lg text-left transition-all hover:border-primary relative ${
+                      selectedMode === mode.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    {isRecommended && (
+                      <Badge className="absolute top-2 right-2 bg-green-500">
+                        Recomendado
+                      </Badge>
+                    )}
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-lg">{mode.name}</h3>
+                      {selectedMode === mode.id && (
+                        <CheckCircle2 className="h-5 w-5 text-primary mt-1" />
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">{mode.description}</p>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Stop Loss:</span>
+                        <span className="font-semibold">{mode.stopLoss}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Take Profit:</span>
+                        <span className="font-semibold">{mode.takeProfit}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Risk:Reward:</span>
+                        <span className="font-semibold">{mode.riskReward}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Timeout:</span>
+                        <span className="font-semibold">{mode.timeout} min</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duração Média:</span>
+                        <span className="font-semibold">{mode.avgDuration}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Trades/Dia:</span>
+                        <span className="font-semibold">{mode.tradesPerDay}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <Alert className="mt-4 border-green-200 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-900">
+                <strong>Configuração:</strong> {TRADING_MODES.find(m => m.id === selectedMode)?.name} |
+                SL: {TRADING_MODES.find(m => m.id === selectedMode)?.stopLoss}% |
+                TP: {TRADING_MODES.find(m => m.id === selectedMode)?.takeProfit}% |
+                Timeout: {TRADING_MODES.find(m => m.id === selectedMode)?.timeout} min
               </AlertDescription>
             </Alert>
           </CardContent>

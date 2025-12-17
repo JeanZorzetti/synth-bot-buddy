@@ -5827,8 +5827,12 @@ class TradeRecordRequest(BaseModel):
     confidence: Optional[float] = None
 
 class ForwardTestingStartRequest(BaseModel):
-    """Request para iniciar forward testing com símbolo específico"""
+    """Request para iniciar forward testing com símbolo e modo específicos"""
     symbol: str = "1HZ75V"  # V75 (1s) por padrão
+    mode: str = "scalping_moderate"  # scalping_aggressive, scalping_moderate, swing
+    stop_loss_pct: float = 1.0
+    take_profit_pct: float = 1.5
+    position_timeout_minutes: int = 5
 
 
 @app.post("/api/trades/record")
@@ -5996,26 +6000,36 @@ async def start_forward_testing(request: ForwardTestingStartRequest, background_
                 detail="Forward testing já está rodando"
             )
 
-        # Atualizar símbolo antes de iniciar
+        # Atualizar configurações antes de iniciar
         engine.symbol = request.symbol
-        logger.info(f"🔄 Símbolo atualizado para: {request.symbol}")
+        engine.stop_loss_pct = request.stop_loss_pct
+        engine.take_profit_pct = request.take_profit_pct
+        engine.position_timeout_minutes = request.position_timeout_minutes
+
+        logger.info(f"🔄 Configuração atualizada:")
+        logger.info(f"   Símbolo: {request.symbol}")
+        logger.info(f"   Modo: {request.mode}")
+        logger.info(f"   SL: {request.stop_loss_pct}% | TP: {request.take_profit_pct}%")
+        logger.info(f"   Timeout: {request.position_timeout_minutes} min")
 
         # Iniciar em background
         background_tasks.add_task(engine.start)
 
-        logger.info(f"🚀 Forward testing iniciado via API com {request.symbol}")
+        logger.info(f"🚀 Forward testing iniciado via API")
 
         return {
             "status": "success",
-            "message": f"Forward testing iniciado com {request.symbol}",
+            "message": f"Forward testing iniciado: {request.mode} com {request.symbol}",
             "start_time": datetime.now().isoformat(),
             "config": {
                 "symbol": engine.symbol,
+                "mode": request.mode,
                 "initial_capital": engine.paper_trading.initial_capital,
                 "confidence_threshold": engine.confidence_threshold,
                 "max_position_size_pct": engine.max_position_size_pct,
                 "stop_loss_pct": engine.stop_loss_pct,
-                "take_profit_pct": engine.take_profit_pct
+                "take_profit_pct": engine.take_profit_pct,
+                "position_timeout_minutes": engine.position_timeout_minutes
             }
         }
 

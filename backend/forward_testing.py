@@ -44,6 +44,7 @@ class ForwardTestingEngine:
         max_position_size_pct: float = 2.0,  # 2% do capital por trade
         stop_loss_pct: float = 2.0,  # 2% stop loss
         take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
+        position_timeout_minutes: int = 30,  # Timeout para fechar posição automaticamente
         log_dir: str = "forward_testing_logs"
     ):
         """
@@ -63,6 +64,7 @@ class ForwardTestingEngine:
         self.max_position_size_pct = max_position_size_pct
         self.stop_loss_pct = stop_loss_pct
         self.take_profit_pct = take_profit_pct
+        self.position_timeout_minutes = position_timeout_minutes
 
         # Componentes
         self.ml_predictor = MLPredictor()
@@ -171,6 +173,9 @@ class ForwardTestingEngine:
 
                 # 2. Atualizar posições existentes (stop loss / take profit)
                 self.paper_trading.update_positions({self.symbol: current_price})
+
+                # 2.5. Fechar posições com timeout
+                self._check_position_timeouts(current_price)
 
                 # 3. Verificar se pode abrir nova posição
                 if len(self.paper_trading.positions) >= self.paper_trading.max_positions:
@@ -417,6 +422,30 @@ class ForwardTestingEngine:
         except Exception as e:
             logger.error(f"Erro ao executar trade: {e}", exc_info=True)
             self._log_bug("trade_execution_error", str(e))
+
+    def _check_position_timeouts(self, current_price: float):
+        """
+        Verifica e fecha posições que excederam o tempo limite
+
+        Args:
+            current_price: Preço atual do mercado
+        """
+        now = datetime.now()
+        timeout_seconds = self.position_timeout_minutes * 60
+
+        for position_id, position in list(self.paper_trading.positions.items()):
+            # Calcular tempo desde entrada
+            position_age_seconds = (now - position.entry_time).total_seconds()
+
+            if position_age_seconds >= timeout_seconds:
+                # Calcular P&L atual
+                pnl, pnl_pct = position.calculate_pnl(current_price)
+
+                logger.info(f"⏰ TIMEOUT: Posição {position_id[-8:]} aberta há {position_age_seconds/60:.1f} min")
+                logger.info(f"   Fechando com P&L: ${pnl:.2f} ({pnl_pct:+.2f}%)")
+
+                # Fechar posição
+                self.paper_trading.close_position(position_id, current_price)
 
     def _log_bug(self, bug_type: str, description: str, severity: str = "ERROR"):
         """
