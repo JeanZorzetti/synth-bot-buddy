@@ -40,7 +40,7 @@ class ForwardTestingEngine:
         self,
         symbol: str = "R_100",
         initial_capital: float = 10000.0,
-        confidence_threshold: float = 0.60,
+        confidence_threshold: float = 0.40,
         max_position_size_pct: float = 2.0,  # 2% do capital por trade
         stop_loss_pct: float = 2.0,  # 2% stop loss
         take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
