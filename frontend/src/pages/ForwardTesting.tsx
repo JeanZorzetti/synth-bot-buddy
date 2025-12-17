@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EquityCurveChart } from '@/components/EquityCurveChart';
 import { LiveMetricsGrid } from '@/components/LiveMetricsGrid';
 import { AlertNotifications } from '@/components/AlertNotifications';
+import { TradeHistoryTable } from '@/components/TradeHistoryTable';
 
 interface ForwardTestingStatus {
   is_running: boolean;
@@ -699,6 +700,13 @@ export default function ForwardTesting() {
         apiBaseUrl={API_BASE_URL}
         isRunning={status?.is_running || false}
         pollInterval={10000}
+      />
+
+      {/* Trade History Table */}
+      <TradeHistoryTable
+        apiBaseUrl={API_BASE_URL}
+        isRunning={status?.is_running || false}
+        pollInterval={30000}
       />
 
       {/* Recent Predictions */}

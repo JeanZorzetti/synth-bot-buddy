@@ -6252,6 +6252,105 @@ async def get_forward_testing_predictions(limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/trades")
+async def get_forward_testing_trades(
+    limit: int = 100,
+    symbol: Optional[str] = None,
+    result_filter: Optional[str] = None  # 'win', 'loss', 'all'
+):
+    """
+    Retorna histórico detalhado de trades executados
+
+    Args:
+        limit: Número máximo de trades (default: 100, máx: 500)
+        symbol: Filtrar por símbolo específico (opcional)
+        result_filter: Filtrar por resultado - 'win', 'loss', ou 'all' (default: 'all')
+
+    Returns:
+        Lista completa de trades com entry/exit, P&L, duração, exit_reason
+    """
+    try:
+        engine = get_forward_testing_engine()
+        trades = engine.paper_trading.trade_history
+
+        # Aplicar filtro de resultado
+        if result_filter == 'win':
+            trades = [t for t in trades if t.profit_loss > 0]
+        elif result_filter == 'loss':
+            trades = [t for t in trades if t.profit_loss < 0]
+
+        # Aplicar filtro de símbolo
+        if symbol:
+            trades = [t for t in trades if t.symbol == symbol]
+
+        # Limitar quantidade (máx 500)
+        limit = min(limit, 500)
+        trades = trades[-limit:] if limit else trades
+
+        # Serializar trades
+        trades_data = []
+        for trade in trades:
+            duration_seconds = (trade.exit_time - trade.entry_time).total_seconds() if trade.exit_time else 0
+
+            trades_data.append({
+                'id': trade.id,
+                'symbol': trade.symbol,
+                'position_type': trade.position_type,
+                'entry_price': trade.entry_price,
+                'exit_price': trade.exit_price,
+                'size': trade.size,
+                'entry_time': trade.entry_time.isoformat() if trade.entry_time else None,
+                'exit_time': trade.exit_time.isoformat() if trade.exit_time else None,
+                'profit_loss': trade.profit_loss,
+                'profit_loss_pct': trade.profit_loss_pct,
+                'is_winner': trade.is_winner,
+                'exit_reason': getattr(trade, 'exit_reason', None),
+                'duration_seconds': duration_seconds,
+                'duration_minutes': round(duration_seconds / 60, 2)
+            })
+
+        # Estatísticas agregadas
+        total_trades = len(engine.paper_trading.trade_history)
+        winning_trades = [t for t in engine.paper_trading.trade_history if t.profit_loss > 0]
+        losing_trades = [t for t in engine.paper_trading.trade_history if t.profit_loss < 0]
+
+        best_trade = max(engine.paper_trading.trade_history, key=lambda t: t.profit_loss) if engine.paper_trading.trade_history else None
+        worst_trade = min(engine.paper_trading.trade_history, key=lambda t: t.profit_loss) if engine.paper_trading.trade_history else None
+
+        avg_profit = sum(t.profit_loss for t in winning_trades) / len(winning_trades) if winning_trades else 0
+        avg_loss = sum(t.profit_loss for t in losing_trades) / len(losing_trades) if losing_trades else 0
+
+        return {
+            "status": "success",
+            "total_trades": total_trades,
+            "returned": len(trades_data),
+            "data": trades_data,
+            "statistics": {
+                "total": total_trades,
+                "winning": len(winning_trades),
+                "losing": len(losing_trades),
+                "best_trade": {
+                    "id": best_trade.id[-8:] if best_trade else None,
+                    "profit_loss": best_trade.profit_loss if best_trade else 0,
+                    "profit_loss_pct": best_trade.profit_loss_pct if best_trade else 0
+                } if best_trade else None,
+                "worst_trade": {
+                    "id": worst_trade.id[-8:] if worst_trade else None,
+                    "profit_loss": worst_trade.profit_loss if worst_trade else 0,
+                    "profit_loss_pct": worst_trade.profit_loss_pct if worst_trade else 0
+                } if worst_trade else None,
+                "avg_profit": avg_profit,
+                "avg_loss": avg_loss,
+                "avg_profit_pct": (avg_profit / engine.paper_trading.initial_capital * 100) if avg_profit > 0 else 0,
+                "avg_loss_pct": (avg_loss / engine.paper_trading.initial_capital * 100) if avg_loss < 0 else 0
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter trades do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/bugs")
 async def get_forward_testing_bugs():
     """
