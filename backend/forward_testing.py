@@ -884,7 +884,7 @@ class ForwardTestingEngine:
             # Execution quality
             'execution': {
                 'total_trades': total_positions,
-                'open_positions': len([p for p in self.paper_trading.positions.values()]),
+                'open_positions': len(self.paper_trading.open_positions),
                 'closed_positions': len(closed_positions),
                 'avg_duration_minutes': round(avg_duration, 2),
                 'timeout_rate': round(timeout_rate * 100, 1),
