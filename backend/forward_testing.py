@@ -363,12 +363,13 @@ class ForwardTestingEngine:
         """
         try:
             # Determinar direção
-            if prediction['prediction'] == 'UP':
+            pred_value = prediction['prediction']
+            if pred_value in ['UP', 'PRICE_UP']:
                 position_type = PositionType.LONG
-            elif prediction['prediction'] == 'DOWN':
+            elif pred_value in ['DOWN', 'PRICE_DOWN']:
                 position_type = PositionType.SHORT
             else:
-                logger.warning(f"Previsão inválida: {prediction['prediction']}")
+                logger.warning(f"Previsão inválida: {pred_value}")
                 return
 
             # Calcular tamanho da posição
