@@ -45,7 +45,13 @@
       "Bash(python.exe:*)",
       "Bash(.Scriptspytest.exe:*)",
       "Bash(Scripts/pytest.exe tests/test_cache_manager.py -v)",
-      "Bash(Scripts/python.exe test_vectorized_backtest.py:*)"
+      "Bash(Scripts/python.exe test_vectorized_backtest.py:*)",
+      "Bash(ls:*)",
+      "Bash(timeout /t 2)",
+      "Bash(test:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(git ls-files:*)"
     ],
     "deny": [],
     "ask": []

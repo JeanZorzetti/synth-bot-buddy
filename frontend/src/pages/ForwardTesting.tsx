@@ -29,6 +29,8 @@ import {
   Settings,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { EquityCurveChart } from '@/components/EquityCurveChart';
+import { LiveMetricsGrid } from '@/components/LiveMetricsGrid';
 
 interface ForwardTestingStatus {
   is_running: boolean;
@@ -134,6 +136,7 @@ export default function ForwardTesting() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [logs, setLogs] = useState<LogFile[]>([]);
+  const [liveMetrics, setLiveMetrics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -150,6 +153,31 @@ export default function ForwardTesting() {
     const interval = setInterval(loadStatus, 5000); // Atualizar a cada 5 segundos
     return () => clearInterval(interval);
   }, []);
+
+  // Polling de live metrics quando sistema está rodando
+  useEffect(() => {
+    if (!status?.is_running) {
+      setLiveMetrics(null);
+      return;
+    }
+
+    const loadLiveMetrics = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/forward-testing/live-metrics`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          setLiveMetrics(data.data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar live metrics:', error);
+      }
+    };
+
+    loadLiveMetrics(); // Carregar imediatamente
+    const interval = setInterval(loadLiveMetrics, 5000); // Atualizar a cada 5 segundos
+    return () => clearInterval(interval);
+  }, [status?.is_running]);
 
   const loadStatus = async () => {
     try {
@@ -649,6 +677,20 @@ export default function ForwardTesting() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Dashboard de Métricas em Tempo Real */}
+      {status?.is_running && liveMetrics && (
+        <>
+          {/* Equity Curve */}
+          <EquityCurveChart
+            data={liveMetrics.equity_curve}
+            initialCapital={liveMetrics.capital.initial}
+          />
+
+          {/* Live Metrics Grid */}
+          <LiveMetricsGrid metrics={liveMetrics} />
+        </>
       )}
 
       {/* Recent Predictions */}
