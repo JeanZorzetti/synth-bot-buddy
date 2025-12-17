@@ -25,6 +25,7 @@ from ml_predictor import MLPredictor
 from paper_trading_engine import PaperTradingEngine, PositionType
 from deriv_api_legacy import DerivAPI
 from alert_system import AlertSystem
+from auto_restart_system import AutoRestartSystem, SystemCheckpoint
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,11 @@ class ForwardTestingEngine:
         self.ml_predictor = MLPredictor()
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
         self.alert_system = AlertSystem()
+        self.auto_restart = AutoRestartSystem(
+            check_interval=30,  # Verificar a cada 30 segundos
+            max_failures=3,  # 3 falhas antes de restart
+            checkpoint_dir=str(self.log_dir / "checkpoints")
+        )
 
         # Deriv API para dados reais
         self.deriv_api = DerivAPI()
@@ -98,6 +104,143 @@ class ForwardTestingEngine:
                    f"position_size={max_position_size_pct}%, "
                    f"stop_loss={stop_loss_pct}%, take_profit={take_profit_pct}%")
 
+        # Configurar callbacks do auto-restart
+        self.auto_restart.set_health_check_callback(self._health_check)
+        self.auto_restart.set_restart_callback(self._perform_restart)
+
+    async def _health_check(self) -> bool:
+        """
+        Verifica saúde do sistema
+
+        Returns:
+            True se sistema está saudável, False caso contrário
+        """
+        try:
+            # 1. Verificar se está rodando
+            if not self.is_running:
+                logger.warning("Health check: Sistema não está rodando")
+                return False
+
+            # 2. Verificar se teve predições recentes (últimos 5 minutos)
+            if self.last_prediction_time:
+                elapsed = (datetime.now() - self.last_prediction_time).total_seconds()
+                if elapsed > 300:  # 5 minutos
+                    logger.warning(f"Health check: Última previsão há {elapsed:.0f}s (> 300s)")
+                    return False
+
+            # 3. Verificar se API está conectada
+            if not self.deriv_connected:
+                logger.warning("Health check: Deriv API não conectada")
+                return False
+
+            # 4. Verificar se capital não zerou
+            if self.paper_trading.capital <= 0:
+                logger.error("Health check: Capital zerado!")
+                return False
+
+            # Sistema saudável
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro durante health check: {e}", exc_info=True)
+            return False
+
+    def _save_checkpoint(self):
+        """Salva checkpoint do estado atual"""
+        try:
+            # Coletar posições abertas
+            open_positions = []
+            for pos_id, position in self.paper_trading.open_positions.items():
+                open_positions.append({
+                    'id': pos_id,
+                    'symbol': position.symbol,
+                    'type': position.position_type.value,
+                    'entry_price': position.entry_price,
+                    'size': position.size,
+                    'stop_loss': position.stop_loss,
+                    'take_profit': position.take_profit,
+                    'entry_time': position.entry_time.isoformat()
+                })
+
+            # Criar checkpoint
+            metrics = self.paper_trading.get_metrics()
+            checkpoint = SystemCheckpoint(
+                timestamp=datetime.now().isoformat(),
+                symbol=self.symbol,
+                capital=self.paper_trading.capital,
+                total_trades=metrics['total_trades'],
+                win_rate=metrics['win_rate_pct'],
+                is_running=self.is_running,
+                last_prediction_time=self.last_prediction_time.isoformat() if self.last_prediction_time else None,
+                open_positions=open_positions
+            )
+
+            self.auto_restart.save_checkpoint(checkpoint)
+
+        except Exception as e:
+            logger.error(f"Erro ao salvar checkpoint: {e}", exc_info=True)
+
+    def _load_checkpoint(self) -> bool:
+        """
+        Carrega último checkpoint e restaura estado
+
+        Returns:
+            True se checkpoint foi carregado com sucesso
+        """
+        try:
+            checkpoint = self.auto_restart.load_checkpoint()
+
+            if not checkpoint:
+                logger.info("Nenhum checkpoint para restaurar")
+                return False
+
+            # Restaurar capital
+            self.paper_trading.capital = checkpoint.capital
+            logger.info(f"✅ Capital restaurado: ${checkpoint.capital:,.2f}")
+
+            # Restaurar posições abertas (se houver)
+            if checkpoint.open_positions:
+                logger.info(f"⚠️ Checkpoint tinha {len(checkpoint.open_positions)} posições abertas")
+                logger.info("   (Posições não serão restauradas - sistema iniciará limpo)")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao carregar checkpoint: {e}", exc_info=True)
+            return False
+
+    async def _perform_restart(self) -> bool:
+        """
+        Executa restart do sistema
+
+        Returns:
+            True se restart foi bem-sucedido
+        """
+        try:
+            logger.info("🔄 Executando restart do sistema...")
+
+            # 1. Salvar checkpoint antes de parar
+            self._save_checkpoint()
+
+            # 2. Parar sistema atual
+            await self.stop()
+
+            # Aguardar cleanup
+            await asyncio.sleep(5)
+
+            # 3. Carregar checkpoint
+            self._load_checkpoint()
+
+            # 4. Reiniciar sistema
+            await self.start()
+
+            logger.info("✅ Restart completado com sucesso")
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro durante restart: {e}", exc_info=True)
+            return False
+
     async def start(self):
         """Inicia sessão de forward testing"""
         if self.is_running:
@@ -117,11 +260,16 @@ class ForwardTestingEngine:
         logger.info(f"Modelo ML carregado: {self.ml_predictor.model_path.name}")
         logger.info("="*60)
 
+        # Iniciar watchdog de auto-restart em background
+        asyncio.create_task(self.auto_restart.start_monitoring())
+        logger.info("🔍 Auto-restart watchdog iniciado")
+
         # Iniciar loop de trading
         try:
             await self._trading_loop()
         except Exception as e:
             logger.error(f"❌ ERRO CRÍTICO no trading loop: {e}", exc_info=True)
+            self._save_checkpoint()  # Salvar checkpoint antes de crash
             self.is_running = False
             raise
 
@@ -129,6 +277,10 @@ class ForwardTestingEngine:
         """Para sessão de forward testing"""
         self.is_running = False
         self.paper_trading.stop()
+
+        # Parar watchdog
+        self.auto_restart.stop_monitoring()
+        logger.info("🛑 Auto-restart watchdog parado")
 
         # Desconectar da Deriv API
         if self.deriv_connected:

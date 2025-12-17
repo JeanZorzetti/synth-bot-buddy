@@ -6600,6 +6600,30 @@ async def get_forward_testing_bugs():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/watchdog-status")
+async def get_watchdog_status():
+    """
+    Retorna status do watchdog de auto-restart
+
+    Returns:
+        Status completo do sistema de auto-restart
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        # Obter status do watchdog
+        watchdog_status = engine.auto_restart.get_status()
+
+        return {
+            "status": "success",
+            "data": watchdog_status
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter status do watchdog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/alerts")
 async def get_forward_testing_alerts(limit: int = 50, unread_only: bool = False):
     """

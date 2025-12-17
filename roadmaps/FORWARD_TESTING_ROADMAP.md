@@ -396,7 +396,19 @@ Preço cai para $751:
 ### Backlog (Futuro)
 - [ ] Multi-Symbol Trading
 - [ ] Trailing Stop Loss
-- [ ] Auto-Restart após Crash
+- [x] **Auto-Restart após Crash** ✅ (Commit: pendente - 17/12/2024)
+  - [x] AutoRestartSystem class (watchdog completo)
+  - [x] Health check periódico (30s interval)
+  - [x] Detecção de falhas consecutivas (3x antes de restart)
+  - [x] Sistema de checkpoint (salva/restaura estado)
+  - [x] Logging detalhado de incidentes
+  - [x] Integração no ForwardTestingEngine
+  - [x] Endpoint GET /api/forward-testing/watchdog-status
+  - [x] Verificações de saúde:
+    - Sistema está rodando
+    - Predições recentes (< 5 min)
+    - API conectada
+    - Capital > 0
 - [ ] Integração com Trading Real
 
 ---
