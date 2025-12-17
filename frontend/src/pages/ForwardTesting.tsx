@@ -33,6 +33,7 @@ import { EquityCurveChart } from '@/components/EquityCurveChart';
 import { LiveMetricsGrid } from '@/components/LiveMetricsGrid';
 import { AlertNotifications } from '@/components/AlertNotifications';
 import { TradeHistoryTable } from '@/components/TradeHistoryTable';
+import { ModeComparison } from '@/components/ModeComparison';
 
 interface ForwardTestingStatus {
   is_running: boolean;
@@ -707,6 +708,12 @@ export default function ForwardTesting() {
         apiBaseUrl={API_BASE_URL}
         isRunning={status?.is_running || false}
         pollInterval={30000}
+      />
+
+      {/* Mode Comparison */}
+      <ModeComparison
+        apiBaseUrl={API_BASE_URL}
+        isRunning={status?.is_running || false}
       />
 
       {/* Recent Predictions */}

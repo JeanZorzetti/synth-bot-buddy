@@ -6351,6 +6351,136 @@ async def get_forward_testing_trades(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/mode-comparison")
+async def get_mode_comparison():
+    """
+    Compara performance entre diferentes símbolos de trading
+
+    Analisa o histórico de trades e agrupa por símbolo para gerar
+    estatísticas comparativas de performance.
+
+    Returns:
+        Comparação de win rate, P&L, Sharpe ratio por símbolo
+    """
+    try:
+        engine = get_forward_testing_engine()
+        trades = engine.paper_trading.trade_history
+
+        if not trades:
+            return {
+                "status": "success",
+                "message": "Nenhum trade disponível para comparação",
+                "data": {
+                    "by_symbol": {},
+                    "recommendations": []
+                }
+            }
+
+        # Agrupar trades por símbolo
+        trades_by_symbol = {}
+        for trade in trades:
+            symbol = trade.symbol
+            if symbol not in trades_by_symbol:
+                trades_by_symbol[symbol] = []
+            trades_by_symbol[symbol].append(trade)
+
+        # Calcular estatísticas por símbolo
+        comparison_data = {}
+        for symbol, symbol_trades in trades_by_symbol.items():
+            total = len(symbol_trades)
+            winning = [t for t in symbol_trades if t.profit_loss > 0]
+            losing = [t for t in symbol_trades if t.profit_loss < 0]
+
+            win_rate = (len(winning) / total * 100) if total > 0 else 0
+
+            total_pnl = sum(t.profit_loss for t in symbol_trades)
+            total_pnl_pct = (total_pnl / engine.paper_trading.initial_capital * 100) if engine.paper_trading.initial_capital > 0 else 0
+
+            # Calcular Sharpe Ratio simplificado
+            returns = [t.profit_loss_pct for t in symbol_trades]
+            avg_return = sum(returns) / len(returns) if returns else 0
+            std_return = (sum((r - avg_return) ** 2 for r in returns) / len(returns)) ** 0.5 if len(returns) > 1 else 0
+            sharpe = (avg_return / std_return) if std_return > 0 else 0
+
+            # Duração média
+            durations = [(t.exit_time - t.entry_time).total_seconds() / 60 for t in symbol_trades if t.exit_time]
+            avg_duration = sum(durations) / len(durations) if durations else 0
+
+            # Taxa de timeout
+            timeout_count = sum(1 for t in symbol_trades if hasattr(t, 'exit_reason') and t.exit_reason == 'timeout')
+            timeout_rate = (timeout_count / total * 100) if total > 0 else 0
+
+            comparison_data[symbol] = {
+                "total_trades": total,
+                "win_rate_pct": round(win_rate, 2),
+                "total_pnl": round(total_pnl, 2),
+                "total_pnl_pct": round(total_pnl_pct, 2),
+                "sharpe_ratio": round(sharpe, 2),
+                "avg_duration_minutes": round(avg_duration, 2),
+                "timeout_rate_pct": round(timeout_rate, 2),
+                "winning_trades": len(winning),
+                "losing_trades": len(losing)
+            }
+
+        # Gerar recomendações
+        recommendations = []
+
+        # Melhor símbolo por win rate
+        if comparison_data:
+            best_win_rate = max(comparison_data.items(), key=lambda x: x[1]['win_rate_pct'])
+            recommendations.append({
+                "type": "best_win_rate",
+                "symbol": best_win_rate[0],
+                "value": best_win_rate[1]['win_rate_pct'],
+                "message": f"Melhor Win Rate: {best_win_rate[0]} com {best_win_rate[1]['win_rate_pct']}%"
+            })
+
+            # Melhor símbolo por P&L
+            best_pnl = max(comparison_data.items(), key=lambda x: x[1]['total_pnl_pct'])
+            recommendations.append({
+                "type": "best_pnl",
+                "symbol": best_pnl[0],
+                "value": best_pnl[1]['total_pnl_pct'],
+                "message": f"Maior Lucro: {best_pnl[0]} com +{best_pnl[1]['total_pnl_pct']}%"
+            })
+
+            # Melhor símbolo por Sharpe
+            best_sharpe = max(comparison_data.items(), key=lambda x: x[1]['sharpe_ratio'])
+            recommendations.append({
+                "type": "best_sharpe",
+                "symbol": best_sharpe[0],
+                "value": best_sharpe[1]['sharpe_ratio'],
+                "message": f"Melhor Risk/Reward: {best_sharpe[0]} com Sharpe {best_sharpe[1]['sharpe_ratio']}"
+            })
+
+            # Símbolo mais rápido
+            fastest = min(comparison_data.items(), key=lambda x: x[1]['avg_duration_minutes'])
+            recommendations.append({
+                "type": "fastest",
+                "symbol": fastest[0],
+                "value": fastest[1]['avg_duration_minutes'],
+                "message": f"Trades Mais Rápidos: {fastest[0]} com média de {fastest[1]['avg_duration_minutes']:.1f} min"
+            })
+
+        return {
+            "status": "success",
+            "current_symbol": engine.symbol,
+            "current_mode": {
+                "stop_loss_pct": engine.stop_loss_pct,
+                "take_profit_pct": engine.take_profit_pct,
+                "timeout_minutes": engine.position_timeout_minutes
+            },
+            "data": {
+                "by_symbol": comparison_data,
+                "recommendations": recommendations
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar comparação de modos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/bugs")
 async def get_forward_testing_bugs():
     """
