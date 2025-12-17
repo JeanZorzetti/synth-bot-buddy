@@ -26,6 +26,7 @@ import {
   Clock,
   Download,
   FileDown,
+  Settings,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,6 +78,17 @@ interface LogFile {
   download_url: string;
 }
 
+const DERIV_SYMBOLS = [
+  { value: 'R_100', label: 'R_100 - Random Index 100', volatility: 'Baixa', description: 'Índice aleatório estável' },
+  { value: '1HZ10V', label: 'V10 (1s) - Volatility 10', volatility: 'Baixa', description: '10% volatilidade, tick 1s' },
+  { value: '1HZ25V', label: 'V25 (1s) - Volatility 25', volatility: 'Média', description: '25% volatilidade, tick 1s' },
+  { value: '1HZ50V', label: 'V50 (1s) - Volatility 50', volatility: 'Média-Alta', description: '50% volatilidade, tick 1s' },
+  { value: '1HZ75V', label: 'V75 (1s) - Volatility 75 ⚡', volatility: 'Alta', description: '75% volatilidade, tick 1s - RECOMENDADO' },
+  { value: '1HZ100V', label: 'V100 (1s) - Volatility 100 🔥', volatility: 'Muito Alta', description: '100% volatilidade, tick 1s - EXTREMAMENTE RÁPIDO' },
+  { value: 'BOOM300N', label: 'Boom 300', volatility: 'Alta', description: 'Spikes a cada ~300 ticks' },
+  { value: 'CRASH300N', label: 'Crash 300', volatility: 'Alta', description: 'Crashes a cada ~300 ticks' },
+];
+
 export default function ForwardTesting() {
   const { toast } = useToast();
   const [status, setStatus] = useState<ForwardTestingStatus | null>(null);
@@ -88,6 +100,7 @@ export default function ForwardTesting() {
   const [isStopping, setIsStopping] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState('1HZ75V');
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
 
@@ -151,14 +164,21 @@ export default function ForwardTesting() {
 
       const response = await fetch(`${API_BASE_URL}/api/forward-testing/start`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          symbol: selectedSymbol,
+        }),
       });
 
       const data = await response.json();
 
       if (data.status === 'success') {
+        const symbolLabel = DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.label || selectedSymbol;
         toast({
           title: 'Forward Testing Iniciado',
-          description: 'Sistema rodando com ML Predictor + Paper Trading',
+          description: `Sistema rodando com ${symbolLabel}`,
         });
 
         // Recarregar status
@@ -333,6 +353,62 @@ export default function ForwardTesting() {
           )}
         </div>
       </div>
+
+      {/* Asset Selector */}
+      {!status?.is_running && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              <CardTitle>Configuração do Ativo</CardTitle>
+            </div>
+            <CardDescription>
+              Escolha o ativo para Forward Testing. Ativos mais voláteis geram mais oportunidades de trade.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {DERIV_SYMBOLS.map((symbol) => (
+                <button
+                  key={symbol.value}
+                  onClick={() => setSelectedSymbol(symbol.value)}
+                  className={`p-4 border-2 rounded-lg text-left transition-all hover:border-primary ${
+                    selectedSymbol === symbol.value
+                      ? 'border-primary bg-primary/5'
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-sm">{symbol.label}</h3>
+                    {selectedSymbol === symbol.value && (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                  <Badge
+                    variant={
+                      symbol.volatility === 'Muito Alta' ? 'destructive' :
+                      symbol.volatility === 'Alta' ? 'default' :
+                      symbol.volatility === 'Média-Alta' ? 'secondary' :
+                      'outline'
+                    }
+                    className="mb-2"
+                  >
+                    {symbol.volatility}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">{symbol.description}</p>
+                </button>
+              ))}
+            </div>
+            <Alert className="mt-4 border-blue-200 bg-blue-50">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-900">
+                <strong>Selecionado:</strong> {DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.label} -
+                Volatilidade {DERIV_SYMBOLS.find(s => s.value === selectedSymbol)?.volatility}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status Banner */}
       {status && (

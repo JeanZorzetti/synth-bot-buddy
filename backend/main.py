@@ -5825,14 +5825,10 @@ class TradeRecordRequest(BaseModel):
     profit_loss: Optional[float] = None
     result: Optional[str] = 'pending'  # win, loss, pending
     confidence: Optional[float] = None
-    strategy: Optional[str] = None  # ml, technical, hybrid, order_flow
-    indicators_used: Optional[Dict] = None
-    ml_prediction: Optional[float] = None
-    order_flow_signal: Optional[str] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    exit_reason: Optional[str] = None
-    notes: Optional[str] = None
+
+class ForwardTestingStartRequest(BaseModel):
+    """Request para iniciar forward testing com símbolo específico"""
+    symbol: str = "1HZ75V"  # V75 (1s) por padrão
 
 
 @app.post("/api/trades/record")
@@ -5978,12 +5974,15 @@ async def delete_trade(trade_id: int):
 # ==================== FORWARD TESTING ENDPOINTS ====================
 
 @app.post("/api/forward-testing/start")
-async def start_forward_testing(background_tasks: BackgroundTasks):
+async def start_forward_testing(request: ForwardTestingStartRequest, background_tasks: BackgroundTasks):
     """
     Inicia sessão de forward testing automatizado
 
     Integra ML Predictor com Paper Trading Engine para testar
     estratégia em condições de mercado real.
+
+    Args:
+        request: Configuração com símbolo do ativo
 
     Returns:
         Status da inicialização
@@ -5997,14 +5996,18 @@ async def start_forward_testing(background_tasks: BackgroundTasks):
                 detail="Forward testing já está rodando"
             )
 
+        # Atualizar símbolo antes de iniciar
+        engine.symbol = request.symbol
+        logger.info(f"🔄 Símbolo atualizado para: {request.symbol}")
+
         # Iniciar em background
         background_tasks.add_task(engine.start)
 
-        logger.info("🚀 Forward testing iniciado via API")
+        logger.info(f"🚀 Forward testing iniciado via API com {request.symbol}")
 
         return {
             "status": "success",
-            "message": "Forward testing iniciado com sucesso",
+            "message": f"Forward testing iniciado com {request.symbol}",
             "start_time": datetime.now().isoformat(),
             "config": {
                 "symbol": engine.symbol,
