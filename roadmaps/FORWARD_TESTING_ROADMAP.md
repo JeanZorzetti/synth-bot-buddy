@@ -395,7 +395,22 @@ Preço cai para $751:
 
 ### Backlog (Futuro)
 - [ ] Multi-Symbol Trading
-- [ ] Trailing Stop Loss
+- [x] **Trailing Stop Loss** ✅ (Commit: pendente - 17/12/2024)
+  - [x] Novos campos na classe Position:
+    - trailing_stop_enabled (bool)
+    - trailing_stop_distance_pct (float)
+    - highest_price/lowest_price (tracking)
+  - [x] Método _update_trailing_stop() no PaperTradingEngine
+  - [x] Lógica de trailing para LONG e SHORT:
+    - LONG: Move SL para cima conforme preço sobe
+    - SHORT: Move SL para baixo conforme preço cai
+    - Nunca move SL desfavoravelmente
+  - [x] Integração no ForwardTestingEngine:
+    - Parâmetros trailing_stop_enabled/distance_pct
+    - Passagem para execute_order()
+  - [x] Logging detalhado de movimentações SL
+  - [ ] (Futuro) UI para controle de trailing
+  - [ ] (Futuro) Trailing activation trigger (ex: após +1% lucro)
 - [x] **Auto-Restart após Crash** ✅ (Commit: pendente - 17/12/2024)
   - [x] AutoRestartSystem class (watchdog completo)
   - [x] Health check periódico (30s interval)

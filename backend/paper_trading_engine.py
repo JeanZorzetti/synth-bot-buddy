@@ -48,6 +48,11 @@ class Position:
     exit_time: Optional[datetime] = None
     profit_loss: float = 0.0
     profit_loss_pct: float = 0.0
+    # Trailing Stop Loss
+    trailing_stop_enabled: bool = False
+    trailing_stop_distance_pct: float = 0.0  # Distância do trailing em %
+    highest_price: Optional[float] = None  # Maior preço atingido (LONG)
+    lowest_price: Optional[float] = None   # Menor preço atingido (SHORT)
 
     def to_dict(self):
         """Converte para dicionário"""
@@ -213,7 +218,9 @@ class PaperTradingEngine:
         size: float,
         current_price: float,
         stop_loss: Optional[float] = None,
-        take_profit: Optional[float] = None
+        take_profit: Optional[float] = None,
+        trailing_stop_enabled: bool = False,
+        trailing_stop_distance_pct: float = 0.5
     ) -> Optional[Position]:
         """
         Executa uma ordem de compra/venda
@@ -225,6 +232,8 @@ class PaperTradingEngine:
             current_price: Preço atual do mercado
             stop_loss: Preço de stop loss (opcional)
             take_profit: Preço de take profit (opcional)
+            trailing_stop_enabled: Se trailing stop está ativado
+            trailing_stop_distance_pct: Distância do trailing em % (padrão: 0.5%)
 
         Returns:
             Position criada ou None se falhou
@@ -266,7 +275,11 @@ class PaperTradingEngine:
             entry_time=datetime.now(),
             status=PositionStatus.OPEN,
             stop_loss=stop_loss,
-            take_profit=take_profit
+            take_profit=take_profit,
+            trailing_stop_enabled=trailing_stop_enabled,
+            trailing_stop_distance_pct=trailing_stop_distance_pct,
+            highest_price=executed_price if trailing_stop_enabled else None,
+            lowest_price=executed_price if trailing_stop_enabled else None
         )
 
         # Atualizar capital
@@ -377,6 +390,58 @@ class PaperTradingEngine:
 
         return trade
 
+    def _update_trailing_stop(self, position: Position, current_price: float):
+        """
+        Atualiza trailing stop loss para uma posição
+
+        Args:
+            position: Posição a atualizar
+            current_price: Preço atual do ativo
+        """
+        if position.position_type == PositionType.LONG:
+            # Inicializar highest_price se não existir
+            if position.highest_price is None:
+                position.highest_price = position.entry_price
+
+            # Atualizar highest_price se preço subiu
+            if current_price > position.highest_price:
+                old_highest = position.highest_price
+                position.highest_price = current_price
+
+                # Calcular novo stop loss baseado no highest_price
+                new_stop_loss = position.highest_price * (1 - position.trailing_stop_distance_pct / 100)
+
+                # Só mover SL para cima (nunca para baixo)
+                if position.stop_loss is None or new_stop_loss > position.stop_loss:
+                    old_stop_loss = position.stop_loss
+                    position.stop_loss = new_stop_loss
+
+                    logger.info(f"📈 Trailing SL movido (LONG): ${old_stop_loss:.5f if old_stop_loss else 0:.5f} → ${new_stop_loss:.5f}")
+                    logger.info(f"   Highest: ${old_highest:.5f} → ${position.highest_price:.5f}")
+                    logger.info(f"   Current: ${current_price:.5f}")
+
+        else:  # SHORT
+            # Inicializar lowest_price se não existir
+            if position.lowest_price is None:
+                position.lowest_price = position.entry_price
+
+            # Atualizar lowest_price se preço caiu
+            if current_price < position.lowest_price:
+                old_lowest = position.lowest_price
+                position.lowest_price = current_price
+
+                # Calcular novo stop loss baseado no lowest_price
+                new_stop_loss = position.lowest_price * (1 + position.trailing_stop_distance_pct / 100)
+
+                # Só mover SL para baixo (nunca para cima)
+                if position.stop_loss is None or new_stop_loss < position.stop_loss:
+                    old_stop_loss = position.stop_loss
+                    position.stop_loss = new_stop_loss
+
+                    logger.info(f"📉 Trailing SL movido (SHORT): ${old_stop_loss:.5f if old_stop_loss else 0:.5f} → ${new_stop_loss:.5f}")
+                    logger.info(f"   Lowest: ${old_lowest:.5f} → ${position.lowest_price:.5f}")
+                    logger.info(f"   Current: ${current_price:.5f}")
+
     def update_positions(self, current_prices: Dict[str, float]):
         """
         Atualiza todas as posições com preços atuais
@@ -395,6 +460,10 @@ class PaperTradingEngine:
             logger.info(f"🔍 Verificando posição {position_id[-8:]}:")
             logger.info(f"   Tipo: {position.position_type.value} | Entry: ${position.entry_price:.5f} | Current: ${current_price:.5f}")
             logger.info(f"   SL: ${position.stop_loss:.5f} | TP: ${position.take_profit:.5f}")
+
+            # Atualizar trailing stop loss se habilitado
+            if position.trailing_stop_enabled:
+                self._update_trailing_stop(position, current_price)
 
             # Verificar stop loss
             if position.stop_loss:

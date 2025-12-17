@@ -47,6 +47,8 @@ class ForwardTestingEngine:
         stop_loss_pct: float = 2.0,  # 2% stop loss
         take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
         position_timeout_minutes: int = 30,  # Timeout para fechar posição automaticamente
+        trailing_stop_enabled: bool = False,  # Trailing stop loss
+        trailing_stop_distance_pct: float = 0.5,  # Distância do trailing (0.5%)
         log_dir: str = "forward_testing_logs"
     ):
         """
@@ -59,6 +61,9 @@ class ForwardTestingEngine:
             max_position_size_pct: Tamanho máximo da posição (% do capital)
             stop_loss_pct: Stop loss percentual
             take_profit_pct: Take profit percentual
+            position_timeout_minutes: Timeout para fechar posição automaticamente
+            trailing_stop_enabled: Se trailing stop loss está ativado
+            trailing_stop_distance_pct: Distância do trailing em %
             log_dir: Diretório para logs e relatórios
         """
         self.symbol = symbol
@@ -67,6 +72,8 @@ class ForwardTestingEngine:
         self.stop_loss_pct = stop_loss_pct
         self.take_profit_pct = take_profit_pct
         self.position_timeout_minutes = position_timeout_minutes
+        self.trailing_stop_enabled = trailing_stop_enabled
+        self.trailing_stop_distance_pct = trailing_stop_distance_pct
 
         # Componentes
         self.ml_predictor = MLPredictor()
@@ -552,13 +559,17 @@ class ForwardTestingEngine:
                 size=position_size,
                 current_price=current_price,
                 stop_loss=stop_loss,
-                take_profit=take_profit
+                take_profit=take_profit,
+                trailing_stop_enabled=self.trailing_stop_enabled,
+                trailing_stop_distance_pct=self.trailing_stop_distance_pct
             )
 
             if position:
                 logger.info(f"✅ TRADE EXECUTADO: {position_type.value} {self.symbol} @ ${current_price:.4f}")
                 logger.info(f"   Size: ${position_size:.2f} | Confidence: {prediction['confidence']:.2%}")
                 logger.info(f"   SL: ${stop_loss:.4f} | TP: ${take_profit:.4f}")
+                if self.trailing_stop_enabled:
+                    logger.info(f"   🔄 Trailing SL: ATIVADO ({self.trailing_stop_distance_pct}% distance)")
 
                 # Registrar trade
                 self.trade_log.append({
