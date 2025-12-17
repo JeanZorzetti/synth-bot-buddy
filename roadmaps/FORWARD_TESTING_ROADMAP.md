@@ -380,9 +380,27 @@ Preço cai para $751:
   - [x] Integração em ForwardTesting.tsx
 
 ### Sprint 3 (Semana 5-6)
-- [ ] Otimizador de Parâmetros
-  - [ ] Grid search algorithm
-  - [ ] UI para visualizar resultados
+- [x] **Otimizador de Parâmetros** ✅ (Commit: pendente - 17/12/2024)
+  - [x] Grid search algorithm
+  - [x] Backend: ParameterOptimizer class (parameter_optimizer.py)
+    - [x] Testa 150 combinações (SL: 5 valores, TP: 6 valores, Timeout: 5 valores)
+    - [x] Simula trades com novos parâmetros SL/TP/Timeout
+    - [x] Calcula 8 métricas: Win Rate, P&L%, Sharpe, Max DD, Duração Média, Timeout Rate
+    - [x] Score combinado: 50% Sharpe + 20% Win Rate + 20% P&L% - 10% Max DD
+    - [x] Retorna top N melhores combinações ordenadas por score
+  - [x] Endpoint GET /api/forward-testing/optimize-parameters
+    - [x] Parâmetros: symbol (opcional), top_n (default: 10)
+    - [x] Converte trades para dict format
+    - [x] Executa otimização e retorna resultados
+  - [x] UI para visualizar resultados (ParameterOptimizer.tsx)
+    - [x] Botão "Otimizar Parâmetros" com loading state
+    - [x] Card destacado com 🏆 melhores parâmetros
+    - [x] Tabela com top 10 combinações
+    - [x] Ranking visual (🏆🥈🥉 + badges)
+    - [x] Color coding: Sharpe (verde/amarelo/vermelho), Win Rate (badges)
+    - [x] Legenda explicativa das métricas
+    - [x] Informações: combinações testadas, trades analisados, ativo
+  - [x] Integração em ForwardTesting.tsx
 - [x] **Export de Relatórios - CSV** ✅ (Commit: pendente - 17/12/2024)
   - [x] Endpoint GET /api/forward-testing/export/csv
   - [x] CSV generation com 14 colunas

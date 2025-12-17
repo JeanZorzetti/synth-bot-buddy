@@ -6624,6 +6624,96 @@ async def get_watchdog_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/optimize-parameters")
+async def optimize_parameters(
+    symbol: str = None,
+    top_n: int = 10
+):
+    """
+    Otimiza parâmetros SL/TP/Timeout usando Grid Search
+
+    Args:
+        symbol: Ativo específico para otimizar (None = todos)
+        top_n: Número de melhores combinações a retornar
+
+    Returns:
+        Lista das top_n melhores combinações de parâmetros
+    """
+    try:
+        from parameter_optimizer import ParameterOptimizer
+
+        engine = get_forward_testing_engine()
+
+        # Obter trades históricos
+        trades = engine.paper_trading.get_closed_positions()
+
+        if not trades:
+            return {
+                "status": "error",
+                "message": "Nenhum trade histórico disponível para otimização"
+            }
+
+        # Converter para formato dict
+        trades_dict = []
+        for trade in trades:
+            trades_dict.append({
+                'symbol': trade.symbol,
+                'position_type': trade.position_type.value,
+                'entry_price': trade.entry_price,
+                'entry_time': trade.entry_time.isoformat(),
+                'exit_price': trade.exit_price,
+                'exit_time': trade.exit_time.isoformat(),
+                'profit_loss': trade.profit_loss,
+                'profit_loss_pct': trade.profit_loss_pct,
+                'exit_reason': 'MANUAL'  # Default
+            })
+
+        # Criar optimizer
+        optimizer = ParameterOptimizer(
+            historical_trades=trades_dict,
+            initial_capital=10000.0
+        )
+
+        # Executar otimização
+        logger.info(f"🔍 Iniciando otimização de parâmetros para {symbol or 'ALL'}")
+        results = optimizer.optimize(symbol=symbol, top_n=top_n)
+
+        # Converter para dict
+        results_dict = []
+        for result in results:
+            results_dict.append({
+                'stop_loss_pct': result.stop_loss_pct,
+                'take_profit_pct': result.take_profit_pct,
+                'timeout_minutes': result.timeout_minutes,
+                'total_trades': result.total_trades,
+                'win_rate': round(result.win_rate, 2),
+                'total_profit_loss': round(result.total_profit_loss, 2),
+                'profit_loss_pct': round(result.profit_loss_pct, 2),
+                'sharpe_ratio': round(result.sharpe_ratio, 3),
+                'max_drawdown_pct': round(result.max_drawdown_pct, 2),
+                'avg_trade_duration_minutes': round(result.avg_trade_duration_minutes, 1),
+                'timeout_rate': round(result.timeout_rate, 2),
+                'score': round(result.score, 3)
+            })
+
+        return {
+            "status": "success",
+            "data": {
+                'results': results_dict,
+                'total_combinations_tested': len(optimizer.stop_loss_grid) *
+                                            len(optimizer.take_profit_grid) *
+                                            len(optimizer.timeout_grid),
+                'historical_trades_used': len(trades_dict),
+                'symbol': symbol or 'ALL',
+                'best_params': results_dict[0] if results_dict else None
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao otimizar parâmetros: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/alerts")
 async def get_forward_testing_alerts(limit: int = 50, unread_only: bool = False):
     """

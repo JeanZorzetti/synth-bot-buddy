@@ -34,6 +34,7 @@ import { LiveMetricsGrid } from '@/components/LiveMetricsGrid';
 import { AlertNotifications } from '@/components/AlertNotifications';
 import { TradeHistoryTable } from '@/components/TradeHistoryTable';
 import { ModeComparison } from '@/components/ModeComparison';
+import { ParameterOptimizer } from '@/components/ParameterOptimizer';
 
 interface ForwardTestingStatus {
   is_running: boolean;
@@ -712,6 +713,12 @@ export default function ForwardTesting() {
 
       {/* Mode Comparison */}
       <ModeComparison
+        apiBaseUrl={API_BASE_URL}
+        isRunning={status?.is_running || false}
+      />
+
+      {/* Parameter Optimizer */}
+      <ParameterOptimizer
         apiBaseUrl={API_BASE_URL}
         isRunning={status?.is_running || false}
       />
