@@ -444,8 +444,8 @@ class ForwardTestingEngine:
                 logger.info(f"⏰ TIMEOUT: Posição {position_id[-8:]} aberta há {position_age_seconds/60:.1f} min")
                 logger.info(f"   Fechando com P&L: ${pnl:.2f} ({pnl_pct:+.2f}%)")
 
-                # Fechar posição
-                self.paper_trading.close_position(position_id, current_price)
+                # Fechar posição com razão 'timeout'
+                self.paper_trading.close_position(position_id, current_price, exit_reason='timeout')
 
     def _log_bug(self, bug_type: str, description: str, severity: str = "ERROR"):
         """
@@ -498,6 +498,103 @@ class ForwardTestingEngine:
             'total_bugs': len(self.bug_log),
             'last_prediction_time': self.last_prediction_time.isoformat() if self.last_prediction_time else None,
             'paper_trading_metrics': metrics
+        }
+
+    def get_live_metrics(self) -> Dict:
+        """
+        Retorna métricas detalhadas em tempo real para dashboard
+
+        Returns:
+            Dict com métricas expandidas incluindo equity curve
+        """
+        metrics = self.paper_trading.get_metrics()
+
+        # Equity Curve (últimos 100 pontos)
+        equity_history = self.paper_trading.equity_curve[-100:] if self.paper_trading.equity_curve else []
+
+        # Calcular métricas de execução
+        total_positions = len(self.paper_trading.trade_history)
+        closed_positions = self.paper_trading.trade_history
+
+        # Taxa de timeout (trades fechados por timeout vs SL/TP)
+        timeout_trades = 0
+        sl_trades = 0
+        tp_trades = 0
+
+        for trade in closed_positions:
+            # Determinar razão de fechamento baseado no P&L e tempo
+            if hasattr(trade, 'exit_reason'):
+                if trade.exit_reason == 'timeout':
+                    timeout_trades += 1
+                elif trade.exit_reason == 'stop_loss':
+                    sl_trades += 1
+                elif trade.exit_reason == 'take_profit':
+                    tp_trades += 1
+
+        timeout_rate = (timeout_trades / len(closed_positions)) if closed_positions else 0
+        sl_hit_rate = (sl_trades / len(closed_positions)) if closed_positions else 0
+        tp_hit_rate = (tp_trades / len(closed_positions)) if closed_positions else 0
+
+        # Duração média de trades
+        avg_duration = 0
+        if closed_positions:
+            durations = [(t.exit_time - t.entry_time).total_seconds() / 60 for t in closed_positions if t.exit_time]
+            avg_duration = sum(durations) / len(durations) if durations else 0
+
+        # Win rate por período (últimas 10, 20, 50 trades)
+        win_rates = {}
+        for period in [10, 20, 50]:
+            recent_trades = closed_positions[-period:] if len(closed_positions) >= period else closed_positions
+            if recent_trades:
+                wins = sum(1 for t in recent_trades if t.profit_loss > 0)
+                win_rates[f'last_{period}'] = (wins / len(recent_trades)) * 100
+
+        return {
+            # Métricas básicas
+            'capital': {
+                'current': metrics['current_capital'],
+                'initial': metrics['initial_capital'],
+                'peak': max(equity_history) if equity_history else metrics['initial_capital'],
+                'pnl': metrics['total_pnl'],
+                'pnl_pct': metrics['total_pnl_pct']
+            },
+
+            # Equity curve
+            'equity_curve': equity_history,
+
+            # Performance
+            'performance': {
+                'win_rate': metrics['win_rate_pct'],
+                'win_rates_by_period': win_rates,
+                'sharpe_ratio': metrics['sharpe_ratio'],
+                'profit_factor': metrics['profit_factor'],
+                'max_drawdown_pct': metrics['max_drawdown_pct']
+            },
+
+            # Execution quality
+            'execution': {
+                'total_trades': total_positions,
+                'open_positions': len([p for p in self.paper_trading.positions.values()]),
+                'closed_positions': len(closed_positions),
+                'avg_duration_minutes': round(avg_duration, 2),
+                'timeout_rate': round(timeout_rate * 100, 1),
+                'sl_hit_rate': round(sl_hit_rate * 100, 1),
+                'tp_hit_rate': round(tp_hit_rate * 100, 1)
+            },
+
+            # Breakdown
+            'trades_breakdown': {
+                'winning': metrics['winning_trades'],
+                'losing': metrics['losing_trades'],
+                'by_exit_reason': {
+                    'timeout': timeout_trades,
+                    'stop_loss': sl_trades,
+                    'take_profit': tp_trades
+                }
+            },
+
+            # Timestamp
+            'updated_at': datetime.now().isoformat()
         }
 
     def generate_validation_report(self) -> str:

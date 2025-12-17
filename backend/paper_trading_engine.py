@@ -89,6 +89,7 @@ class Trade:
     profit_loss: float
     profit_loss_pct: float
     is_winner: bool
+    exit_reason: Optional[str] = None  # 'stop_loss', 'take_profit', 'timeout', 'manual'
 
     def to_dict(self):
         """Converte para dicionário"""
@@ -103,7 +104,8 @@ class Trade:
             'exit_time': self.exit_time.isoformat(),
             'profit_loss': self.profit_loss,
             'profit_loss_pct': self.profit_loss_pct,
-            'is_winner': self.is_winner
+            'is_winner': self.is_winner,
+            'exit_reason': self.exit_reason
         }
 
 
@@ -280,13 +282,14 @@ class PaperTradingEngine:
 
         return position
 
-    def close_position(self, position_id: str, current_price: float) -> Optional[Trade]:
+    def close_position(self, position_id: str, current_price: float, exit_reason: str = 'manual') -> Optional[Trade]:
         """
         Fecha uma posição existente
 
         Args:
             position_id: ID da posição a fechar
             current_price: Preço atual do mercado
+            exit_reason: Razão do fechamento ('stop_loss', 'take_profit', 'timeout', 'manual')
 
         Returns:
             Trade criado ou None se falhou
@@ -332,7 +335,8 @@ class PaperTradingEngine:
             exit_time=position.exit_time,
             profit_loss=pnl,
             profit_loss_pct=pnl_pct,
-            is_winner=pnl > 0
+            is_winner=pnl > 0,
+            exit_reason=exit_reason
         )
 
         # Atualizar métricas
@@ -396,22 +400,22 @@ class PaperTradingEngine:
             if position.stop_loss:
                 if position.position_type == PositionType.LONG and current_price <= position.stop_loss:
                     logger.info(f"🛑 Stop loss atingido para {position_id[-8:]}: {current_price:.5f} <= {position.stop_loss:.5f}")
-                    self.close_position(position_id, current_price)
+                    self.close_position(position_id, current_price, exit_reason='stop_loss')
                     continue
                 elif position.position_type == PositionType.SHORT and current_price >= position.stop_loss:
                     logger.info(f"🛑 Stop loss atingido para {position_id[-8:]}: {current_price:.5f} >= {position.stop_loss:.5f}")
-                    self.close_position(position_id, current_price)
+                    self.close_position(position_id, current_price, exit_reason='stop_loss')
                     continue
 
             # Verificar take profit
             if position.take_profit:
                 if position.position_type == PositionType.LONG and current_price >= position.take_profit:
                     logger.info(f"🎯 Take profit atingido para {position_id[-8:]}: {current_price:.5f} >= {position.take_profit:.5f}")
-                    self.close_position(position_id, current_price)
+                    self.close_position(position_id, current_price, exit_reason='take_profit')
                     continue
                 elif position.position_type == PositionType.SHORT and current_price <= position.take_profit:
                     logger.info(f"🎯 Take profit atingido para {position_id[-8:]}: {current_price:.5f} <= {position.take_profit:.5f}")
-                    self.close_position(position_id, current_price)
+                    self.close_position(position_id, current_price, exit_reason='take_profit')
                     continue
 
     def get_metrics(self) -> Dict:

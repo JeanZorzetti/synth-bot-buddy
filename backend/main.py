@@ -6107,6 +6107,33 @@ async def get_forward_testing_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/live-metrics")
+async def get_forward_testing_live_metrics():
+    """
+    Retorna métricas detalhadas em tempo real para dashboard
+
+    Inclui:
+    - Equity curve (últimos 100 pontos)
+    - Métricas de performance (win rate, sharpe, profit factor)
+    - Métricas de execução (duração média, timeout rate, SL/TP hit rate)
+    - Breakdown de trades por razão de saída
+
+    Returns:
+        Métricas expandidas para visualização em dashboard
+    """
+    try:
+        engine = get_forward_testing_engine()
+        live_metrics = engine.get_live_metrics()
+
+        return {
+            "status": "success",
+            "data": live_metrics
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter métricas live do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/logs")
 async def list_forward_testing_logs():
     """
