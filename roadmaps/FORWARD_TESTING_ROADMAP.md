@@ -334,10 +334,13 @@ Preço cai para $751:
 ## 📋 Checklist de Implementação
 
 ### Sprint 1 (Semana 1-2)
-- [ ] Dashboard de Métricas em Tempo Real
-  - [ ] Equity Curve Chart
-  - [ ] Metrics Grid (Win Rate, Avg Duration, etc.)
-  - [ ] Backend endpoint `/api/forward-testing/live-metrics`
+
+- [x] **Dashboard de Métricas em Tempo Real** ✅ (Commit: 0905e6f - 17/12/2024)
+  - [x] Equity Curve Chart (EquityCurveChart.tsx - Recharts)
+  - [x] Metrics Grid (LiveMetricsGrid.tsx - 6 cards com color coding)
+  - [x] Backend endpoint `/api/forward-testing/live-metrics`
+  - [x] Polling automático a cada 5 segundos
+  - [x] Integração completa em ForwardTesting.tsx
 - [ ] Sistema de Alertas
   - [ ] Alert logic (drawdown, win rate, etc.)
   - [ ] Toast notifications no frontend
