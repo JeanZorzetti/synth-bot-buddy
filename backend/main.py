@@ -6640,9 +6640,17 @@ async def optimize_parameters(
         Lista das top_n melhores combinações de parâmetros
     """
     try:
-        from parameter_optimizer import ParameterOptimizer
-
         engine = get_forward_testing_engine()
+
+        # Import optimizer (pode falhar se numpy não instalado)
+        try:
+            from parameter_optimizer import ParameterOptimizer
+        except ImportError as e:
+            logger.error(f"Erro ao importar ParameterOptimizer: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Otimizador requer numpy instalado. Execute: pip install numpy"
+            )
 
         # Obter trades históricos
         trades = engine.paper_trading.get_closed_positions()

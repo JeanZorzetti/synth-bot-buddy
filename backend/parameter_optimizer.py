@@ -8,8 +8,26 @@ import logging
 import itertools
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta
-import numpy as np
 from dataclasses import dataclass
+
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    # Fallback para estatísticas básicas sem numpy
+    class np:
+        @staticmethod
+        def mean(values):
+            return sum(values) / len(values) if values else 0.0
+
+        @staticmethod
+        def std(values):
+            if not values or len(values) < 2:
+                return 0.0
+            mean_val = sum(values) / len(values)
+            variance = sum((x - mean_val) ** 2 for x in values) / len(values)
+            return variance ** 0.5
 
 logger = logging.getLogger(__name__)
 

@@ -91,6 +91,10 @@ class ForwardTestingEngine:
         # Rastreamento de posições por símbolo
         self.positions_by_symbol: Dict[str, int] = {sym: 0 for sym in self.symbols}
 
+        # Logs e métricas (definir ANTES de usar em outros componentes)
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(exist_ok=True)
+
         # Componentes
         self.ml_predictor = MLPredictor()
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
@@ -110,10 +114,6 @@ class ForwardTestingEngine:
         self.is_running = False
         self.start_time: Optional[datetime] = None
         self.last_prediction_time: Optional[datetime] = None
-
-        # Logs e métricas
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(exist_ok=True)
 
         self.bug_log: List[Dict] = []
         self.prediction_log: List[Dict] = []
