@@ -31,6 +31,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { EquityCurveChart } from '@/components/EquityCurveChart';
 import { LiveMetricsGrid } from '@/components/LiveMetricsGrid';
+import { AlertNotifications } from '@/components/AlertNotifications';
 
 interface ForwardTestingStatus {
   is_running: boolean;
@@ -692,6 +693,13 @@ export default function ForwardTesting() {
           <LiveMetricsGrid metrics={liveMetrics} />
         </>
       )}
+
+      {/* Alert Notifications */}
+      <AlertNotifications
+        apiBaseUrl={API_BASE_URL}
+        isRunning={status?.is_running || false}
+        pollInterval={10000}
+      />
 
       {/* Recent Predictions */}
       {predictions.length > 0 && (

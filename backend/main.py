@@ -6275,6 +6275,98 @@ async def get_forward_testing_bugs():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/alerts")
+async def get_forward_testing_alerts(limit: int = 50, unread_only: bool = False):
+    """
+    Retorna alertas gerados pelo sistema
+
+    Args:
+        limit: Número máximo de alertas (padrão: 50)
+        unread_only: Se True, retorna apenas alertas não lidos
+
+    Returns:
+        Lista de alertas com níveis CRITICAL/WARNING/INFO
+    """
+    try:
+        engine = get_forward_testing_engine()
+
+        if unread_only:
+            alerts = engine.alert_system.get_unread_alerts()
+        else:
+            alerts = engine.alert_system.get_recent_alerts(limit=limit)
+
+        # Contar por nível
+        critical_count = len([a for a in alerts if a['level'] == 'CRITICAL'])
+        warning_count = len([a for a in alerts if a['level'] == 'WARNING'])
+        info_count = len([a for a in alerts if a['level'] == 'INFO'])
+
+        return {
+            "status": "success",
+            "total_alerts": len(alerts),
+            "critical_count": critical_count,
+            "warning_count": warning_count,
+            "info_count": info_count,
+            "data": alerts
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter alertas do forward testing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/forward-testing/alerts/{alert_id}/mark-read")
+async def mark_alert_as_read(alert_id: str):
+    """
+    Marca um alerta específico como lido
+
+    Args:
+        alert_id: ID do alerta
+
+    Returns:
+        Status da operação
+    """
+    try:
+        engine = get_forward_testing_engine()
+        success = engine.alert_system.mark_as_read(alert_id)
+
+        if success:
+            return {
+                "status": "success",
+                "message": f"Alerta {alert_id} marcado como lido"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Alerta não encontrado")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao marcar alerta como lido: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/forward-testing/alerts/mark-all-read")
+async def mark_all_alerts_as_read():
+    """
+    Marca todos os alertas como lidos
+
+    Returns:
+        Número de alertas marcados
+    """
+    try:
+        engine = get_forward_testing_engine()
+        count = engine.alert_system.mark_all_as_read()
+
+        return {
+            "status": "success",
+            "message": f"{count} alertas marcados como lidos",
+            "count": count
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao marcar todos os alertas como lidos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/forward-testing/report")
 async def generate_forward_testing_report():
     """

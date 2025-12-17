@@ -24,6 +24,7 @@ import numpy as np
 from ml_predictor import MLPredictor
 from paper_trading_engine import PaperTradingEngine, PositionType
 from deriv_api_legacy import DerivAPI
+from alert_system import AlertSystem
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ class ForwardTestingEngine:
         # Componentes
         self.ml_predictor = MLPredictor()
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
+        self.alert_system = AlertSystem()
 
         # Deriv API para dados reais
         self.deriv_api = DerivAPI()
@@ -176,6 +178,9 @@ class ForwardTestingEngine:
 
                 # 2.5. Fechar posições com timeout
                 self._check_position_timeouts(current_price)
+
+                # 2.6. Verificar condições de alerta
+                self._check_alert_conditions()
 
                 # 3. Verificar se pode abrir nova posição
                 if len(self.paper_trading.positions) >= self.paper_trading.max_positions:
@@ -446,6 +451,57 @@ class ForwardTestingEngine:
 
                 # Fechar posição com razão 'timeout'
                 self.paper_trading.close_position(position_id, current_price, exit_reason='timeout')
+
+    def _check_alert_conditions(self):
+        """
+        Verifica condições de alerta e gera alertas apropriados
+        """
+        try:
+            # Obter métricas atuais
+            metrics = self.paper_trading.get_metrics()
+
+            # Pegar último trade se existir
+            last_trade = None
+            if self.paper_trading.trade_history:
+                last_trade_obj = self.paper_trading.trade_history[-1]
+                last_trade = {
+                    'id': last_trade_obj.id,
+                    'profit_loss': last_trade_obj.profit_loss,
+                    'exit_reason': getattr(last_trade_obj, 'exit_reason', None)
+                }
+
+            # Calcular timeout rate e sl hit rate
+            timeout_rate_pct = 0
+            sl_hit_rate_pct = 0
+
+            if self.paper_trading.trade_history:
+                total = len(self.paper_trading.trade_history)
+                timeout_count = sum(1 for t in self.paper_trading.trade_history
+                                   if hasattr(t, 'exit_reason') and t.exit_reason == 'timeout')
+                sl_count = sum(1 for t in self.paper_trading.trade_history
+                              if hasattr(t, 'exit_reason') and t.exit_reason == 'stop_loss')
+
+                timeout_rate_pct = (timeout_count / total) * 100 if total > 0 else 0
+                sl_hit_rate_pct = (sl_count / total) * 100 if total > 0 else 0
+
+            # Verificar todas as condições
+            new_alerts = self.alert_system.check_all_conditions(
+                current_capital=metrics['current_capital'],
+                initial_capital=metrics['initial_capital'],
+                win_rate_pct=metrics['win_rate_pct'],
+                timeout_rate_pct=timeout_rate_pct,
+                sl_hit_rate_pct=sl_hit_rate_pct,
+                last_trade=last_trade,
+                total_trades=metrics['total_trades']
+            )
+
+            # Novos alertas são automaticamente adicionados ao alert_system
+            # Aqui podemos apenas logar quantos foram gerados
+            if new_alerts:
+                logger.info(f"🔔 {len(new_alerts)} novo(s) alerta(s) gerado(s)")
+
+        except Exception as e:
+            logger.error(f"Erro ao verificar alertas: {e}", exc_info=True)
 
     def _log_bug(self, bug_type: str, description: str, severity: str = "ERROR"):
         """
