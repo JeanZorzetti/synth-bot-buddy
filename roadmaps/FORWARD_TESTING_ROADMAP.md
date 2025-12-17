@@ -352,10 +352,20 @@ Preço cai para $751:
   - [ ] (Opcional) Email/Telegram integration
 
 ### Sprint 2 (Semana 3-4)
-- [ ] Histórico de Trades Detalhado
-  - [ ] Tabela de trades
-  - [ ] Filtros e pesquisa
-  - [ ] Estatísticas agregadas
+
+- [x] **Histórico de Trades Detalhado** ✅ (Commit: e7d4eb9 - 17/12/2024)
+  - [x] Endpoint GET /api/forward-testing/trades (filtros: limit, symbol, result)
+  - [x] TradeHistoryTable component (385 linhas)
+  - [x] Tabela completa com 7 colunas (ID, Tipo, Entry→Exit, P&L, Duração, Exit Reason, Timestamp)
+  - [x] Filtros por resultado (Todos/Ganhos/Perdas)
+  - [x] Select de limite (20/50/100/200)
+  - [x] Estatísticas agregadas (Melhor/Pior/Lucro Médio/Perda Média)
+  - [x] Color-coded rows (verde/vermelho)
+  - [x] Exit reason badges (TP/SL/Timeout/Manual)
+  - [x] Polling automático a cada 30 segundos
+  - [x] Integração em ForwardTesting.tsx
+  - [ ] (Futuro) Filtro por período
+  - [ ] (Futuro) Pesquisa por ID
 - [ ] Comparador de Modos
   - [ ] Tabela comparativa
   - [ ] Recomendação automática
