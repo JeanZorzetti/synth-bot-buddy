@@ -6652,8 +6652,8 @@ async def optimize_parameters(
                 detail="Otimizador requer numpy instalado. Execute: pip install numpy"
             )
 
-        # Obter trades históricos
-        trades = engine.paper_trading.get_closed_positions()
+        # Obter trades históricos (trade_history contém trades fechados)
+        trades = engine.paper_trading.trade_history
 
         if not trades:
             return {
@@ -6666,14 +6666,14 @@ async def optimize_parameters(
         for trade in trades:
             trades_dict.append({
                 'symbol': trade.symbol,
-                'position_type': trade.position_type.value,
+                'position_type': trade.position_type,
                 'entry_price': trade.entry_price,
                 'entry_time': trade.entry_time.isoformat(),
                 'exit_price': trade.exit_price,
                 'exit_time': trade.exit_time.isoformat(),
                 'profit_loss': trade.profit_loss,
                 'profit_loss_pct': trade.profit_loss_pct,
-                'exit_reason': 'MANUAL'  # Default
+                'exit_reason': trade.exit_reason if hasattr(trade, 'exit_reason') else 'MANUAL'
             })
 
         # Criar optimizer
