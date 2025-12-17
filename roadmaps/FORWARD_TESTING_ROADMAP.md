@@ -366,9 +366,18 @@ Preço cai para $751:
   - [x] Integração em ForwardTesting.tsx
   - [ ] (Futuro) Filtro por período
   - [ ] (Futuro) Pesquisa por ID
-- [ ] Comparador de Modos
-  - [ ] Tabela comparativa
-  - [ ] Recomendação automática
+- [x] **Comparador de Performance por Ativo** ✅ (Commit: 218f4b1 - 17/12/2024)
+  - [x] Endpoint GET /api/forward-testing/mode-comparison
+  - [x] ModeComparison component (312 linhas)
+  - [x] Tabela comparativa com 7 colunas (Ativo, Trades, Win Rate, P&L, Sharpe, Duração, Timeout)
+  - [x] Agrupa trades por símbolo e calcula estatísticas
+  - [x] 4 recomendações automáticas (Melhor Win Rate, Maior Lucro, Melhor Sharpe, Mais Rápido)
+  - [x] Color coding por performance (Win Rate, P&L, Sharpe, Timeout Rate)
+  - [x] Badges visuais (Troféu para Win Rate ≥55%, Alvo para Sharpe ≥1.5)
+  - [x] Ordenação automática por P&L %
+  - [x] Badge "Ativo Atual" destacado
+  - [x] Botão atualizar manual
+  - [x] Integração em ForwardTesting.tsx
 
 ### Sprint 3 (Semana 5-6)
 - [ ] Otimizador de Parâmetros
