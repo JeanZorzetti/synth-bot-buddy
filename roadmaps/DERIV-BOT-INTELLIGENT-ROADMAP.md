@@ -2319,28 +2319,156 @@ def stress_test(bot, scenario):
     return results
 ```
 
-### 8.3 Forward Testing (Semana 25-28)
+### 8.3 Forward Testing (Semana 25-28) ⚡ **SISTEMA PRINCIPAL DO BOT**
 
-#### Teste em Conta Demo
-- Usar conta demo da Deriv
-- Rodar bot 24/7 por 4 semanas
-- Monitorar todas as métricas
-- Ajustar parâmetros conforme necessário
+> **NOTA IMPORTANTE**: Forward Testing se tornou a **ferramenta principal** do bot, evoluindo de uma simples validação para um **sistema de trading completo e autônomo**.
 
-#### Métricas para Validar
+#### 🎯 Visão Atual (Dezembro 2024)
+
+O Forward Testing não é apenas um teste - é o **coração do sistema de trading automatizado**:
+
+- ✅ **Trading Automático 24/7** com ML + Technical Analysis
+- ✅ **Múltiplos Ativos** (V10, V25, V50, V75, V100, Boom/Crash 300)
+- ✅ **3 Modos de Trading** (Scalping Agressivo, Moderado, Swing)
+- ✅ **Gestão de Risco Avançada** (SL/TP dinâmicos + Position Timeout)
+- ✅ **Dados Reais** via Deriv API (WebSocket + REST)
+- ✅ **Paper Trading Integrado** ($10k virtual)
+
+#### 🛠️ Arquitetura Atual
+
+```
+┌─────────────────────────────────────────────────────────┐
+│         FORWARD TESTING SYSTEM (PRINCIPAL)              │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  1. DATA LAYER (Deriv API)                             │
+│     └─ WebSocket ticks_history (evita rate limiting)   │
+│     └─ Warm-up: 200 ticks (~33 min)                    │
+│                                                          │
+│  2. ML PREDICTION ENGINE                                │
+│     └─ XGBoost Model (trained on R_100)                │
+│     └─ Retorna: PRICE_UP/PRICE_DOWN + confidence       │
+│     └─ Threshold: 40% (ajustável)                      │
+│                                                          │
+│  3. TECHNICAL ANALYSIS                                  │
+│     └─ Multi-Indicator Voting System                   │
+│     └─ RSI, MACD, Stochastic, Bollinger, SMAs         │
+│     └─ Confirma/rejeita sinais ML                      │
+│                                                          │
+│  4. TRADING MODES (Novo! 17/12/2024)                   │
+│     ├─ Scalping Agressivo (SL: 0.5%, TP: 0.75%)       │
+│     ├─ Scalping Moderado (SL: 1.0%, TP: 1.5%) ⚡       │
+│     └─ Swing Trading (SL: 2.0%, TP: 4.0%)             │
+│                                                          │
+│  5. POSITION MANAGEMENT                                 │
+│     └─ Max 5 posições simultâneas                      │
+│     └─ Stop Loss / Take Profit automáticos             │
+│     └─ Position Timeout (3-30 min) ⏰ NOVO             │
+│     └─ Real-time monitoring                            │
+│                                                          │
+│  6. PAPER TRADING ENGINE                                │
+│     └─ Capital virtual: $10,000                        │
+│     └─ Simulação de latência (100ms)                   │
+│     └─ Simulação de slippage (0.1%)                    │
+│     └─ Métricas em tempo real                          │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 📊 Seletor de Ativos (17/12/2024)
+
+**8 Ativos Disponíveis** com badge de volatilidade:
+
+| Ativo | Volatilidade | Descrição | Recomendado Para |
+|-------|-------------|-----------|------------------|
+| R_100 | Baixa | Random Index 100 | Swing |
+| V10 (1s) | Baixa | 10% vol, tick 1s | Swing |
+| V25 (1s) | Média | 25% vol, tick 1s | Swing |
+| V50 (1s) | Média-Alta | 50% vol, tick 1s | Scalping/Swing |
+| **V75 (1s)** | **Alta** ⚡ | **75% vol, tick 1s** | **Scalping Moderado** |
+| **V100 (1s)** | **Muito Alta** 🔥 | **100% vol, tick 1s** | **Scalping Agressivo** |
+| Boom 300 | Alta | Spikes ~300 ticks | Scalping |
+| Crash 300 | Alta | Crashes ~300 ticks | Scalping |
+
+#### ⚡ Modos de Trading (17/12/2024)
+
+**1. Scalping Agressivo 🔥**
+```
+Stop Loss: 0.5%
+Take Profit: 0.75%
+Risk:Reward: 1:1.5
+Timeout: 3 minutos
+Duração Média: 1-3 min
+Trades/Dia: 20-50
+Ideal para: V100, V75
+```
+
+**2. Scalping Moderado ⚡ (PADRÃO)**
+```
+Stop Loss: 1.0%
+Take Profit: 1.5%
+Risk:Reward: 1:1.5
+Timeout: 5 minutos
+Duração Média: 3-8 min
+Trades/Dia: 10-30
+Ideal para: V75, V50, Boom300
+```
+
+**3. Swing Trading 📈**
+```
+Stop Loss: 2.0%
+Take Profit: 4.0%
+Risk:Reward: 1:2
+Timeout: 30 minutos
+Duração Média: 30-120 min
+Trades/Dia: 3-10
+Ideal para: V50, V25, R_100
+```
+
+#### 🔧 Position Timeout (17/12/2024)
+
+**Problema Resolvido**: Posições ficavam presas indefinidamente em mercados de baixa volatilidade.
+
+**Solução**: Sistema de timeout automático:
+```python
+def _check_position_timeouts(current_price):
+    """Fecha posições após timeout configurado"""
+    for position in open_positions:
+        if position_age >= timeout:
+            logger.info(f"⏰ TIMEOUT: Fechando após {age} min")
+            close_position(position_id, current_price)
+```
+
+**Benefícios**:
+- ✅ Capital nunca fica preso
+- ✅ Novas oportunidades sempre disponíveis
+- ✅ Controle total sobre duração de trades
+- ✅ Reduz drawdown máximo
+
+#### 📈 Métricas para Validar
+
+**Metas Originais**:
 - ✅ Win Rate > 60%
 - ✅ Sharpe Ratio > 1.5
 - ✅ Max Drawdown < 15%
 - ✅ Profit Factor > 1.5
 - ✅ ROI Mensal > 10%
 
-### 8.4 Tarefas (4/6 = 67% COMPLETO)
+**Métricas Adicionais (Scalping)**:
+- ✅ Avg Trade Duration < 10 min
+- ✅ Position Timeout Rate < 20%
+- ✅ Execution Rate > 95%
+- ✅ Slippage < 0.2%
+
+### 8.4 Tarefas (5/6 = 83% COMPLETO) ⚡
 
 - [x] Implementar paper trading engine (PaperTradingEngine class ✅)
 - [x] Criar 5 cenários de stress test (high_volatility, low_volume, flash_crash, strong_trend, range_bound ✅)
 - [x] Frontend Paper Trading Dashboard (PaperTrading.tsx + rotas + sidebar ✅)
 - [x] ✅ Sistema de Forward Testing automático (ForwardTestingEngine + 6 endpoints REST ✅) - **IMPLEMENTADO 15/12/2024** ✨
-- [ ] ⏳ Rodar forward testing por 4 semanas (sistema pronto, aguardando execução)
+- [x] ✅ **Seletor de Ativos Voláteis** (8 ativos: V10-V100, Boom/Crash) - **IMPLEMENTADO 17/12/2024** 🔥
+- [x] ✅ **Modos de Trading + Position Timeout** (Scalping Agressivo/Moderado/Swing) - **IMPLEMENTADO 17/12/2024** ⚡
+- [ ] ⏳ **Rodar forward testing por 4 semanas** (sistema pronto, aguardando validação com Scalping)
 - [ ] Ajustar e otimizar estratégia (baseado em resultados do forward testing)
 
 ### 8.4.1 Implementação - Paper Trading Engine (15/12/2024)
