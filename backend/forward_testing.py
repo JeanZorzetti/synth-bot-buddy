@@ -41,9 +41,11 @@ class ForwardTestingEngine:
     def __init__(
         self,
         symbol: str = "R_100",
+        symbols: Optional[List[str]] = None,  # Lista de símbolos para multi-symbol trading
         initial_capital: float = 10000.0,
         confidence_threshold: float = 0.40,
         max_position_size_pct: float = 2.0,  # 2% do capital por trade
+        max_positions_per_symbol: int = 1,  # Máximo de posições por símbolo
         stop_loss_pct: float = 2.0,  # 2% stop loss
         take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
         position_timeout_minutes: int = 30,  # Timeout para fechar posição automaticamente
@@ -55,10 +57,12 @@ class ForwardTestingEngine:
         Inicializa o sistema de forward testing
 
         Args:
-            symbol: Símbolo a tradear
+            symbol: Símbolo primário (usado se symbols não for fornecido)
+            symbols: Lista de símbolos para multi-symbol trading (None = single symbol)
             initial_capital: Capital inicial para paper trading
             confidence_threshold: Threshold mínimo de confidence para executar trade
             max_position_size_pct: Tamanho máximo da posição (% do capital)
+            max_positions_per_symbol: Máximo de posições abertas por símbolo
             stop_loss_pct: Stop loss percentual
             take_profit_pct: Take profit percentual
             position_timeout_minutes: Timeout para fechar posição automaticamente
@@ -66,14 +70,26 @@ class ForwardTestingEngine:
             trailing_stop_distance_pct: Distância do trailing em %
             log_dir: Diretório para logs e relatórios
         """
-        self.symbol = symbol
+        # Configurar símbolos
+        if symbols:
+            self.symbols = symbols
+            self.multi_symbol_mode = True
+        else:
+            self.symbols = [symbol]
+            self.multi_symbol_mode = False
+
+        self.symbol = symbol  # Manter compatibilidade com código existente
         self.confidence_threshold = confidence_threshold
         self.max_position_size_pct = max_position_size_pct
+        self.max_positions_per_symbol = max_positions_per_symbol
         self.stop_loss_pct = stop_loss_pct
         self.take_profit_pct = take_profit_pct
         self.position_timeout_minutes = position_timeout_minutes
         self.trailing_stop_enabled = trailing_stop_enabled
         self.trailing_stop_distance_pct = trailing_stop_distance_pct
+
+        # Rastreamento de posições por símbolo
+        self.positions_by_symbol: Dict[str, int] = {sym: 0 for sym in self.symbols}
 
         # Componentes
         self.ml_predictor = MLPredictor()
@@ -261,7 +277,12 @@ class ForwardTestingEngine:
         logger.info("="*60)
         logger.info("FORWARD TESTING INICIADO")
         logger.info(f"Início: {self.start_time.isoformat()}")
-        logger.info(f"Símbolo: {self.symbol}")
+        if self.multi_symbol_mode:
+            logger.info(f"🔄 MULTI-SYMBOL MODE: {len(self.symbols)} símbolos")
+            logger.info(f"Símbolos: {', '.join(self.symbols)}")
+            logger.info(f"Max posições por símbolo: {self.max_positions_per_symbol}")
+        else:
+            logger.info(f"Símbolo: {self.symbol}")
         logger.info(f"Capital Inicial: ${self.paper_trading.initial_capital:,.2f}")
         logger.info(f"Token Deriv configurado: {'SIM' if self.deriv_api_token else 'NÃO ❌'}")
         logger.info(f"Modelo ML carregado: {self.ml_predictor.model_path.name}")
@@ -303,15 +324,63 @@ class ForwardTestingEngine:
         # Gerar relatório final
         self.generate_validation_report()
 
+    async def _process_symbol(self, symbol: str):
+        """
+        Processa um único símbolo: coleta dados, gera previsão, executa trades
+
+        Args:
+            symbol: Símbolo a processar
+        """
+        try:
+            # 1. Coletar dados do mercado para este símbolo
+            market_data = await self._fetch_market_data_for_symbol(symbol)
+            if not market_data:
+                logger.warning(f"❌ Falha ao coletar dados do mercado para {symbol}")
+                return
+
+            logger.info(f"✅ [{symbol}] Market data coletado: preço={market_data['close']:.5f}")
+            current_price = market_data['close']
+
+            # 2. Atualizar posições existentes deste símbolo
+            self.paper_trading.update_positions({symbol: current_price})
+
+            # 2.5. Fechar posições com timeout
+            self._check_position_timeouts_for_symbol(symbol, current_price)
+
+            # 3. Verificar se pode abrir nova posição neste símbolo
+            current_positions = sum(1 for pos in self.paper_trading.positions.values() if pos.symbol == symbol)
+            if current_positions >= self.max_positions_per_symbol:
+                logger.info(f"⏸️ [{symbol}] Limite de posições atingido ({current_positions}/{self.max_positions_per_symbol})")
+                return
+
+            # 4. Gerar previsão ML
+            logger.info(f"🧠 [{symbol}] Gerando previsão ML...")
+            prediction = await self._generate_prediction(market_data)
+            if not prediction:
+                return
+
+            logger.info(f"📊 [{symbol}] Previsão: {prediction['prediction']} (confidence: {prediction.get('confidence', 0):.2%})")
+
+            # 5. Executar trade se confidence > threshold
+            confidence = prediction.get('confidence', 0)
+            if confidence >= self.confidence_threshold and prediction['prediction'] in ['UP', 'DOWN', 'PRICE_UP', 'PRICE_DOWN']:
+                logger.info(f"🎯 [{symbol}] Confidence {confidence:.2%} > {self.confidence_threshold:.2%} - Executando trade!")
+                await self._execute_trade_for_symbol(prediction, current_price, symbol)
+            else:
+                logger.info(f"⏭️ [{symbol}] Confidence insuficiente ou sem sinal: {confidence:.2%}")
+
+        except Exception as e:
+            logger.error(f"Erro ao processar {symbol}: {e}", exc_info=True)
+            self._log_bug(f"symbol_processing_error_{symbol}", str(e), severity="ERROR")
+
     async def _trading_loop(self):
         """
         Loop principal de trading
 
-        1. Coleta dados do mercado
-        2. Gera previsão ML
-        3. Executa trade se confidence > threshold
-        4. Atualiza posições existentes
-        5. Registra métricas
+        1. Itera sobre todos os símbolos ativos
+        2. Para cada símbolo: coleta dados, gera previsão, executa trades
+        3. Atualiza posições existentes
+        4. Registra métricas
         """
         while self.is_running:
             try:
@@ -322,69 +391,44 @@ class ForwardTestingEngine:
                         await asyncio.sleep(1)
                         continue
 
-                # 1. Coletar dados do mercado
-                market_data = await self._fetch_market_data()
-                if not market_data:
-                    logger.warning("❌ Falha ao coletar dados do mercado")
-                    await asyncio.sleep(5)
-                    continue
+                # Processar cada símbolo
+                for symbol in self.symbols:
+                    if not self.is_running:
+                        break
+                    await self._process_symbol(symbol)
 
-                logger.info(f"✅ Market data coletado: preço={market_data['close']:.5f}")
-                current_price = market_data['close']
-
-                # 2. Atualizar posições existentes (stop loss / take profit)
-                self.paper_trading.update_positions({self.symbol: current_price})
-
-                # 2.5. Fechar posições com timeout
-                self._check_position_timeouts(current_price)
-
-                # 2.6. Verificar condições de alerta
+                # Verificar condições de alerta (global)
                 self._check_alert_conditions()
 
-                # 3. Verificar se pode abrir nova posição
-                if len(self.paper_trading.positions) >= self.paper_trading.max_positions:
-                    logger.info(f"⏸️ Limite de posições atingido ({self.paper_trading.max_positions})")
-                    await asyncio.sleep(10)
-                    continue
-
-                # 4. Gerar previsão ML
-                logger.info("🧠 Gerando previsão ML...")
-                prediction = await self._generate_prediction(market_data)
-                logger.info(f"📊 Previsão gerada: {prediction}")
-                if not prediction:
-                    logger.warning("Falha ao gerar previsão ML")
-                    await asyncio.sleep(5)
-                    continue
-
-                # Pular previsões de warm-up (não registrar no log de estatísticas)
-                if 'reason' in prediction and 'Aguardando histórico' in prediction.get('reason', ''):
-                    logger.debug(f"⏳ Warm-up: {prediction['reason']}")
-                    await asyncio.sleep(10)
-                    continue
-
-                self.last_prediction_time = datetime.now()
-
-                # Registrar apenas previsões VÁLIDAS (após warm-up)
-                self.prediction_log.append({
-                    'timestamp': self.last_prediction_time.isoformat(),
-                    'prediction': prediction['prediction'],
-                    'confidence': prediction['confidence'],
-                    'price': current_price
-                })
-
-                # 5. Decidir se executa trade
-                if prediction['confidence'] >= self.confidence_threshold:
-                    await self._execute_trade(prediction, current_price)
-                else:
-                    logger.debug(f"Confidence {prediction['confidence']:.2%} < threshold {self.confidence_threshold:.2%}, não executando trade")
-
                 # Aguardar antes da próxima iteração
-                await asyncio.sleep(10)
+                await asyncio.sleep(10 if self.multi_symbol_mode else 5)
 
             except Exception as e:
                 logger.error(f"Erro no trading loop: {e}", exc_info=True)
                 self._log_bug("trading_loop_error", str(e))
                 await asyncio.sleep(5)
+
+    async def _fetch_market_data_for_symbol(self, symbol: str) -> Optional[Dict]:
+        """
+        Coleta dados do mercado para um símbolo específico
+
+        Args:
+            symbol: Símbolo a coletar dados
+
+        Returns:
+            Dict com dados do mercado ou None se falhar
+        """
+        # Temporariamente trocar o símbolo ativo
+        original_symbol = self.symbol
+        self.symbol = symbol
+
+        # Chamar método original
+        result = await self._fetch_market_data()
+
+        # Restaurar símbolo original
+        self.symbol = original_symbol
+
+        return result
 
     async def _fetch_market_data(self) -> Optional[Dict]:
         """
@@ -522,6 +566,25 @@ class ForwardTestingEngine:
             self._log_bug("prediction_generation_error", str(e), severity="ERROR")
             return None
 
+    async def _execute_trade_for_symbol(self, prediction: Dict, current_price: float, symbol: str):
+        """
+        Executa trade para um símbolo específico
+
+        Args:
+            prediction: Dict com prediction e confidence
+            current_price: Preço atual do mercado
+            symbol: Símbolo a tradear
+        """
+        # Temporariamente trocar o símbolo ativo
+        original_symbol = self.symbol
+        self.symbol = symbol
+
+        # Chamar método original
+        await self._execute_trade(prediction, current_price)
+
+        # Restaurar símbolo original
+        self.symbol = original_symbol
+
     async def _execute_trade(self, prediction: Dict, current_price: float):
         """
         Executa trade baseado na previsão
@@ -590,6 +653,34 @@ class ForwardTestingEngine:
         except Exception as e:
             logger.error(f"Erro ao executar trade: {e}", exc_info=True)
             self._log_bug("trade_execution_error", str(e))
+
+    def _check_position_timeouts_for_symbol(self, symbol: str, current_price: float):
+        """
+        Verifica e fecha posições de um símbolo específico que excederam o tempo limite
+
+        Args:
+            symbol: Símbolo a verificar
+            current_price: Preço atual do mercado
+        """
+        now = datetime.now()
+        timeout_seconds = self.position_timeout_minutes * 60
+
+        for position_id, position in list(self.paper_trading.positions.items()):
+            if position.symbol != symbol:
+                continue
+
+            # Calcular tempo desde entrada
+            position_age_seconds = (now - position.entry_time).total_seconds()
+
+            if position_age_seconds >= timeout_seconds:
+                # Calcular P&L atual
+                pnl, pnl_pct = position.calculate_pnl(current_price)
+
+                logger.info(f"⏰ [{symbol}] TIMEOUT: Posição {position_id[-8:]} aberta há {position_age_seconds/60:.1f} min")
+                logger.info(f"   Fechando com P&L: ${pnl:.2f} ({pnl_pct:+.2f}%)")
+
+                # Fechar posição com razão 'timeout'
+                self.paper_trading.close_position(position_id, current_price, exit_reason='timeout')
 
     def _check_position_timeouts(self, current_price: float):
         """

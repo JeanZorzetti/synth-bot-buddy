@@ -394,7 +394,20 @@ Preço cai para $751:
   - [ ] (Futuro) JSON export
 
 ### Backlog (Futuro)
-- [ ] Multi-Symbol Trading
+- [x] **Multi-Symbol Trading** ✅ (Commit: pendente - 17/12/2024)
+  - [x] Novos parâmetros no __init__:
+    - symbols: List[str] - Lista de símbolos
+    - max_positions_per_symbol: int - Limite por ativo
+  - [x] Método _process_symbol() - Processa cada símbolo independentemente
+  - [x] Métodos auxiliares para multi-symbol:
+    - _fetch_market_data_for_symbol()
+    - _check_position_timeouts_for_symbol()
+    - _execute_trade_for_symbol()
+  - [x] Trading loop refatorado para iterar símbolos
+  - [x] Rastreamento de posições por símbolo
+  - [x] Logging detalhado com prefixo [SYMBOL]
+  - [ ] (Futuro) UI para seleção de múltiplos símbolos
+  - [ ] (Futuro) Alocação dinâmica de capital por performance
 - [x] **Trailing Stop Loss** ✅ (Commit: pendente - 17/12/2024)
   - [x] Novos campos na classe Position:
     - trailing_stop_enabled (bool)
