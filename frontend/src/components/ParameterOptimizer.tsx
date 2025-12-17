@@ -42,8 +42,8 @@ export function ParameterOptimizer({ apiBaseUrl, isRunning }: ParameterOptimizer
   const runOptimization = async () => {
     setIsLoading(true);
     try {
-      const symbolParam = selectedSymbol === 'ALL' ? '' : `?symbol=${selectedSymbol}`;
-      const response = await fetch(`${apiBaseUrl}/api/forward-testing/optimize-parameters${symbolParam}&top_n=10`);
+      const symbolParam = selectedSymbol === 'ALL' ? '' : `symbol=${selectedSymbol}&`;
+      const response = await fetch(`${apiBaseUrl}/api/forward-testing/optimize-parameters?${symbolParam}top_n=10`);
       const result = await response.json();
 
       if (result.status === 'error') {
