@@ -162,10 +162,11 @@ class ForwardTestingEngine:
                 # 1. Coletar dados do mercado
                 market_data = await self._fetch_market_data()
                 if not market_data:
-                    logger.warning("Falha ao coletar dados do mercado")
+                    logger.warning("❌ Falha ao coletar dados do mercado")
                     await asyncio.sleep(5)
                     continue
 
+                logger.info(f"✅ Market data coletado: preço={market_data['close']:.5f}")
                 current_price = market_data['close']
 
                 # 2. Atualizar posições existentes (stop loss / take profit)
@@ -173,12 +174,14 @@ class ForwardTestingEngine:
 
                 # 3. Verificar se pode abrir nova posição
                 if len(self.paper_trading.positions) >= self.paper_trading.max_positions:
-                    logger.debug(f"Limite de posições atingido ({self.paper_trading.max_positions})")
+                    logger.info(f"⏸️ Limite de posições atingido ({self.paper_trading.max_positions})")
                     await asyncio.sleep(10)
                     continue
 
                 # 4. Gerar previsão ML
+                logger.info("🧠 Gerando previsão ML...")
                 prediction = await self._generate_prediction(market_data)
+                logger.info(f"📊 Previsão gerada: {prediction}")
                 if not prediction:
                     logger.warning("Falha ao gerar previsão ML")
                     await asyncio.sleep(5)
