@@ -6481,6 +6481,102 @@ async def get_mode_comparison():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/forward-testing/export/csv")
+async def export_trades_csv():
+    """
+    Exporta histórico de trades em formato CSV
+
+    Returns:
+        Arquivo CSV com todos os trades executados
+    """
+    try:
+        import csv
+        import tempfile
+        from datetime import datetime
+
+        engine = get_forward_testing_engine()
+        trades = engine.paper_trading.trade_history
+
+        if not trades:
+            raise HTTPException(status_code=404, detail="Nenhum trade disponível para exportar")
+
+        # Criar arquivo temporário
+        temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='', encoding='utf-8')
+
+        try:
+            writer = csv.writer(temp_file)
+
+            # Cabeçalho
+            writer.writerow([
+                'ID',
+                'Symbol',
+                'Position Type',
+                'Entry Price',
+                'Exit Price',
+                'Size',
+                'Entry Time',
+                'Exit Time',
+                'Profit/Loss ($)',
+                'Profit/Loss (%)',
+                'Is Winner',
+                'Exit Reason',
+                'Duration (seconds)',
+                'Duration (minutes)'
+            ])
+
+            # Dados
+            for trade in trades:
+                duration_seconds = (trade.exit_time - trade.entry_time).total_seconds() if trade.exit_time else 0
+
+                writer.writerow([
+                    trade.id,
+                    trade.symbol,
+                    trade.position_type,
+                    trade.entry_price,
+                    trade.exit_price,
+                    trade.size,
+                    trade.entry_time.isoformat() if trade.entry_time else '',
+                    trade.exit_time.isoformat() if trade.exit_time else '',
+                    trade.profit_loss,
+                    trade.profit_loss_pct,
+                    'Yes' if trade.is_winner else 'No',
+                    getattr(trade, 'exit_reason', 'N/A'),
+                    duration_seconds,
+                    round(duration_seconds / 60, 2)
+                ])
+
+            temp_file.close()
+
+            # Gerar nome do arquivo com timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"forward_testing_trades_{timestamp}.csv"
+
+            logger.info(f"📊 Exportando {len(trades)} trades para CSV: {filename}")
+
+            # Retornar arquivo
+            return FileResponse(
+                path=temp_file.name,
+                media_type='text/csv',
+                filename=filename,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"'
+                }
+            )
+
+        except Exception as e:
+            # Limpar arquivo temporário em caso de erro
+            import os
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+            raise e
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao exportar trades para CSV: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/forward-testing/bugs")
 async def get_forward_testing_bugs():
     """

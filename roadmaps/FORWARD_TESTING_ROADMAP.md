@@ -383,10 +383,15 @@ Preço cai para $751:
 - [ ] Otimizador de Parâmetros
   - [ ] Grid search algorithm
   - [ ] UI para visualizar resultados
-- [ ] Export de Relatórios
-  - [ ] PDF generation
-  - [ ] CSV export
-  - [ ] Download via API
+- [x] **Export de Relatórios - CSV** ✅ (Commit: pendente - 17/12/2024)
+  - [x] Endpoint GET /api/forward-testing/export/csv
+  - [x] CSV generation com 14 colunas
+  - [x] Timestamped filename
+  - [x] Botão "Exportar CSV" em TradeHistoryTable
+  - [x] Handler com toast notifications
+  - [x] Download automático via FileResponse
+  - [ ] (Futuro) PDF generation
+  - [ ] (Futuro) JSON export
 
 ### Backlog (Futuro)
 - [ ] Multi-Symbol Trading

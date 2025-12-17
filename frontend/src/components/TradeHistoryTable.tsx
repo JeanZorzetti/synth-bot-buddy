@@ -27,7 +27,9 @@ import {
   History,
   Filter,
   BarChart3,
+  Download,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Trade {
   id: string;
@@ -77,9 +79,11 @@ export function TradeHistoryTable({
   isRunning,
   pollInterval = 30000 // 30 segundos
 }: TradeHistoryTableProps) {
+  const { toast } = useToast();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [statistics, setStatistics] = useState<TradeStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [resultFilter, setResultFilter] = useState<string>('all'); // 'all', 'win', 'loss'
   const [limit, setLimit] = useState<number>(50);
 
@@ -107,6 +111,49 @@ export function TradeHistoryTable({
       console.error('Erro ao carregar trades:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Exportar para CSV
+  const handleExportCSV = async () => {
+    try {
+      setIsExporting(true);
+
+      const response = await fetch(`${apiBaseUrl}/api/forward-testing/export/csv`);
+
+      if (!response.ok) {
+        throw new Error('Falha ao exportar CSV');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Usar filename do header se disponível
+      const contentDisposition = response.headers.get('content-disposition');
+      const filenameMatch = contentDisposition?.match(/filename="?(.+)"?/);
+      const filename = filenameMatch?.[1] || `forward_testing_trades_${Date.now()}.csv`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'CSV Exportado',
+        description: `Download de ${trades.length} trades iniciado com sucesso`,
+      });
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast({
+        title: 'Erro ao Exportar',
+        description: 'Falha ao gerar arquivo CSV',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -246,6 +293,16 @@ export function TradeHistoryTable({
             >
               <BarChart3 className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
               Atualizar
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={isExporting || trades.length === 0}
+            >
+              <Download className={`h-4 w-4 mr-1 ${isExporting ? 'animate-spin' : ''}`} />
+              Exportar CSV
             </Button>
           </div>
         </div>
