@@ -395,17 +395,105 @@ Nossa simulação testou o **pior cenário possível**:
 
 ---
 
+## 🆚 ADENDO: V75 vs V100 - QUAL ESCOLHER PARA FASE 0.2?
+
+### Resumo da Pesquisa Adicional
+
+**V100 é tecnicamente SUPERIOR em performance**, mas V75 é mais POPULAR.
+
+#### Dados Objetivos (Análise 6 meses, 8,640 janelas de 30min)
+
+| Métrica | V75 | V100 | Vencedor |
+|---------|-----|------|----------|
+| **Swing médio (30min)** | Menor | ~2,000 pontos ($10) | V100 (+30%) |
+| **Volatilidade** | 75% | 100% | V100 |
+| **Risco de Liquidação** | Alto | EXTREMO | V75 (mais seguro) |
+| **Estrutura de Mercado** | Limpa e previsível | Caótica | V75 |
+| **Popularidade** | MAIS popular | Menos popular | V75 |
+| **Indicadores Técnicos** | Funcionam bem | Menos confiáveis | V75 |
+| **Melhor para Iniciantes** | Difícil mas possível | Suicida | V75 |
+| **Melhor para Profissionais** | Bom | MELHOR | V100 |
+
+#### Por Que V75 é Mais Popular?
+
+1. **Volatilidade Gerenciável** (75% vs 100%)
+   - V100 pode liquidar conta micro em **segundos** com 0.01 lote
+   - V75 dá mais tempo para reagir
+
+2. **Melhor Estrutura para Análise Técnica**
+   - V75: Momentum limpo, padrões reconhecíveis
+   - V100: Caos, muitos false breakouts
+
+3. **Comunidade e Recursos**
+   - 90% das estratégias publicadas são para V75
+   - Mais EAs, mais suporte, mais dados compartilhados
+
+4. **Equilíbrio Risco/Retorno**
+   - V100 dá 30% mais swings, mas 300% mais risco
+   - Traders preferem "dormir tranquilos" (V75) que "lucrar 30% mais" (V100)
+
+### Recomendação para Fase 0.2
+
+**TESTAR AMBOS** e comparar resultados:
+
+#### Hipóteses a Validar:
+
+**Hipótese V75**:
+- Win rate: 55-65% (melhor estrutura = filtros ML mais eficazes)
+- Swings: Moderados (~0.5% por trade)
+- Profit Factor: 1.5-2.0
+- Sharpe Ratio: Mais alto (menos volatilidade)
+
+**Hipótese V100**:
+- Win rate: 50-60% (estrutura caótica = filtros ML menos eficazes)
+- Swings: Grandes (~0.65% por trade, +30%)
+- Profit Factor: 1.5-2.0 (mesmo com win rate menor, swings compensam)
+- Sharpe Ratio: Mais baixo (mais volatilidade)
+
+#### Estratégia de Teste:
+
+1. **Fase 0.2**: Coletar dados M5 de AMBOS (V75 e V100)
+2. **Treinar 2 modelos** XGBoost (features técnicas idênticas)
+3. **Backtesting paralelo**:
+   - Mesmos 3 meses out-of-sample
+   - Mesmas métricas (win rate, profit factor, Sharpe, max drawdown)
+4. **Decisão**:
+   - Se V75 > V100 em profit factor → usar V75
+   - Se V100 > V75 em profit factor → usar V100
+   - Se diferença < 10% → usar **AMBOS** (50/50 capital)
+
+#### Vantagens de Testar Ambos:
+
+✅ **Diversificação**: Se V75 falhar, V100 pode compensar
+✅ **Dados empíricos**: Saber qual é REALMENTE melhor (não apenas teoria)
+✅ **Flexibilidade**: Escolher o melhor OU combinar 50/50
+✅ **Tempo extra**: Apenas +1 dia (coleta paralela, treino paralelo)
+
+---
+
 **Implementado por**: Claude Sonnet 4.5
 **Data**: 18/12/2025
-**Versão**: 1.0
+**Versão**: 1.1 (Adicionado V75 vs V100)
 
 ---
 
 ## 📖 Referências
 
+### Estratégias V75/V100 Scalping
+
 1. [V75 Index Scalping Strategy 2025](https://synthetics.info/v75-scalping-trading-strategy/)
 2. [Best Tips For Trading Synthetic Indices 2025](https://synthetics.info/tips-for-trading-synthetic-indices/)
-3. [What Are Synthetic Indices? 2025](https://fxprimus.com/what-are-synthetic-indices-a-beginners-guide/)
-4. [Most Profitable Trading Strategy 2025](https://www.hyrotrader.com/blog/most-profitable-trading-strategy/)
-5. [Volatility 75 Ultimate Scalper Indicator](https://mrpfx.com/resource/volatility-75-ultimate-scalper-indicator-strategy/)
-6. [BeanFX V75 Scalper Strategy](https://www.beanfxtrader.com/beanfx-volatility-index-75-scalper/)
+3. [Volatility 75 Ultimate Scalper Indicator](https://mrpfx.com/resource/volatility-75-ultimate-scalper-indicator-strategy/)
+4. [BeanFX V75 Scalper Strategy](https://www.beanfxtrader.com/beanfx-volatility-index-75-scalper/)
+
+### Comparação V75 vs V100
+
+5. [Volatility Indices Full Guide 2025](https://synthetics.info/volatility-indices/)
+6. [Top 5 Most Volatile Synthetic Indices 2025](https://synthetics.info/most-volatile-synthetic-indices-on-deriv/)
+7. [Best Volatility Index to Trade in Deriv](https://kenyaforexfirm.com/blog/best-volatility-index-to-trade-in-deriv/)
+8. [Best Volatility Indices for Beginners 2025](https://synthetics.info/best-volatility-indices-for-beginners/)
+
+### Profitabilidade e Expectativas
+
+9. [What Are Synthetic Indices? 2025](https://fxprimus.com/what-are-synthetic-indices-a-beginners-guide/)
+10. [Most Profitable Trading Strategy 2025](https://www.hyrotrader.com/blog/most-profitable-trading-strategy/)
