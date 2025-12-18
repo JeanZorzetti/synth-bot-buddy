@@ -24,7 +24,13 @@ Responder a pergunta: **"Scalping é viável nos ativos Deriv com ML?"**
 
 ---
 
-## 🔬 FASE 0.1: Análise de Volatilidade para Scalping
+## 🔬 FASE 0.1: Análise de Volatilidade para Scalping ✅ CONCLUÍDA
+
+**Status**: ✅ Implementada e executada
+**Data**: 18/12/2025
+**Arquivo**: `backend/ml/research/scalping_volatility_analysis.py` (630 linhas)
+**Relatórios**: `backend/ml/research/reports/scalping_viability_*.md`
+**Documentação**: `roadmaps/FASE_01_IMPLEMENTADA.md`
 
 ### Objetivo
 Identificar ativos com volatilidade suficiente para scalping (targets de 0.5%-2%)
@@ -302,13 +308,49 @@ if __name__ == "__main__":
 
 ### Entregáveis da Fase 0.1
 
-- [ ] Script `scalping_volatility_analysis.py` implementado
-- [ ] Dados históricos coletados (6 meses, 1min) para todos os ativos
-- [ ] Relatórios individuais para cada ativo (`scalping_viability_{SYMBOL}.md`)
-- [ ] Relatório comparativo final (`scalping_assets_comparison.md`)
-- [ ] Ranking de ativos por viabilidade de scalping
+- [x] Script `scalping_volatility_analysis.py` implementado ✅
+- [x] Dados históricos coletados (6 meses, 1min) para todos os ativos ✅
+- [x] Relatórios individuais para cada ativo (`scalping_viability_{SYMBOL}.md`) ✅
+- [x] Relatório comparativo final (`SCALPING_COMPARATIVE_ANALYSIS.md`) ✅
+- [x] Ranking de ativos por viabilidade de scalping ✅
 
 **Critério de Sucesso**: Identificar **pelo menos 2 ativos** viáveis para scalping
+
+### 📊 RESULTADOS DA FASE 0.1
+
+**Veredicto**: ❌ **V75 NÃO VIÁVEL para scalping em M1**
+
+**V75 (1HZ75V) - Timeframe M1**:
+- ✅ ATR: 0.1501% (EXCELENTE - 3x acima do mínimo)
+- ❌ Tempo para 1% TP: 12.0 min (20% acima do limite)
+- ❌ Success Rate: 2.7% (59x abaixo do mínimo de 60%)
+
+**Cenários Testados**:
+| Cenário | TP | SL | Success Rate | Tempo Médio |
+|---------|----|----|--------------|-------------|
+| Micro | 0.5% | 0.25% | 23.6% | 10.8 min |
+| Padrão | 1.0% | 0.5% | **2.7%** | 15.1 min |
+| Agressivo | 1.5% | 0.75% | 0.1% | 16.8 min |
+| Swing-Scalp | 2.0% | 1.0% | 0.0% | 18.0 min |
+
+### 🔍 ANÁLISE COMPARATIVA vs MERCADO
+
+**Arquivo**: `roadmaps/SCALPING_COMPARATIVE_ANALYSIS.md`
+
+**Descoberta Crítica**: Mercado usa **M5-M15** + indicadores técnicos (RSI+BB+Stoch+MACD), nós testamos **M1 sem filtros**
+
+**Discrepâncias Identificadas**:
+1. **Timeframe**: Mercado M5-M15 vs Nosso M1 (M1 é muito ruidoso)
+2. **Filtro de Entrada**: Mercado usa 5 confirmações vs Nosso "qualquer candle"
+3. **TP**: Mercado usa 0.1% (10 pips) vs Nosso 1% (100 pips)
+4. **Win Rate**: Mercado reporta 55-79% vs Nosso 2.7%
+
+**Explicação**: Nossa simulação testou o **pior cenário possível** (M1 + sem filtros + TP alto)
+
+**Próximas Opções**:
+1. ⭐⭐⭐ **Path A**: Revalidar V75 com M5 + features técnicas (Fase 0.2)
+2. ⭐⭐⭐⭐ **Path B**: Focar em R_100 swing (já validado, 62.58% accuracy)
+3. ⭐⭐ **Path Híbrido**: 70% R_100 swing + 30% V75 scalping
 
 ---
 
