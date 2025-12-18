@@ -39,9 +39,52 @@
 
 ---
 
-## 🔬 FASE 0: Pesquisa e Análise Profunda (Semana 0)
+## 🚨 AÇÕES URGENTES (Prioridade Máxima)
+
+**Status**: 🔴 CRÍTICO - Descobertas da Fase 0 exigem ação imediata
+
+Com base nas análises das Fases 0.1-0.4, identificamos 3 problemas críticos que precisam ser corrigidos AGORA antes de qualquer otimização adicional.
+
+### URGENTE 1: Ajustar Timeout (Quick Win - 5 min)
+**Problema**: Timeout de 3min causa 92% dos trades fecharem antes de atingir TP
+**Solução**: Aumentar timeout para 180 minutos (2.5 horas)
+**Impacto Esperado**: Timeout rate 92% → <30%
+
+**Ação**:
+- [x] Modificar `forward_testing.py`: `position_timeout_minutes=180` ✅
+- [ ] Re-testar com 10 trades
+- [ ] Validar timeout rate < 30%
+
+### URGENTE 2: Implementar Predição MULTI-CLASS (Crítico - 1 dia)
+**Problema**: Modelo só prevê PRICE_UP (100%), nunca prevê quedas
+**Solução**: Re-treinar modelo XGBoost multi-class com dataset balanceado
+**Impacto Esperado**: Acurácia 15% → 45%+
+
+**Ação**:
+- [x] Coletar dataset balanceado (33% UP / 33% DOWN / 33% NO_MOVE) ✅
+- [x] Re-treinar XGBoost com `objective='multi:softmax'` ✅
+- [x] Validar que prevê as 3 classes ✅ (NO_MOVE: 23.5%, UP: 66.4%, DOWN: 10.1%)
+- [~] Validar acurácia > 45% ⚠️ (atingiu 33.25%, faltam 11.75pp)
+
+### URGENTE 3: Ajustar Threshold Dinâmico (Médio - 2h)
+**Problema**: Threshold fixo 0.3 força todas predições como PRICE_UP
+**Solução**: Usar threshold por classe ou remover threshold
+**Impacto Esperado**: Predições balanceadas
+
+**Ação**:
+- [x] Modificar `ml_predictor.py`: usar `predict()` ao invés de threshold ✅
+- [x] Auto-detectar modelo multi-class vs binary ✅
+- [x] Retornar probabilidades das 3 classes ✅
+- [ ] Validar distribuição de classes (30-40% cada)
+- [ ] Re-testar com 10 trades
+
+---
+
+## 🔬 FASE 0: Pesquisa e Análise Profunda ✅ **CONCLUÍDA**
 
 **Objetivo**: Entender profundamente o comportamento do mercado, do modelo e identificar a causa raiz dos problemas antes de implementar soluções.
+
+**Status**: ✅ Concluída (Fases 0.1-0.4 executadas)
 
 ### 0.1 Análise Exploratória de Dados (EDA) ✅ **CONCLUÍDA**
 

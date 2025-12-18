@@ -73,15 +73,23 @@ class MLPredictor:
         logger.info(f"  Features: {len(self.feature_names)}")
 
     def _find_latest_model(self) -> str:
-        """Encontra modelo XGBoost mais recente"""
+        """Encontra modelo XGBoost mais recente (prioriza multi-class)"""
         models_dir = Path(__file__).parent / "ml" / "models"
 
+        # Priorizar modelo multi-class
+        multiclass_models = list(models_dir.glob("xgboost_multiclass_*.pkl"))
+        if multiclass_models:
+            latest_model = sorted(multiclass_models, key=lambda x: x.stat().st_mtime)[-1]
+            logger.info(f"Usando modelo MULTI-CLASS mais recente: {latest_model.name}")
+            return str(latest_model)
+
+        # Fallback para modelo binary
         model_files = list(models_dir.glob("xgboost_improved_learning_rate_*.pkl"))
         if not model_files:
             raise FileNotFoundError("Modelo XGBoost não encontrado!")
 
         latest_model = sorted(model_files, key=lambda x: x.stat().st_mtime)[-1]
-        logger.info(f"Usando modelo mais recente: {latest_model.name}")
+        logger.info(f"Usando modelo BINARY mais recente: {latest_model.name}")
         return str(latest_model)
 
     def _load_model(self):
@@ -127,27 +135,67 @@ class MLPredictor:
 
             # Fazer predição
             X = features[self.feature_names]
-            y_pred_proba = self.model.predict_proba(X)[:, 1][0]  # Probabilidade de "Price Up"
 
-            # Classificar usando threshold otimizado
-            prediction = "PRICE_UP" if y_pred_proba >= self.threshold else "NO_MOVE"
+            # Detectar se é modelo multi-class ou binary
+            is_multiclass = 'multiclass' in self.model_path.name.lower()
 
-            # Determinar signal strength
-            if y_pred_proba >= self.confidence_threshold:
-                signal_strength = "HIGH"
-            elif y_pred_proba >= self.threshold:
-                signal_strength = "MEDIUM"
+            if is_multiclass:
+                # MULTI-CLASS: usar predict() direto (sem threshold)
+                y_pred_class = self.model.predict(X)[0]
+                y_pred_proba_all = self.model.predict_proba(X)[0]
+
+                # Mapear classe para label
+                class_map = {0: "NO_MOVE", 1: "PRICE_UP", 2: "PRICE_DOWN"}
+                prediction = class_map.get(y_pred_class, "NO_MOVE")
+
+                # Confidence = probabilidade da classe prevista
+                confidence = float(y_pred_proba_all[y_pred_class])
+
+                # Signal strength baseado em confidence
+                if confidence >= 0.50:
+                    signal_strength = "HIGH"
+                elif confidence >= 0.40:
+                    signal_strength = "MEDIUM"
+                else:
+                    signal_strength = "LOW"
+
+                result = {
+                    "prediction": prediction,
+                    "confidence": confidence,
+                    "signal_strength": signal_strength,
+                    "threshold_used": None,  # Multi-class não usa threshold
+                    "model": self.model_path.name,
+                    "model_type": "multi-class",
+                    "class_probabilities": {
+                        "NO_MOVE": float(y_pred_proba_all[0]),
+                        "PRICE_UP": float(y_pred_proba_all[1]),
+                        "PRICE_DOWN": float(y_pred_proba_all[2])
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }
+
             else:
-                signal_strength = "LOW"
+                # BINARY: usar threshold (comportamento original)
+                y_pred_proba = self.model.predict_proba(X)[:, 1][0]
 
-            result = {
-                "prediction": prediction,
-                "confidence": float(y_pred_proba),
-                "signal_strength": signal_strength,
-                "threshold_used": self.threshold,
-                "model": self.model_path.name,
-                "timestamp": datetime.now().isoformat()
-            }
+                prediction = "PRICE_UP" if y_pred_proba >= self.threshold else "NO_MOVE"
+
+                if y_pred_proba >= self.confidence_threshold:
+                    signal_strength = "HIGH"
+                elif y_pred_proba >= self.threshold:
+                    signal_strength = "MEDIUM"
+                else:
+                    signal_strength = "LOW"
+
+                result = {
+                    "prediction": prediction,
+                    "confidence": float(y_pred_proba),
+                    "signal_strength": signal_strength,
+                    "threshold_used": self.threshold,
+                    "model": self.model_path.name,
+                    "model_type": "binary",
+                    "timestamp": datetime.now().isoformat()
+                }
 
             if return_confidence:
                 result["features_summary"] = {

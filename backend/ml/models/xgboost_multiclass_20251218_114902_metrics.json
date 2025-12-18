@@ -1,0 +1,23 @@
+{
+  "model_name": "xgboost_multiclass",
+  "timestamp": "20251218_114902",
+  "metrics": {
+    "accuracy": 0.332486870202574,
+    "precision": 0.34947880114088,
+    "recall": 0.34678747489096695,
+    "f1": 0.2969728937549973,
+    "num_classes": 3,
+    "classes_predicted": 3
+  },
+  "metadata": {
+    "dataset": "R_100_1m_6months_balanced",
+    "train_samples": 207920,
+    "test_samples": 51981,
+    "features": 65,
+    "prediction_horizon": "15min",
+    "threshold": "0.3%",
+    "num_class": 3,
+    "objective": "multi:softmax",
+    "balanced": true
+  }
+}

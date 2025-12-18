@@ -48,7 +48,7 @@ class ForwardTestingEngine:
         max_positions_per_symbol: int = 1,  # Máximo de posições por símbolo
         stop_loss_pct: float = 2.0,  # 2% stop loss
         take_profit_pct: float = 4.0,  # 4% take profit (risk:reward 1:2)
-        position_timeout_minutes: int = 30,  # Timeout para fechar posição automaticamente
+        position_timeout_minutes: int = 180,  # Timeout para fechar posição automaticamente (2.5 horas - otimizado para ATR médio)
         trailing_stop_enabled: bool = False,  # Trailing stop loss
         trailing_stop_distance_pct: float = 0.5,  # Distância do trailing (0.5%)
         log_dir: str = "forward_testing_logs"
