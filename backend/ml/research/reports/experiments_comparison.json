@@ -1,0 +1,56 @@
+{
+  "baseline": {
+    "win_rate": 0.509,
+    "tp_pct": 0.2,
+    "sl_pct": 0.1,
+    "n_trials": 50
+  },
+  "experiments": {
+    "A": {
+      "experiment": "A_relaxed_tp_sl",
+      "tp_pct": 0.3,
+      "sl_pct": 0.15,
+      "rr_ratio": 2.0,
+      "n_trials": 50,
+      "win_rate": 0.5119303118293145,
+      "f1_score": 0.5122138666980183,
+      "accuracy": 0.5119303118293145,
+      "best_params": {
+        "max_depth": 8,
+        "learning_rate": 0.29133864402697857,
+        "n_estimators": 107,
+        "min_child_weight": 4,
+        "subsample": 0.9918970359185635,
+        "colsample_bytree": 0.8840384056942895,
+        "gamma": 2.0851263843422316,
+        "reg_alpha": 1.1250680084315507,
+        "reg_lambda": 1.9771682028386126
+      },
+      "timestamp": "2025-12-18T19:17:27.885749"
+    },
+    "B": {
+      "win_rate": 0,
+      "error": "'VotingClassifier' object has no attribute 'le_'"
+    },
+    "C": {
+      "experiment": "C_more_trials",
+      "n_trials": 100,
+      "win_rate": 0.5100615160045876,
+      "f1_score": 0.4935829244332941,
+      "accuracy": 0.5100615160045876,
+      "best_params": {
+        "max_depth": 7,
+        "learning_rate": 0.12185064114171879,
+        "n_estimators": 421,
+        "min_child_weight": 4,
+        "subsample": 0.6396042782181031,
+        "colsample_bytree": 0.7242807389888848,
+        "gamma": 0.8606737372476329,
+        "reg_alpha": 1.4972781019936352,
+        "reg_lambda": 0.5648640258267641
+      },
+      "timestamp": "2025-12-18T19:28:49.869027"
+    }
+  },
+  "best_experiment": "A",
+  "goal_achieved": 

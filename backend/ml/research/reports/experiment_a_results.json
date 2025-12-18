@@ -1,0 +1,22 @@
+{
+  "experiment": "A_relaxed_tp_sl",
+  "tp_pct": 0.3,
+  "sl_pct": 0.15,
+  "rr_ratio": 2.0,
+  "n_trials": 50,
+  "win_rate": 0.5119303118293145,
+  "f1_score": 0.5122138666980183,
+  "accuracy": 0.5119303118293145,
+  "best_params": {
+    "max_depth": 8,
+    "learning_rate": 0.29133864402697857,
+    "n_estimators": 107,
+    "min_child_weight": 4,
+    "subsample": 0.9918970359185635,
+    "colsample_bytree": 0.8840384056942895,
+    "gamma": 2.0851263843422316,
+    "reg_alpha": 1.1250680084315507,
+    "reg_lambda": 1.9771682028386126
+  },
+  "timestamp": "2025-12-18T19:17:27.885749"
+}
