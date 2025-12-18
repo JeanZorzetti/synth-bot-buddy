@@ -97,6 +97,18 @@ const DERIV_SYMBOLS = [
 
 const TRADING_MODES = [
   {
+    id: 'ml_multiclass',
+    name: 'ML Multi-Class 🧠 (RECOMENDADO)',
+    description: 'Modelo otimizado via Fase 0 (3 classes: UP/DOWN/NO_MOVE)',
+    stopLoss: 2.0,
+    takeProfit: 4.0,
+    timeout: 180,
+    riskReward: '1:2',
+    avgDuration: '30-180 min',
+    tradesPerDay: '3-8',
+    recommended: ['R_100'],
+  },
+  {
     id: 'scalping_aggressive',
     name: 'Scalping Agressivo 🔥',
     description: 'Entradas/saídas ultra-rápidas',
@@ -146,8 +158,8 @@ export default function ForwardTesting() {
   const [isStopping, setIsStopping] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState('1HZ75V');
-  const [selectedMode, setSelectedMode] = useState('scalping_moderate');
+  const [selectedSymbol, setSelectedSymbol] = useState('R_100');
+  const [selectedMode, setSelectedMode] = useState('ml_multiclass');
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br';
 

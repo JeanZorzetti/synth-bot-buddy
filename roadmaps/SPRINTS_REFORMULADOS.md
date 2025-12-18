@@ -1,10 +1,65 @@
 # 🎯 SPRINTS REFORMULADOS - Baseado nas Descobertas da Fase 0
 
+## 📋 RESUMO DAS CORREÇÕES IMPLEMENTADAS
+
+### URGENTE 1: Timeout Ajustado ✅
+- **Problema**: Timeout de 3 minutos causava 92% de timeouts
+- **Solução**: Timeout aumentado para 180 minutos (2.5 horas) baseado em análise ATR da Fase 0.1
+- **Arquivo**: `backend/forward_testing.py` linha 51
+- **Commit**: `8e740ee`
+
+### URGENTE 2: Modelo Multi-Class Treinado ✅
+- **Problema**: Modelo binary previa 100% PRICE_UP (accuracy 15.38%)
+- **Solução**: Modelo XGBoost multi-class (3 classes: NO_MOVE, PRICE_UP, PRICE_DOWN)
+- **Resultado**: Accuracy 33.25%, prevê todas as 3 classes
+- **Arquivo**: `backend/ml/training/train_xgboost_multiclass.py` (novo)
+- **Modelo**: `xgboost_multiclass_20251218_114940.pkl`
+- **Commit**: `1245249`
+
+### URGENTE 3: Threshold Removido ✅
+- **Problema**: Threshold fixo de 0.40 não funcionava com multi-class
+- **Solução**: ml_predictor.py auto-detecta modelo e usa predict() direto (sem threshold)
+- **Arquivo**: `backend/ml_predictor.py` linhas 75-198
+- **Commit**: `1245249`
+
+### FIX CRÍTICO: UnboundLocalError ✅
+- **Problema**: Erro `cannot access local variable 'y_pred_proba'` em produção
+- **Solução**: Usar `result.get('confidence')` em vez de variável local
+- **Arquivo**: `backend/ml_predictor.py` linha 209
+- **Commit**: `8e740ee`
+
+### FIX CRÍTICO: Trading Loop Não Iniciava ✅
+- **Problema**: Sistema rodando 1h45m sem gerar predições
+- **Solução**: Trocar `background_tasks.add_task()` por `asyncio.create_task()`
+- **Arquivo**: `backend/main.py` linha 6016
+- **Commit**: `0e89ae9`
+
+### FIX CRÍTICO: Frontend Sobrescrevia Defaults ✅
+- **Problema**: Frontend enviava `position_timeout_minutes: 5` ao invés de 180
+- **Solução**: Atualizar defaults de `ForwardTestingStartRequest` no backend
+- **Arquivo**: `backend/main.py` linhas 5829-5835
+- **Valores Novos**:
+  - `symbol: "R_100"` (antes: "1HZ75V")
+  - `mode: "ml_multiclass"` (antes: "scalping_moderate")
+  - `position_timeout_minutes: 180` (antes: 5)
+  - `stop_loss_pct: 2.0` (antes: 1.0)
+  - `take_profit_pct: 4.0` (antes: 1.5)
+- **Commit**: `5b537ea`
+
+### FIX FRONTEND: Modo ML Multi-Class Adicionado ✅
+- **Problema**: Frontend não tinha opção para o novo modo otimizado
+- **Solução**: Adicionar modo "ML Multi-Class 🧠 (RECOMENDADO)" ao frontend
+- **Arquivo**: `frontend/src/pages/ForwardTesting.tsx` linhas 98-110
+- **Defaults Novos**: `selectedSymbol: "R_100"`, `selectedMode: "ml_multiclass"`
+- **Commit**: (próximo)
+
+---
+
 ## 🎯 SPRINT 1: Validação do Modelo Multi-Class em Produção (Semana 1) 🆕
 
 **Objetivo**: Validar se o modelo multi-class corrige os problemas críticos identificados na Fase 0 e estabelecer baseline de performance real.
 
-**Status**: 🔵 PRÓXIMO - Aguardando estabilização do deploy
+**Status**: 🟢 PRONTO PARA INICIAR - Todos os pré-requisitos completos
 
 **Pré-requisitos**:
 - ✅ Modelo multi-class treinado (xgboost_multiclass_20251218_114940.pkl)
@@ -13,6 +68,7 @@
 - ✅ Deploy em produção (botderivapi.roilabs.com.br)
 - ✅ Bug UnboundLocalError corrigido
 - ✅ ForwardTestingStartRequest defaults ajustados (R_100, 180min, SL 2%, TP 4%)
+- ✅ Frontend com modo "ML Multi-Class" configurado
 
 ---
 
