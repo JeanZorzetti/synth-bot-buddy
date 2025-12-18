@@ -11,7 +11,8 @@
 - ✅ Timeout ajustado para 180 minutos
 - ✅ ml_predictor.py com suporte multi-class
 - ✅ Deploy em produção (botderivapi.roilabs.com.br)
-- ⏳ Bug UnboundLocalError corrigido
+- ✅ Bug UnboundLocalError corrigido
+- ✅ ForwardTestingStartRequest defaults ajustados (R_100, 180min, SL 2%, TP 4%)
 
 ---
 

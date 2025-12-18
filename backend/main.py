@@ -5828,11 +5828,11 @@ class TradeRecordRequest(BaseModel):
 
 class ForwardTestingStartRequest(BaseModel):
     """Request para iniciar forward testing com símbolo e modo específicos"""
-    symbol: str = "1HZ75V"  # V75 (1s) por padrão
-    mode: str = "scalping_moderate"  # scalping_aggressive, scalping_moderate, swing
-    stop_loss_pct: float = 1.0
-    take_profit_pct: float = 1.5
-    position_timeout_minutes: int = 5
+    symbol: str = "R_100"  # R_100 por padrão (otimizado via Fase 0)
+    mode: str = "ml_multiclass"  # ml_multiclass = modelo multi-class XGBoost
+    stop_loss_pct: float = 2.0  # Otimizado para modelo multi-class
+    take_profit_pct: float = 4.0  # Risk:Reward 1:2
+    position_timeout_minutes: int = 180  # 180 min (2.5 horas) - otimizado via Fase 0.1 ATR analysis
 
 
 @app.post("/api/trades/record")
