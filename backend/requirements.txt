@@ -1,9 +1,9 @@
 # Core dependencies
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
-python-dotenv==1.0.0
-requests==2.31.0
+fastapi>=0.115.0
+uvicorn>=0.34.0
+pydantic>=2.10.0
+python-dotenv>=1.0.0
+requests>=2.32.0
 
 # Trading engine dependencies
 numpy>=1.24.0
@@ -18,8 +18,8 @@ python-jose[cryptography]>=3.3.0
 python-multipart>=0.0.6
 
 # Testing dependencies
-pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
 
 # Deriv API dependencies
 websocket-client>=1.6.0
@@ -28,14 +28,14 @@ ujson>=5.8.0
 python-deriv-api==0.1.6
 
 # Machine Learning dependencies (Phase 3)
-xgboost==3.1.1
-scikit-learn==1.7.2
+xgboost>=2.1.0
+scikit-learn>=1.5.0
 # pandas-ta removed (requires Python 3.12+, using manual calculations instead)
-numba==0.61.2
-joblib==1.5.2
+numba>=0.60.0
+joblib>=1.4.0
 
 # System monitoring dependencies (Phase 5)
-psutil==7.1.3
+psutil>=6.1.0
 
 # Metrics and monitoring dependencies (Phase 6)
-prometheus-client==0.19.0
+prometheus-client>=0.19.0

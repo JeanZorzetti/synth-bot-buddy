@@ -51,7 +51,10 @@
       "Bash(test:*)",
       "Bash(find:*)",
       "Bash(chmod:*)",
-      "Bash(git ls-files:*)"
+      "Bash(git ls-files:*)",
+      "Bash(Remove-Item -Recurse -Force .venv)",
+      "Bash(.venv/Scripts/python.exe -m pip:*)",
+      "Bash(.venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []
