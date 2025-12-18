@@ -157,6 +157,55 @@
 
 ---
 
+### 0.2.1 Fix Crítico - Implementar Features Faltando ✅ **CONCLUÍDA**
+
+**Duração**: 0.5 dia | **Prioridade**: 🚨 CRÍTICA | **Executada em**: 18/12/2025
+
+**Ação**:
+- [x] Analisar `feature_calculator.py` e identificar features não implementadas
+- [x] Implementar as 48 features faltando:
+  - [x] RSI (Relative Strength Index)
+  - [x] MACD (Moving Average Convergence Divergence)
+  - [x] ATR (Average True Range)
+  - [x] Volatilidade (5, 20 períodos)
+  - [x] Momentum (5, 15 períodos)
+  - [x] Returns (1, 5, 15 períodos)
+  - [x] Candlestick patterns (doji, hammer, engulfing, etc.)
+  - [x] Features temporais (hour_sin, hour_cos, session flags)
+  - [x] Price ratios (price_to_sma20, price_to_ema9)
+  - [x] RSI flags (overbought, oversold)
+  - [x] Stochastic flags
+  - [x] MACD flags (bullish crossover)
+  - [x] EMA slope
+- [x] Validar que todas 65 features são geradas corretamente
+- [x] Re-executar Fase 0.2 para confirmar fix
+- [x] Testar modelo com features completas
+
+**Resultados**:
+
+✅ **FIX COMPLETO**: Todas as 65 features implementadas!
+
+**Features Adicionadas** (48 novas):
+- Price-based: returns_1/5/15, candle_range, body_size, shadows
+- Candlestick flags: is_bullish, is_bearish, is_doji
+- Momentum: RSI, MACD (line, signal, histogram, bullish flag)
+- Volatility: ATR, BB squeeze, volatility_5/20
+- Stochastic: stoch_k/d, oversold/overbought flags
+- Patterns: 10 candlestick patterns + counts
+- Derived: EMA/SMA diffs, price ratios, slopes
+- Temporal: hour, day_of_week, sessions (Asian/London/NY), hour_sin/cos
+
+**Validação**:
+- ✅ 65/65 features calculadas (0 faltando)
+- ✅ Modelo recebe todas as features corretamente
+- ✅ Confidence: 0.48 (antes: erro por features faltando)
+
+**Próximos Passos**:
+- Prosseguir para Fase 0.3 (Análise de Predições)
+- Espera-se melhoria significativa no Win Rate
+
+---
+
 ### 0.3 Análise de Predições do Modelo
 **Duração**: 2 dias
 
