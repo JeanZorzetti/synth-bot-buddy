@@ -432,17 +432,205 @@ atr, atr_pct, intrabar_range, intrabar_range_pct, volatility_squeeze, atr_expans
 - [x] Analisar viabilidade M5
 - [x] Criar feature engineering
 - [x] Processar V100 M5 com features
-- [ ] Criar labeling script (próximo)
-- [ ] Treinar modelo XGBoost
-- [ ] Backtesting
+- [x] Criar labeling script
+- [x] Treinar modelo XGBoost (baseline: 50.9% win rate)
+- [x] Executar experimentos de otimização (A, B, C)
+- [ ] **CRÍTICO: Feature Engineering Avançada** (próximo)
+- [ ] Backtesting completo
 - [ ] Forward testing
 - [ ] Trading real
 
 ---
 
+## 🔴 RESULTADOS DOS EXPERIMENTOS (18/12/2025)
+
+### Experimentos Executados
+
+Após o treinamento inicial (baseline: 50.9% win rate), executamos **3 experimentos paralelos** para tentar atingir a meta de 60%+ win rate:
+
+#### Experimento A: TP/SL Relaxado (0.3% / 0.15%)
+**Hipótese**: TP/SL mais largo reduz ruído e aumenta win rate base
+
+**Resultados**:
+- ✅ Win rate: **51.2%** (+0.3pp sobre baseline)
+- F1-score: 0.512
+- Accuracy: 51.2%
+- **Status**: 🥇 Melhor dos 3 experimentos
+
+**Hiperparâmetros**:
+```
+max_depth: 8
+learning_rate: 0.291
+n_estimators: 107
+subsample: 0.99
+colsample_bytree: 0.88
+```
+
+#### Experimento B: Ensemble (XGBoost + LightGBM + CatBoost)
+**Hipótese**: Combinar 3 modelos aumenta robustez e win rate
+
+**Resultados**:
+- ❌ **FALHOU** com erro VotingClassifier
+- Causa: Implementação incorreta do ensemble
+- Modelos individuais treinados mas não fitted corretamente
+- **Status**: Sem resultados válidos
+
+#### Experimento C: Optuna 100 Trials
+**Hipótese**: 50 trials insuficientes, 100 trials acharão melhores hiperparâmetros
+
+**Resultados**:
+- ✅ Win rate: **51.0%** (+0.1pp sobre baseline)
+- F1-score: 0.494
+- Accuracy: 51.0%
+- **Status**: Ganho marginal não justifica 2x mais tempo
+
+**Hiperparâmetros**:
+```
+max_depth: 7
+learning_rate: 0.122
+n_estimators: 421
+subsample: 0.64
+colsample_bytree: 0.72
+```
+
+### 📊 Comparação Final
+
+| Experimento | Win Rate | F1-Score | Melhoria | Status |
+|-------------|----------|----------|----------|--------|
+| Baseline (TP 0.2%/SL 0.1%, 50 trials) | 50.9% | 0.498 | - | ⚠️ |
+| 🥇 A: TP/SL 0.3%/0.15% | **51.2%** | 0.512 | +0.3pp | ✅ |
+| 🥈 C: 100 trials | 51.0% | 0.494 | +0.1pp | ✅ |
+| ❌ B: Ensemble | N/A | N/A | FALHOU | ❌ |
+
+### ❌ CONCLUSÃO CRÍTICA
+
+**META DE 60% NÃO ATINGIDA**
+
+**Análise dos Problemas**:
+
+1. **Features Atuais São Insuficientes**
+   - Melhoria máxima: apenas +0.3pp (praticamente zero)
+   - Todos os experimentos ficaram ~51% (próximo de random)
+   - 62 features técnicas não discriminam bem setups lucrativos em V100 M5
+
+2. **TP/SL Pode Estar Inadequado**
+   - TP 0.2% pode ser muito agressivo para volatilidade real
+   - TP 0.3% não melhorou significativamente (+0.3pp)
+   - Precisa testar TP/SL adaptativos baseados em ATR
+
+3. **Abordagem de ML Supervisionado Limitada**
+   - Indicadores técnicos clássicos (RSI, BB, MACD) não são suficientes
+   - Precisa de features mais sofisticadas (order flow, tape reading)
+
+### 🎯 AÇÃO IMEDIATA NECESSÁRIA
+
+**Decisão**: Implementar **Feature Engineering Avançada** antes de desistir de scalping
+
+**Próximas etapas obrigatórias** (em ordem de prioridade):
+
+1. ✅ **Feature Engineering Avançada** (CRÍTICO - próximo passo)
+   - Order flow imbalance
+   - Tape reading (agressividade de ordens)
+   - Volume profile
+   - Delta cumulativo
+   - Absorção de ordens
+
+2. ⏳ **Testar Timeframes Maiores** (se #1 falhar)
+   - M15/M30 (menos ruído, mais estáveis)
+   - Expectativa: win rate pode subir 5-10pp
+
+3. ⏳ **Testar Outros Ativos** (se #1 e #2 falharem)
+   - BOOM300N (spikes para cima - padrão mais claro)
+   - CRASH300N (spikes para baixo - padrão mais claro)
+
+4. ⏳ **Avaliar Estratégias Alternativas** (último recurso)
+   - Mean reversion (reversão à média)
+   - Grid trading (grid de ordens)
+   - Martingale adaptativo
+
+**Documentação dos experimentos**: `backend/ml/research/reports/SCALPING_EXPERIMENTS.md`
+
+---
+
 ## 🚀 PRÓXIMOS PASSOS
 
-### Fase 3: Labeling (1 dia)
+### Fase 2.5: Feature Engineering Avançada (CRÍTICO - 2-3 dias)
+
+**NOVA PRIORIDADE MÁXIMA** após falha dos experimentos A/B/C
+
+**Objetivo**: Adicionar features sofisticadas de microestrutura de mercado para atingir 60%+ win rate
+
+**Arquivo a criar**: `scalping_advanced_features.py`
+
+**Features a Implementar**:
+
+#### 1. Order Flow Imbalance (esperado: +5-8% win rate)
+```python
+def calculate_order_flow():
+    """
+    Mede desequilíbrio entre compradores/vendedores
+    - Buy volume = close > open
+    - Sell volume = close < open
+    - Imbalance = (buy_vol - sell_vol) / total_vol
+    """
+    buy_volume = df[df['close'] > df['open']]['volume'].sum()
+    sell_volume = df[df['close'] < df['open']]['volume'].sum()
+    imbalance = (buy_volume - sell_volume) / (buy_volume + sell_volume)
+```
+
+#### 2. Tape Reading Features (esperado: +3-5% win rate)
+```python
+def aggressive_order_detection():
+    """
+    Detecta agressividade de ordens (market orders vs limit)
+    - Aggressive buy = close near high (compra de mercado)
+    - Aggressive sell = close near low (venda de mercado)
+    """
+    aggr_buy = (df['close'] - df['low']) / (df['high'] - df['low'])
+    aggr_sell = (df['high'] - df['close']) / (df['high'] - df['low'])
+```
+
+#### 3. Volume Profile (esperado: +2-4% win rate)
+```python
+def volume_profile():
+    """
+    Identifica zonas de alto/baixo volume
+    - High volume nodes (HVN) = suporte/resistência forte
+    - Low volume nodes (LVN) = breakout zones
+    """
+    volume_at_price = df.groupby('close')['volume'].sum()
+    hvn = volume_at_price.quantile(0.8)  # Top 20% volume
+    lvn = volume_at_price.quantile(0.2)  # Bottom 20% volume
+```
+
+#### 4. Delta Cumulativo (esperado: +2-3% win rate)
+```python
+def cumulative_delta():
+    """
+    Soma cumulativa de buy volume - sell volume
+    - Delta positivo crescente = tendência de alta
+    - Delta negativo crescente = tendência de baixa
+    """
+    delta = (df['close'] - df['open']).rolling(20).sum()
+```
+
+#### 5. Absorção de Ordens (esperado: +1-2% win rate)
+```python
+def absorption_detection():
+    """
+    Detecta quando grande volume não move preço (absorção)
+    - High volume + small range = absorção (reversão provável)
+    """
+    absorption = df['volume'] / (df['high'] - df['low'])
+```
+
+**Total Esperado**: +13-22% win rate → 51.2% + 15% = **66.2%** ✅
+
+**Critério de Sucesso**:
+- Win rate > 60% em validation set
+- Se falhar, avançar para Fase 2.6 (M15/M30)
+
+### Fase 3: Labeling (1 dia) - JÁ CONCLUÍDO
 
 **Objetivo**: Gerar labels LONG/SHORT/NO_TRADE para treinar modelo supervisionado
 
