@@ -16,7 +16,6 @@ import seaborn as sns
 from typing import Dict, List, Tuple
 import json
 import sys
-from deriv_api import DerivAPI
 import asyncio
 
 # Adicionar caminho do backend ao sys.path
@@ -37,91 +36,101 @@ class ScalpingVolatilityAnalyzer:
 
     async def collect_historical_data(self, days: int = 180):
         """
-        Coleta dados históricos do Deriv API
+        Coleta dados históricos via WebSocket Deriv API
 
         Args:
             days: Número de dias de histórico (padrão: 180 = 6 meses)
         """
+        import websockets
+        import json
+
         print(f"\nColetando dados historicos de {self.symbol} ({days} dias)...")
 
-        # Inicializar Deriv API
-        api = DerivAPI(app_id=1089)
+        # Endpoint WebSocket
+        app_id = 1089
+        uri = f"wss://ws.derivws.com/websockets/v3?app_id={app_id}"
 
         try:
-            # Conectar
-            await api.connect()
-            print("   [OK] Conectado ao Deriv API")
+            async with websockets.connect(uri) as websocket:
+                print("   [OK] Conectado ao Deriv WebSocket")
 
-            # Calcular timestamps
-            end_time = int(datetime.now().timestamp())
-            start_time = int((datetime.now() - timedelta(days=days)).timestamp())
+                # Calcular timestamps
+                end_time = int(datetime.now().timestamp())
+                start_time = int((datetime.now() - timedelta(days=days)).timestamp())
 
-            # Coletar candles (máximo 5000 por request)
-            all_candles = []
-            chunk_size = 5000
-            current_end = end_time
+                # Coletar candles (máximo 5000 por request)
+                all_candles = []
+                chunk_size = 5000
+                current_end = end_time
 
-            while True:
-                # Request candles
-                response = await api.ticks_history({
-                    "ticks_history": self.symbol,
-                    "adjust_start_time": 1,
-                    "count": chunk_size,
-                    "end": str(current_end),
-                    "granularity": 60,  # 1 minuto
-                    "style": "candles"
-                })
+                while True:
+                    # Request candles
+                    # Granularity: 60 = 1min (M1), 300 = 5min (M5)
+                    granularity_map = {'1min': 60, '5min': 300}
+                    granularity = granularity_map.get(self.timeframe, 60)
 
-                if 'error' in response:
-                    print(f"   [ERRO] Erro ao coletar candles: {response['error']['message']}")
-                    break
+                    request = {
+                        "ticks_history": self.symbol,
+                        "adjust_start_time": 1,
+                        "count": chunk_size,
+                        "end": current_end,
+                        "granularity": granularity,
+                        "style": "candles"
+                    }
 
-                candles = response.get('candles', [])
-                if not candles:
-                    break
+                    await websocket.send(json.dumps(request))
+                    response_str = await websocket.recv()
+                    response = json.loads(response_str)
 
-                all_candles.extend(candles)
-                print(f"   [PROGRESS] Coletados {len(all_candles)} candles...")
+                    if 'error' in response:
+                        print(f"   [ERRO] Erro ao coletar candles: {response['error']['message']}")
+                        break
 
-                # Verificar se chegou ao início
-                oldest_time = int(candles[0]['epoch'])
-                if oldest_time <= start_time:
-                    break
+                    candles = response.get('candles', [])
+                    if not candles:
+                        break
 
-                # Próximo chunk
-                current_end = oldest_time - 1
+                    all_candles.extend(candles)
+                    print(f"   [PROGRESS] Coletados {len(all_candles)} candles...")
 
-                # Evitar rate limiting
-                await asyncio.sleep(0.5)
+                    # Verificar se chegou ao início
+                    oldest_time = int(candles[0]['epoch'])
+                    if oldest_time <= start_time:
+                        break
 
-            # Converter para DataFrame
-            df = pd.DataFrame(all_candles)
-            df['timestamp'] = pd.to_datetime(df['epoch'], unit='s')
-            df['open'] = df['open'].astype(float)
-            df['high'] = df['high'].astype(float)
-            df['low'] = df['low'].astype(float)
-            df['close'] = df['close'].astype(float)
+                    # Próximo chunk
+                    current_end = oldest_time - 1
 
-            # Filtrar apenas dados dentro do período
-            df = df[df['epoch'] >= start_time]
-            df = df.sort_values('timestamp').reset_index(drop=True)
+                    # Evitar rate limiting
+                    await asyncio.sleep(0.5)
 
-            self.df = df
-            print(f"   [OK] {len(df)} candles coletados ({df['timestamp'].min()} a {df['timestamp'].max()})")
+                # Converter para DataFrame
+                df = pd.DataFrame(all_candles)
+                df['timestamp'] = pd.to_datetime(df['epoch'], unit='s')
+                df['open'] = df['open'].astype(float)
+                df['high'] = df['high'].astype(float)
+                df['low'] = df['low'].astype(float)
+                df['close'] = df['close'].astype(float)
 
-            # Salvar CSV
-            output_dir = Path(__file__).parent / "data"
-            output_dir.mkdir(exist_ok=True)
-            csv_path = output_dir / f"{self.symbol}_1min_{days}days.csv"
-            df.to_csv(csv_path, index=False)
-            print(f"   [SAVE] Dados salvos em {csv_path}")
+                # Filtrar apenas dados dentro do período
+                df = df[df['epoch'] >= start_time]
+                df = df.sort_values('timestamp').reset_index(drop=True)
+
+                self.df = df
+                print(f"   [OK] {len(df)} candles coletados ({df['timestamp'].min()} a {df['timestamp'].max()})")
+
+                # Salvar CSV
+                output_dir = Path(__file__).parent / "data"
+                output_dir.mkdir(exist_ok=True)
+                csv_path = output_dir / f"{self.symbol}_{self.timeframe}_{days}days.csv"
+                df.to_csv(csv_path, index=False)
+                print(f"   [SAVE] Dados salvos em {csv_path}")
 
         except Exception as e:
             print(f"   [ERRO] Erro ao coletar dados: {e}")
+            import traceback
+            traceback.print_exc()
             raise
-
-        finally:
-            await api.disconnect()
 
     def load_data_from_csv(self, csv_path: str):
         """Carrega dados de CSV existente"""
@@ -530,16 +539,16 @@ class ScalpingVolatilityAnalyzer:
         print(f"\n[SAVE] Relatório salvo em {output_path}")
 
 
-async def analyze_multiple_symbols():
+async def analyze_multiple_symbols(timeframe='5min'):
     """
     Analisa múltiplos símbolos e gera relatório comparativo
+
+    Args:
+        timeframe: '1min' ou '5min' (default: '5min' para Fase 0.2)
     """
     symbols = [
         '1HZ75V',   # Volatility 75
         '1HZ100V',  # Volatility 100
-        'BOOM300N', # Boom 300
-        'CRASH300N',# Crash 300
-        'R_100',    # Random Index 100 (baseline - já sabemos que é lento)
     ]
 
     results = []
@@ -551,11 +560,11 @@ async def analyze_multiple_symbols():
         print(f"ANALISANDO: {symbol}")
         print(f"{'='*70}")
 
-        analyzer = ScalpingVolatilityAnalyzer(symbol=symbol, timeframe='1min')
+        analyzer = ScalpingVolatilityAnalyzer(symbol=symbol, timeframe=timeframe)
 
         # Verificar se já existe CSV
         data_dir = Path(__file__).parent / "data"
-        csv_path = data_dir / f"{symbol}_1min_180days.csv"
+        csv_path = data_dir / f"{symbol}_{timeframe}_180days.csv"
 
         if csv_path.exists():
             print(f"[OK] Dados encontrados em {csv_path}")
