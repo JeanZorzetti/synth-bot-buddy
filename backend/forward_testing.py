@@ -434,8 +434,11 @@ class ForwardTestingEngine:
         """
         Coleta dados REAIS do mercado via Deriv API
 
+        IMPORTANTE: Agora busca candles OHLC reais em vez de ticks,
+        necessário para o ML Predictor gerar features válidas
+
         Returns:
-            Dict com OHLC + indicadores técnicos ou None se falhar
+            Dict com último candle OHLC ou None se falhar
         """
         try:
             # Conectar à Deriv API se ainda não conectado
@@ -457,40 +460,44 @@ class ForwardTestingEngine:
                 self.deriv_connected = True
                 logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
-            # Obter último tick via ticks_history (NUNCA cria subscrição)
-            # Mais seguro que ticks() - evita "already subscribed" definitivamente
-            logger.info(f"📊 Solicitando último tick para {self.symbol}")
-            response = await self.deriv_api.get_latest_tick(self.symbol)
-            logger.info(f"✅ Resposta recebida da Deriv API")
+            # Buscar candles OHLC reais (200 candles de 1 minuto para ML)
+            logger.info(f"📊 Solicitando 200 candles OHLC para {self.symbol}")
+            response = await self.deriv_api.get_candles(
+                symbol=self.symbol,
+                count=200,
+                granularity=60  # 1 minuto
+            )
+            logger.info(f"✅ Candles recebidos da Deriv API")
 
-            if 'history' not in response or not response['history'].get('prices'):
-                logger.warning(f"Resposta sem histórico: {response}")
-                self._log_bug("tick_response_invalid", f"Resposta sem histórico: {response}")
+            if 'candles' not in response or not response['candles']:
+                logger.warning(f"Resposta sem candles: {response}")
+                self._log_bug("candles_response_invalid", f"Resposta sem candles: {response}")
                 return None
 
-            # Extrair último tick do histórico
-            history = response['history']
-            prices = history['prices']
-            times = history['times']
-
-            if not prices or not times:
-                logger.warning("Histórico vazio")
+            # Extrair último candle
+            candles = response['candles']
+            if not candles:
+                logger.warning("Nenhum candle retornado")
                 return None
 
-            current_price = float(prices[-1])
-            tick_time = int(times[-1])
+            last_candle = candles[-1]
 
-            logger.debug(f"✅ Tick recebido: {current_price} @ {tick_time}")
-
-            return {
-                'timestamp': datetime.fromtimestamp(tick_time).isoformat(),
-                'open': current_price,
-                'high': current_price,
-                'low': current_price,
-                'close': current_price,
-                'volume': 1000,
-                'symbol': self.symbol
+            # Extrair OHLC real do último candle
+            candle_data = {
+                'timestamp': datetime.fromtimestamp(last_candle['epoch']).isoformat(),
+                'open': float(last_candle['open']),
+                'high': float(last_candle['high']),
+                'low': float(last_candle['low']),
+                'close': float(last_candle['close']),
+                'volume': 1000,  # Deriv não fornece volume
+                'symbol': self.symbol,
+                # IMPORTANTE: Incluir TODOS os 200 candles para o ML
+                'all_candles': candles
             }
+
+            logger.debug(f"✅ Candle OHLC: O={candle_data['open']:.5f} H={candle_data['high']:.5f} L={candle_data['low']:.5f} C={candle_data['close']:.5f}")
+
+            return candle_data
 
         except Exception as e:
             logger.error(f"❌ CRÍTICO: Falha ao coletar dados REAIS do mercado: {e}", exc_info=True)
@@ -512,52 +519,55 @@ class ForwardTestingEngine:
         Gera previsão usando modelo ML
 
         Args:
-            market_data: Dados do mercado
+            market_data: Dados do mercado (com 'all_candles' contendo 200 candles OHLC)
 
         Returns:
             Dict com prediction e confidence ou None se falhar
         """
         try:
-            # Criar DataFrame com histórico de candles
-            # Acumular ticks em buffer para formar candles
-            if not hasattr(self, 'price_buffer'):
-                self.price_buffer = []
-
-            self.price_buffer.append({
-                'timestamp': market_data['timestamp'],
-                'close': market_data['close'],
-                'high': market_data['high'],
-                'low': market_data['low'],
-                'volume': market_data['volume']
-            })
-
-            # Manter buffer de 250 pontos (ML precisa de 200+ para features)
-            if len(self.price_buffer) > 250:
-                self.price_buffer = self.price_buffer[-250:]
-
-            # Precisa de pelo menos 200 pontos para features
-            if len(self.price_buffer) < 200:
-                logger.debug(f"Buffer insuficiente: {len(self.price_buffer)}/200 pontos")
+            # Verificar se temos os candles históricos
+            if 'all_candles' not in market_data:
+                logger.warning("Market data sem 'all_candles' - dados insuficientes")
                 return {
                     'prediction': 'NO_MOVE',
                     'confidence': 0.0,
                     'signal_strength': 'NONE',
-                    'reason': f'Aguardando histórico ({len(self.price_buffer)}/200)'
+                    'reason': 'Dados históricos não disponíveis'
                 }
 
-            # Converter buffer para DataFrame
-            df = pd.DataFrame(self.price_buffer)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            candles = market_data['all_candles']
+
+            if len(candles) < 200:
+                logger.debug(f"Candles insuficientes: {len(candles)}/200")
+                return {
+                    'prediction': 'NO_MOVE',
+                    'confidence': 0.0,
+                    'signal_strength': 'NONE',
+                    'reason': f'Aguardando histórico ({len(candles)}/200)'
+                }
+
+            # Converter candles para DataFrame
+            candles_data = []
+            for candle in candles:
+                candles_data.append({
+                    'timestamp': datetime.fromtimestamp(candle['epoch']),
+                    'open': float(candle['open']),
+                    'high': float(candle['high']),
+                    'low': float(candle['low']),
+                    'close': float(candle['close']),
+                    'volume': 1000
+                })
+
+            df = pd.DataFrame(candles_data)
             df = df.set_index('timestamp')
 
-            # Adicionar coluna 'open' se não existir (usar close anterior)
-            if 'open' not in df.columns:
-                df['open'] = df['close'].shift(1).fillna(df['close'])
+            logger.info(f"📊 DataFrame criado: {len(df)} candles com OHLC real")
+            logger.debug(f"   Último candle: O={df['open'].iloc[-1]:.5f} H={df['high'].iloc[-1]:.5f} L={df['low'].iloc[-1]:.5f} C={df['close'].iloc[-1]:.5f}")
 
             # Gerar previsão usando ML Predictor
             prediction = self.ml_predictor.predict(df, return_confidence=True)
 
-            logger.info(f"✅ Previsão ML: {prediction['prediction']} (confidence: {prediction['confidence']:.2%})")
+            logger.info(f"✅ Previsão ML: {prediction['prediction']} (confidence: {prediction.get('confidence', 0):.2%})")
 
             return prediction
 

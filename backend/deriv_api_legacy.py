@@ -321,7 +321,28 @@ class DerivAPI:
             "style": "ticks"
         }
         return await self._send_request(request)
-    
+
+    async def get_candles(self, symbol: str, count: int = 200, granularity: int = 60) -> Dict[str, Any]:
+        """
+        Obter candles OHLC históricos sem criar subscrição
+
+        Args:
+            symbol: Símbolo (ex: R_100, 1HZ100V)
+            count: Número de candles (default: 200 para ML)
+            granularity: Timeframe em segundos (60=1min, 300=5min, 3600=1h)
+
+        Returns:
+            Dict com candles OHLC
+        """
+        request = {
+            "ticks_history": symbol,
+            "count": count,
+            "end": "latest",
+            "style": "candles",
+            "granularity": granularity
+        }
+        return await self._send_request(request)
+
     async def trading_durations(self, symbol: str, contract_type: str = "CALL") -> Dict[str, Any]:
         """11. Trading Durations - Durações disponíveis"""
         request = {
