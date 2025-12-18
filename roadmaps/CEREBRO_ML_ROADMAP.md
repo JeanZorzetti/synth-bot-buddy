@@ -43,52 +43,65 @@
 
 **Objetivo**: Entender profundamente o comportamento do mercado, do modelo e identificar a causa raiz dos problemas antes de implementar soluções.
 
-### 0.1 Análise Exploratória de Dados (EDA)
-**Duração**: 2 dias
+### 0.1 Análise Exploratória de Dados (EDA) ✅ **CONCLUÍDA**
+
+**Duração**: 2 dias | **Executada em**: 18/12/2025
 
 **Ação**:
-- [ ] Coletar 30 dias de dados históricos de R_100 (1min candles)
-- [ ] Analisar distribuição de preços:
+
+- [x] Coletar 30 dias de dados históricos de R_100 (1min candles) - 43,200 candles
+- [x] Analisar distribuição de preços:
   - Histograma de retornos
   - Q-Q plot (normalidade)
   - Teste de estacionariedade (ADF test)
-- [ ] Calcular estatísticas descritivas:
+- [x] Calcular estatísticas descritivas:
   - Volatilidade média (ATR)
   - Range médio (high-low)
   - Distribuição de gaps
-- [ ] Identificar padrões temporais:
+- [x] Identificar padrões temporais:
   - Hora do dia com maior volatilidade
   - Dias da semana com melhor performance
-  - Correlação entre volume e movimento de preço
+  - Tempo médio para movimentos de 0.5%, 1.0%, 1.5%
 
-**Ferramentas**:
-```python
-import pandas as pd
-import numpy as np
-from scipy import stats
-from statsmodels.tsa.stattools import adfuller
+**Resultados**:
 
-# Coletar dados
-df = await collect_historical_data(symbol='R_100', days=30, granularity=60)
+**Distribuição**:
 
-# Análise de distribuição
-returns = df['close'].pct_change()
-print(f"Mean: {returns.mean():.4f}")
-print(f"Std: {returns.std():.4f}")
-print(f"Skewness: {returns.skew():.4f}")
-print(f"Kurtosis: {returns.kurtosis():.4f}")
+- ❌ Retornos NÃO são normalmente distribuídos (p-value: 0.0000)
+- ❌ Série NÃO é estacionária (ADF p-value: 0.4741)
+- Skewness: 0.18 (cauda direita mais longa)
+- Kurtosis: 22.44 (caudas pesadas - muitos outliers)
 
-# Teste de normalidade
-stat, p_value = stats.normaltest(returns.dropna())
-print(f"Normalidade: p-value={p_value:.4f}")
+**Volatilidade**:
 
-# Teste de estacionariedade
-adf_result = adfuller(df['close'])
-print(f"ADF Statistic: {adf_result[0]:.4f}")
-print(f"p-value: {adf_result[1]:.4f}")
-```
+- ATR médio: 1.15 (0.188%)
+- Range médio: 1.15 (0.188%)
+- SL recomendado: 0.283% (1.5x ATR)
+- TP recomendado: 0.471% (2.5x ATR)
 
-**Entregável**: Relatório EDA com gráficos e insights
+**Padrões Temporais**:
+
+- Hora com maior volatilidade: **14h**
+- Dia com maior volatilidade: **Sunday**
+
+**Tempo de Movimento**:
+
+- 0.5%: ~153 candles (mediana: 117) = **2.5 horas**
+- 1.0%: ~582 candles (mediana: 441) = **9.7 horas**
+- 1.5%: ~1391 candles (mediana: 1113) = **23.2 horas**
+
+**Conclusões Críticas**:
+
+1. ⚠️ **Timeout de 3min é MUITO CURTO** - movimento de 0.5% leva ~2.5h
+2. ✅ **SL/TP atuais estão adequados** - baseados em ATR
+3. 📊 **Modelo deve usar retornos** - série não é estacionária
+4. 📈 **Estatísticas não-paramétricas** - distribuição não-normal
+
+**Entregável**:
+
+- [EDA_REPORT.md](../backend/research/output/fase0_eda/EDA_REPORT.md)
+- 6 gráficos PNG ([plots/](../backend/research/output/fase0_eda/plots/))
+- [r100_30days_1min.csv](../backend/research/output/fase0_eda/r100_30days_1min.csv) (43K candles)
 
 ---
 
