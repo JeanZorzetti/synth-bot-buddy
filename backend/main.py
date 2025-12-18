@@ -6012,10 +6012,10 @@ async def start_forward_testing(request: ForwardTestingStartRequest, background_
         logger.info(f"   SL: {request.stop_loss_pct}% | TP: {request.take_profit_pct}%")
         logger.info(f"   Timeout: {request.position_timeout_minutes} min")
 
-        # Iniciar em background
-        background_tasks.add_task(engine.start)
+        # Iniciar em background usando asyncio.create_task() para não bloquear
+        asyncio.create_task(engine.start())
 
-        logger.info(f"🚀 Forward testing iniciado via API")
+        logger.info(f"🚀 Forward testing iniciado via API (modo assíncrono)")
 
         return {
             "status": "success",
