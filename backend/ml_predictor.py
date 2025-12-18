@@ -206,7 +206,9 @@ class MLPredictor:
                     }
                 }
 
-            logger.info(f"Previsão: {prediction} (confidence: {y_pred_proba:.4f}, strength: {signal_strength})")
+            # Log com confidence correto (pode ser y_pred_proba ou confidence dependendo do tipo de modelo)
+            conf_value = result.get('confidence', 0.0)
+            logger.info(f"Previsão: {prediction} (confidence: {conf_value:.4f}, strength: {signal_strength})")
 
             return result
 
