@@ -105,43 +105,55 @@
 
 ---
 
-### 0.2 Análise de Features do Modelo Atual
-**Duração**: 1 dia
+### 0.2 Análise de Features do Modelo Atual ✅ **CONCLUÍDA**
+
+**Duração**: 1 dia | **Executada em**: 18/12/2025
 
 **Ação**:
-- [ ] Listar todas as 65 features utilizadas
-- [ ] Calcular correlação entre features
-- [ ] Identificar features redundantes (corr > 0.9)
-- [ ] Calcular importância via SHAP values
-- [ ] Verificar features com missing values (NaN)
-- [ ] Analisar distribuição de cada feature
+- [x] Listar todas as 65 features utilizadas
+- [x] Calcular correlação entre features
+- [x] Identificar features redundantes (corr > 0.9)
+- [x] Calcular importância via SHAP values
+- [x] Verificar features com missing values (NaN)
+- [x] Analisar distribuição de cada feature
 
-**Código**:
-```python
-import shap
-import matplotlib.pyplot as plt
+**Resultados**:
 
-# Carregar modelo
-predictor = MLPredictor()
-model = predictor.model
+**🚨 PROBLEMA CRÍTICO IDENTIFICADO**:
+- **48 features faltando** no cálculo atual (74% das features!)
+- Modelo espera 65 features mas apenas 17 são calculadas
+- Features críticas ausentes: `rsi`, `macd_line`, `atr`, `volatility_*`, `momentum_*`, patterns de candlestick
+- **Causa raiz do Win Rate 15%**: Modelo está "cego", fazendo predições sem 74% dos dados!
 
-# Calcular SHAP values
-explainer = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(X_test)
+**Top 5 Features Mais Importantes (SHAP)**:
+1. `ema_21`: 0.162 (mais importante)
+2. `bb_upper`: 0.134
+3. `day_of_month`: 0.107
+4. `sma_20`: 0.100
+5. `sma_50`: 0.090
 
-# Top 20 features
-shap.summary_plot(shap_values, X_test, max_display=20)
+**Features Redundantes (Correlação > 0.9)**:
+- Total: 22 pares, 7 features para remover
+- `bb_middle` = `sma_20` (corr: 1.0000)
+- `ema_21` ≈ `sma_20` (corr: 0.9997)
+- `bb_upper/lower` altamente correlacionadas
+- **Recomendação**: Manter apenas `sma_20` + `volatility_20`
 
-# Correlação
-corr_matrix = X_train.corr()
-high_corr = corr_matrix[abs(corr_matrix) > 0.9].stack()
-print("Features altamente correlacionadas:")
-print(high_corr[high_corr != 1.0])
-```
+**Missing Values**:
+- ✅ Nenhuma feature com missing values
+
+**Conclusões Críticas**:
+1. 🚨 **FIX URGENTE**: Corrigir cálculo de features - 48 features faltando
+2. ✅ **Limpar Redundâncias**: Remover 7 features correlacionadas
+3. 📊 **Features Úteis**: Top 5 features fazem sentido (EMAs, BBs, SMAs)
+4. 🎯 **Próximo Passo**: Fase 0.3 depende de feature calculation fix
 
 **Entregável**:
-- Lista de top 20 features mais importantes
-- Lista de features redundantes para remover
+- [FEATURE_ANALYSIS_REPORT.md](../backend/research/output/fase0_feature_analysis/FEATURE_ANALYSIS_REPORT.md)
+- 3 gráficos PNG ([plots/](../backend/research/output/fase0_feature_analysis/plots/))
+  - 01_shap_importance.png
+  - 02_importance_ranking.png
+  - 03_correlation_heatmap.png
 
 ---
 
