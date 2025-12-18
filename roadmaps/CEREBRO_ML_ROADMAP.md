@@ -206,66 +206,59 @@
 
 ---
 
-### 0.3 Análise de Predições do Modelo
-**Duração**: 2 dias
+### 0.3 Análise de Predições do Modelo ✅ **CONCLUÍDA**
+
+**Duração**: 2 dias | **Executada em**: 18/12/2025
 
 **Ação**:
-- [ ] Coletar 1000 predições do modelo em produção
-- [ ] Analisar distribuição de confidence:
-  - Histograma de confidence (0-100%)
-  - Percentil 25, 50, 75, 95
-- [ ] Separar por classe (PRICE_UP vs NO_MOVE):
-  - Quantas predições de cada tipo?
-  - Confidence média por classe
-- [ ] Analisar taxa de acerto por faixa de confidence:
-  - 30-40%: X% de acerto
-  - 40-50%: Y% de acerto
-  - 50-60%: Z% de acerto
-  - >60%: W% de acerto
-- [ ] Verificar se modelo está calibrado:
-  - Confidence 70% → Acerto real 70%?
-  - Plotar calibration curve
+- [x] Coletar 1000 predições do modelo em produção
+- [x] Analisar distribuição de confidence
+- [x] Separar por classe (PRICE_UP vs NO_MOVE vs PRICE_DOWN)
+- [x] Analisar taxa de acerto por faixa de confidence
+- [x] Verificar calibração do modelo
+- [x] Plotar calibration curve
 
-**Código**:
-```python
-from sklearn.calibration import calibration_curve
+**Resultados**:
 
-# Analisar distribuição de confidence
-predictions = await collect_predictions(count=1000)
-confidences = [p['confidence'] for p in predictions]
+**🚨 PROBLEMAS CRÍTICOS IDENTIFICADOS**:
 
-print(f"Confidence média: {np.mean(confidences):.2%}")
-print(f"Confidence mediana: {np.median(confidences):.2%}")
-print(f"Confidence P95: {np.percentile(confidences, 95):.2%}")
+1. **Modelo 100% Desbalanceado**:
+   - PRICE_UP: 1000 predições (100%)
+   - NO_MOVE: 0 predições (0%)
+   - PRICE_DOWN: 0 predições (0%)
+   - ❌ **Modelo NUNCA prevê quedas ou lateralização!**
 
-# Predições por classe
-price_up = [p for p in predictions if p['prediction'] == 'PRICE_UP']
-no_move = [p for p in predictions if p['prediction'] == 'NO_MOVE']
-price_down = [p for p in predictions if p['prediction'] == 'PRICE_DOWN']
+2. **Acurácia Extremamente Baixa**:
+   - Acurácia geral: **15.3%** (pior que aleatório!)
+   - Esperado para 3 classes: 33.3%
+   - **Modelo está PIOR que chute aleatório**
 
-print(f"PRICE_UP: {len(price_up)} ({len(price_up)/len(predictions)*100:.1f}%)")
-print(f"NO_MOVE: {len(no_move)} ({len(no_move)/len(predictions)*100:.1f}%)")
-print(f"PRICE_DOWN: {len(price_down)} ({len(price_down)/len(predictions)*100:.1f}%)")
+3. **Modelo Descalibrado**:
+   - Confidence média: 43.8%
+   - Acurácia real: 15.3%
+   - Diferença: **28.5%** (modelo superestima confiança!)
+   - Faixa 40-50%: Confidence 45.2% mas Acurácia 15.2% (diff: 30%)
 
-# Calibration curve
-y_true = [1 if actual_moved_up else 0 for p in predictions]
-y_prob = [p['confidence'] for p in predictions]
-prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=10)
+4. **Distribuição de Confidence**:
+   - Média: 43.8%, Mediana: 44.5%
+   - Range: 30.9% - 54.5%
+   - P95: 49.9%
+   - ✅ Distribuição normal (não concentrada)
 
-plt.plot(prob_pred, prob_true, marker='o')
-plt.plot([0, 1], [0, 1], linestyle='--')
-plt.xlabel('Predicted probability')
-plt.ylabel('True probability')
-plt.title('Calibration Curve')
-plt.show()
-```
+**Causas Raiz Identificadas**:
 
-**Descoberta Esperada**:
-- Modelo prevê apenas PRICE_UP ou NO_MOVE (nunca PRICE_DOWN)?
-- Confidence sempre baixa (<40%)?
-- Modelo descalibrado (confidence 70% mas acerto 30%)?
+1. **Dataset Viesado**: Modelo treinado com excesso de exemplos PRICE_UP
+2. **Threshold Incorreto**: Threshold 0.3 força todas predições como PRICE_UP
+3. **Target Mal Definido**: Classes podem estar mal balanceadas no treino
+4. **Modelo Inadequado**: XGBoost binário sendo usado para problema multi-classe
 
-**Entregável**: Relatório de análise de predições
+**Entregável**:
+- [PREDICTION_ANALYSIS_REPORT.md](../backend/research/output/fase0_prediction_analysis/PREDICTION_ANALYSIS_REPORT.md)
+- 4 gráficos PNG ([plots/](../backend/research/output/fase0_prediction_analysis/plots/))
+  - 01_confidence_distribution.png
+  - 02_predictions_by_class.png
+  - 03_accuracy_by_confidence.png
+  - 04_calibration_curve.png
 
 ---
 
