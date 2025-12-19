@@ -6030,10 +6030,29 @@ async def start_forward_testing(request: ForwardTestingStartRequest, background_
             )
 
         # Atualizar configurações antes de iniciar
+        old_symbol = engine.symbol
         engine.symbol = request.symbol
         engine.stop_loss_pct = request.stop_loss_pct
         engine.take_profit_pct = request.take_profit_pct
         engine.position_timeout_minutes = request.position_timeout_minutes
+
+        # Se símbolo mudou, recriar predictor
+        if old_symbol != request.symbol:
+            logger.info(f"🔄 Símbolo mudou de {old_symbol} para {request.symbol}")
+            logger.info(f"   Recriando predictor...")
+
+            if request.symbol == "CRASH500":
+                try:
+                    from ml_predictor_crash500 import CRASH500Predictor
+                    engine.ml_predictor = CRASH500Predictor()
+                    logger.info("✅ CRASH500Predictor (Survival Analysis) carregado")
+                except ImportError as e:
+                    logger.error(f"❌ PyTorch não disponível: {e}")
+                    logger.warning("⚠️ Fallback para MLPredictor (XGBoost)")
+                    engine.ml_predictor = get_ml_predictor()
+            else:
+                engine.ml_predictor = get_ml_predictor()
+                logger.info("✅ MLPredictor (XGBoost Multi-Class) carregado")
 
         logger.info(f"🔄 Configuração atualizada:")
         logger.info(f"   Símbolo: {request.symbol}")
