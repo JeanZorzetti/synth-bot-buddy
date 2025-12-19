@@ -279,6 +279,35 @@ npm run dev
 
 ## 🚨 TROUBLESHOOTING
 
+### Erro: `ModuleNotFoundError: No module named 'torch'`
+
+**Causa**: PyTorch não instalado no ambiente de produção
+
+**Comportamento**: Sistema usa **lazy import** - CRASH500Predictor só é carregado quando necessário
+
+**Soluções**:
+
+1. **Instalar PyTorch** (recomendado para usar CRASH500):
+```bash
+# CPU only (menor, mais rápido para deploy)
+pip install torch==2.0.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# GPU (se disponível)
+pip install torch==2.0.0
+```
+
+2. **Usar outro símbolo** (se PyTorch não disponível):
+   - Sistema automaticamente faz fallback para MLPredictor (XGBoost)
+   - Selecione V100, BOOM300N, CRASH300N, etc.
+   - Response HTTP 503 para CRASH500 sem PyTorch
+
+**Verificar instalação**:
+```bash
+python -c "import torch; print(f'PyTorch {torch.__version__} OK')"
+```
+
+---
+
 ### Erro: `ModuleNotFoundError: No module named 'ml_predictor_crash500'`
 
 **Causa**: Arquivo `ml_predictor_crash500.py` não encontrado

@@ -25,7 +25,7 @@ from models.order_models import OrderRequest, OrderResponse
 from analysis import TechnicalAnalysis
 from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 from ml_predictor import get_ml_predictor, initialize_ml_predictor
-from ml_predictor_crash500 import CRASH500Predictor
+# CRASH500Predictor - lazy import to avoid torch dependency at startup
 from backtesting import Backtester, BacktestResult
 from background_tasks import task_manager
 from risk_manager import RiskManager, RiskLimits, TrailingStop
@@ -1779,10 +1779,18 @@ async def get_ml_prediction(
 
         # Rotear para predictor correto baseado no símbolo
         if symbol == "CRASH500":
-            # CRASH500 Survival Analysis
+            # CRASH500 Survival Analysis (lazy import)
             if crash500_predictor is None:
                 logger.info("Inicializando CRASH500Predictor (Survival Analysis)")
-                crash500_predictor = CRASH500Predictor()
+                try:
+                    from ml_predictor_crash500 import CRASH500Predictor
+                    crash500_predictor = CRASH500Predictor()
+                except ImportError as e:
+                    logger.error(f"PyTorch não disponível. CRASH500Predictor requer torch: {e}")
+                    raise HTTPException(
+                        status_code=503,
+                        detail="CRASH500 Predictor não disponível (PyTorch não instalado). Use outro símbolo ou instale torch."
+                    )
 
             # Fazer previsão
             prediction = crash500_predictor.predict(df)

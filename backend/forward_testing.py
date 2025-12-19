@@ -22,7 +22,7 @@ import pandas as pd
 import numpy as np
 
 from ml_predictor import MLPredictor
-from ml_predictor_crash500 import CRASH500Predictor
+# CRASH500Predictor - lazy import to avoid torch dependency
 from paper_trading_engine import PaperTradingEngine, PositionType
 from deriv_api_legacy import DerivAPI
 from alert_system import AlertSystem
@@ -100,7 +100,13 @@ class ForwardTestingEngine:
         # Usar CRASH500Predictor se símbolo for CRASH500, senão MLPredictor padrão
         if symbol == "CRASH500" or (symbols and "CRASH500" in symbols):
             logger.info("Usando CRASH500Predictor (Survival Analysis)")
-            self.ml_predictor = CRASH500Predictor()
+            try:
+                from ml_predictor_crash500 import CRASH500Predictor
+                self.ml_predictor = CRASH500Predictor()
+            except ImportError as e:
+                logger.error(f"PyTorch não disponível. CRASH500Predictor requer torch: {e}")
+                logger.warning("Fallback para MLPredictor (XGBoost) devido a falta do PyTorch")
+                self.ml_predictor = MLPredictor()
         else:
             logger.info("Usando MLPredictor (XGBoost Multi-Class)")
             self.ml_predictor = MLPredictor()
