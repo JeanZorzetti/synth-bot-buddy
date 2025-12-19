@@ -90,9 +90,11 @@ class CRASH500Predictor:
         if model_path is None:
             model_path = Path(__file__).parent / "ml" / "research" / "models" / "crash_survival_lstm.pth"
 
-        logger.info(f"Carregando modelo CRASH 500 de {model_path}")
+        self.model_path = Path(model_path)  # Salvar path para compatibilidade com ForwardTestingEngine
+
+        logger.info(f"Carregando modelo CRASH 500 de {self.model_path}")
         self.model = LSTMSurvivalModel(input_dim=5).to(self.device)
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+        self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
         self.model.eval()
 
         logger.info("Modelo CRASH 500 Survival carregado com sucesso!")
