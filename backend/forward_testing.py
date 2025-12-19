@@ -22,6 +22,7 @@ import pandas as pd
 import numpy as np
 
 from ml_predictor import MLPredictor
+from ml_predictor_crash500 import CRASH500Predictor
 from paper_trading_engine import PaperTradingEngine, PositionType
 from deriv_api_legacy import DerivAPI
 from alert_system import AlertSystem
@@ -96,7 +97,14 @@ class ForwardTestingEngine:
         self.log_dir.mkdir(exist_ok=True)
 
         # Componentes
-        self.ml_predictor = MLPredictor()
+        # Usar CRASH500Predictor se símbolo for CRASH500, senão MLPredictor padrão
+        if symbol == "CRASH500" or (symbols and "CRASH500" in symbols):
+            logger.info("Usando CRASH500Predictor (Survival Analysis)")
+            self.ml_predictor = CRASH500Predictor()
+        else:
+            logger.info("Usando MLPredictor (XGBoost Multi-Class)")
+            self.ml_predictor = MLPredictor()
+
         self.paper_trading = PaperTradingEngine(initial_capital=initial_capital)
         self.alert_system = AlertSystem()
         self.auto_restart = AutoRestartSystem(

@@ -25,6 +25,7 @@ from models.order_models import OrderRequest, OrderResponse
 from analysis import TechnicalAnalysis
 from market_data_fetcher import MarketDataFetcher, create_sample_dataframe
 from ml_predictor import get_ml_predictor, initialize_ml_predictor
+from ml_predictor_crash500 import CRASH500Predictor
 from backtesting import Backtester, BacktestResult
 from background_tasks import task_manager
 from risk_manager import RiskManager, RiskLimits, TrailingStop
@@ -516,6 +517,7 @@ async def cors_test(request: Request):
 
 # Inicializar ML Predictor com threshold otimizado
 ml_predictor = None  # Lazy initialization
+crash500_predictor = None  # Lazy initialization for CRASH500
 
 @app.get("/api/ml/info")
 async def get_ml_info():
@@ -1756,17 +1758,13 @@ async def get_ml_prediction(
         - model: nome do modelo
     """
     try:
-        global ml_predictor, _api_token
+        global ml_predictor, crash500_predictor, _api_token
 
         # Check for token in header
         token_from_header = request.headers.get('X-API-Token')
         if token_from_header:
             _api_token = token_from_header
             logger.info(f"[OK] Token recebido via header: {token_from_header[:10]}...")
-
-        # Inicializar ML predictor se necessário
-        if ml_predictor is None or (threshold and threshold != ml_predictor.threshold):
-            ml_predictor = get_ml_predictor(threshold=threshold or 0.30)
 
         logger.info(f"Fazendo previsão ML para {symbol} ({timeframe})")
 
@@ -1779,14 +1777,37 @@ async def get_ml_prediction(
                 detail=f"Dados insuficientes: {len(df)} candles (mínimo: 200)"
             )
 
-        # Fazer previsão
-        prediction = ml_predictor.predict(df, return_confidence=True)
+        # Rotear para predictor correto baseado no símbolo
+        if symbol == "CRASH500":
+            # CRASH500 Survival Analysis
+            if crash500_predictor is None:
+                logger.info("Inicializando CRASH500Predictor (Survival Analysis)")
+                crash500_predictor = CRASH500Predictor()
 
-        # Adicionar contexto
-        prediction["symbol"] = symbol
-        prediction["timeframe"] = timeframe
-        prediction["data_source"] = data_source
-        prediction["candles_analyzed"] = len(df)
+            # Fazer previsão
+            prediction = crash500_predictor.predict(df)
+
+            # Adicionar contexto
+            prediction["symbol"] = symbol
+            prediction["timeframe"] = timeframe
+            prediction["data_source"] = data_source
+            prediction["candles_analyzed"] = len(df)
+            prediction["model"] = "LSTM Survival Analysis (CRASH500)"
+            prediction["prediction"] = prediction.get("signal", "WAIT")  # Converter signal para prediction
+
+        else:
+            # XGBoost Multi-Class (V100, BOOM, etc.)
+            if ml_predictor is None or (threshold and threshold != ml_predictor.threshold):
+                ml_predictor = get_ml_predictor(threshold=threshold or 0.30)
+
+            # Fazer previsão
+            prediction = ml_predictor.predict(df, return_confidence=True)
+
+            # Adicionar contexto
+            prediction["symbol"] = symbol
+            prediction["timeframe"] = timeframe
+            prediction["data_source"] = data_source
+            prediction["candles_analyzed"] = len(df)
 
         return prediction
 

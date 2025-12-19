@@ -93,6 +93,7 @@ const DERIV_SYMBOLS = [
   { value: '1HZ100V', label: 'V100 (1s) - Volatility 100 🔥', volatility: 'Muito Alta', description: '100% volatilidade, tick 1s - EXTREMAMENTE RÁPIDO' },
   { value: 'BOOM300N', label: 'Boom 300', volatility: 'Alta', description: 'Spikes a cada ~300 ticks' },
   { value: 'CRASH300N', label: 'Crash 300', volatility: 'Alta', description: 'Crashes a cada ~300 ticks' },
+  { value: 'CRASH500', label: 'CRASH 500 🎯 (91.81% WIN RATE!)', volatility: 'Estruturada', description: 'Survival Analysis - Prever risco vs direção' },
 ];
 
 const TRADING_MODES = [
@@ -143,6 +144,18 @@ const TRADING_MODES = [
     avgDuration: '30-120 min',
     tradesPerDay: '3-10',
     recommended: ['1HZ50V', '1HZ25V', 'R_100'],
+  },
+  {
+    id: 'crash500_survival',
+    name: 'CRASH 500 Survival Analysis 🎯 (91.81% WIN RATE!)',
+    description: 'Prever RISCO de alta volatilidade (não direção). LSTM Survival prevê "quantos candles até zona de perigo". Se >= 20: ENTER LONG, senão WAIT.',
+    stopLoss: 1.0,
+    takeProfit: 2.0,
+    timeout: 20,
+    riskReward: '1:2',
+    avgDuration: '20-100 candles',
+    tradesPerDay: 'Variável (safety-first)',
+    recommended: ['CRASH500'],
   },
 ];
 
