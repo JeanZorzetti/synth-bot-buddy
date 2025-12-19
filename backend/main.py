@@ -6032,6 +6032,7 @@ async def start_forward_testing(request: ForwardTestingStartRequest, background_
         # Atualizar configurações antes de iniciar
         old_symbol = engine.symbol
         engine.symbol = request.symbol
+        engine.symbols = [request.symbol]  # Atualizar lista de símbolos também!
         engine.stop_loss_pct = request.stop_loss_pct
         engine.take_profit_pct = request.take_profit_pct
         engine.position_timeout_minutes = request.position_timeout_minutes
