@@ -218,7 +218,17 @@ class DerivAPI:
                 # Verificar se houve erro na resposta
                 if 'error' in response:
                     error_info = response['error']
-                    raise Exception(f"Deriv API Error: {error_info.get('message', 'Unknown error')}")
+                    error_code = error_info.get('code', 'N/A')
+                    error_msg = error_info.get('message', 'Unknown error')
+                    error_details = error_info.get('details', {})
+
+                    logger.error(f"❌ Deriv API Error:")
+                    logger.error(f"   Code: {error_code}")
+                    logger.error(f"   Message: {error_msg}")
+                    logger.error(f"   Details: {error_details}")
+                    logger.error(f"   Request: {request}")
+
+                    raise Exception(f"Deriv API Error [{error_code}]: {error_msg}")
                 
                 return response
             return None
