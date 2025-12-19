@@ -104,9 +104,16 @@ class ScalpingLabeler:
 
     def _check_trade_outcome(self, start_idx: int, entry_price: float,
                             tp_price: float, sl_price: float,
-                            direction: str) -> Dict:
+                            direction: str, spread_pct: float = 0.02) -> Dict:
         """
         Verifica o resultado de um trade hipotético
+
+        CORREÇÃO CRÍTICA: Lógica Pessimista + Spread
+        - Se TP e SL são atingidos no MESMO candle, assume SL (violino)
+        - Adiciona spread de 0.02% (custo real da Deriv)
+
+        Args:
+            spread_pct: 0.02% (spread aproximado do V100 na Deriv)
 
         Returns:
             Dict com resultado: {
@@ -117,14 +124,35 @@ class ScalpingLabeler:
                 'pnl_pct': float
             }
         """
+        # Ajustar TP para incluir spread
+        # LONG precisa subir mais para compensar spread
+        # SHORT precisa cair mais para compensar spread
+        if direction == 'LONG':
+            real_tp = tp_price * (1 + spread_pct / 100)
+        else:  # SHORT
+            real_tp = tp_price * (1 - spread_pct / 100)
+
         for j in range(start_idx + 1, min(start_idx + self.max_candles + 1, len(self.df))):
             high = self.df.iloc[j]['high']
             low = self.df.iloc[j]['low']
             candles_elapsed = j - start_idx
 
             if direction == 'LONG':
-                # Verificar se TP foi atingido
-                if high >= tp_price:
+                hit_tp = high >= real_tp
+                hit_sl = low <= sl_price
+
+                # LÓGICA PESSIMISTA: Se ambos atingidos, assume violino (SL primeiro)
+                if hit_sl and hit_tp:
+                    return {
+                        'hit_tp': False,
+                        'hit_sl': True,  # Considera perda
+                        'candles_to_exit': candles_elapsed,
+                        'exit_price': sl_price,
+                        'pnl_pct': -self.sl_pct
+                    }
+
+                # Se só TP
+                if hit_tp:
                     return {
                         'hit_tp': True,
                         'hit_sl': False,
@@ -132,8 +160,9 @@ class ScalpingLabeler:
                         'exit_price': tp_price,
                         'pnl_pct': self.tp_pct
                     }
-                # Verificar se SL foi atingido
-                if low <= sl_price:
+
+                # Se só SL
+                if hit_sl:
                     return {
                         'hit_tp': False,
                         'hit_sl': True,
@@ -141,9 +170,23 @@ class ScalpingLabeler:
                         'exit_price': sl_price,
                         'pnl_pct': -self.sl_pct
                     }
+
             else:  # SHORT
-                # Verificar se TP foi atingido
-                if low <= tp_price:
+                hit_tp = low <= real_tp
+                hit_sl = high >= sl_price
+
+                # LÓGICA PESSIMISTA: Se ambos atingidos, assume violino (SL primeiro)
+                if hit_sl and hit_tp:
+                    return {
+                        'hit_tp': False,
+                        'hit_sl': True,  # Considera perda
+                        'candles_to_exit': candles_elapsed,
+                        'exit_price': sl_price,
+                        'pnl_pct': -self.sl_pct
+                    }
+
+                # Se só TP
+                if hit_tp:
                     return {
                         'hit_tp': True,
                         'hit_sl': False,
@@ -151,8 +194,9 @@ class ScalpingLabeler:
                         'exit_price': tp_price,
                         'pnl_pct': self.tp_pct
                     }
-                # Verificar se SL foi atingido
-                if high >= sl_price:
+
+                # Se só SL
+                if hit_sl:
                     return {
                         'hit_tp': False,
                         'hit_sl': True,
