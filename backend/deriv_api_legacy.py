@@ -212,8 +212,8 @@ class DerivAPI:
             logger.debug(f"Enviado: {message}")
             
             if expect_response:
-                # Timeout de 30 segundos para resposta
-                response = await asyncio.wait_for(future, timeout=30.0)
+                # Timeout de 60 segundos para resposta (aumentado para candles históricos)
+                response = await asyncio.wait_for(future, timeout=60.0)
                 
                 # Verificar se houve erro na resposta
                 if 'error' in response:
@@ -341,7 +341,10 @@ class DerivAPI:
             "style": "candles",
             "granularity": granularity
         }
-        return await self._send_request(request)
+        logger.info(f"🔍 get_candles request: {request}")
+        response = await self._send_request(request)
+        logger.info(f"✅ get_candles response received for {symbol}")
+        return response
 
     async def trading_durations(self, symbol: str, contract_type: str = "CALL") -> Dict[str, Any]:
         """11. Trading Durations - Durações disponíveis"""
