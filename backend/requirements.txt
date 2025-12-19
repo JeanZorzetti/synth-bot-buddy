@@ -34,6 +34,11 @@ scikit-learn>=1.5.0
 numba>=0.60.0
 joblib>=1.4.0
 
+# PyTorch for CRASH500 Survival Analysis (LSTM)
+# Using CPU-only version for lighter deployment
+torch>=2.0.0
+# If GPU available, replace with: torch>=2.0.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+
 # System monitoring dependencies (Phase 5)
 psutil>=6.1.0
 
