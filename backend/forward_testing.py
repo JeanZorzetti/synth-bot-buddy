@@ -377,11 +377,12 @@ class ForwardTestingEngine:
 
             # 5. Executar trade se confidence > threshold
             confidence = prediction.get('confidence', 0)
-            if confidence >= self.confidence_threshold and prediction['prediction'] in ['UP', 'DOWN', 'PRICE_UP', 'PRICE_DOWN']:
+            valid_signals = ['UP', 'DOWN', 'PRICE_UP', 'PRICE_DOWN', 'LONG', 'SHORT']  # Incluir LONG/SHORT do CRASH500
+            if confidence >= self.confidence_threshold and prediction['prediction'] in valid_signals:
                 logger.info(f"🎯 [{symbol}] Confidence {confidence:.2%} > {self.confidence_threshold:.2%} - Executando trade!")
                 await self._execute_trade_for_symbol(prediction, current_price, symbol)
             else:
-                logger.info(f"⏭️ [{symbol}] Confidence insuficiente ou sem sinal: {confidence:.2%}")
+                logger.info(f"⏭️ [{symbol}] Confidence insuficiente ou sem sinal: {confidence:.2%} (sinal: {prediction.get('prediction', 'N/A')})")
 
         except Exception as e:
             logger.error(f"Erro ao processar {symbol}: {e}", exc_info=True)
@@ -432,24 +433,18 @@ class ForwardTestingEngine:
         Returns:
             Dict com dados do mercado ou None se falhar
         """
-        # Temporariamente trocar o símbolo ativo
-        original_symbol = self.symbol
-        self.symbol = symbol
+        # Chamar método com símbolo específico
+        return await self._fetch_market_data(symbol_override=symbol)
 
-        # Chamar método original
-        result = await self._fetch_market_data()
-
-        # Restaurar símbolo original
-        self.symbol = original_symbol
-
-        return result
-
-    async def _fetch_market_data(self) -> Optional[Dict]:
+    async def _fetch_market_data(self, symbol_override: Optional[str] = None) -> Optional[Dict]:
         """
         Coleta dados REAIS do mercado via Deriv API
 
         IMPORTANTE: Agora busca candles OHLC reais em vez de ticks,
         necessário para o ML Predictor gerar features válidas
+
+        Args:
+            symbol_override: Se fornecido, usa este símbolo ao invés de self.symbol
 
         Returns:
             Dict com último candle OHLC ou None se falhar
@@ -474,10 +469,13 @@ class ForwardTestingEngine:
                 self.deriv_connected = True
                 logger.info("✅ Conectado e autenticado na Deriv API para dados reais")
 
+            # Usar símbolo override se fornecido, senão usar self.symbol
+            symbol_to_fetch = symbol_override if symbol_override else self.symbol
+
             # Buscar candles OHLC reais (200 candles de 1 minuto para ML)
-            logger.info(f"📊 Solicitando 200 candles OHLC para {self.symbol}")
+            logger.info(f"📊 Solicitando 200 candles OHLC para {symbol_to_fetch}")
             response = await self.deriv_api.get_candles(
-                symbol=self.symbol,
+                symbol=symbol_to_fetch,
                 count=200,
                 granularity=60  # 1 minuto
             )

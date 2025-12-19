@@ -165,6 +165,7 @@ class CRASH500Predictor:
 
             if features is None:
                 return {
+                    'prediction': 'WAIT',  # Compatibilidade com ForwardTestingEngine
                     'signal': 'WAIT',
                     'candles_to_risk': 0,
                     'is_safe': False,
@@ -187,6 +188,7 @@ class CRASH500Predictor:
             confidence = min(distance_from_threshold / 20.0, 1.0)  # Normalizar por 20
 
             result = {
+                'prediction': signal,  # Compatibilidade com ForwardTestingEngine
                 'signal': signal,
                 'candles_to_risk': round(candles_pred, 1),
                 'is_safe': is_safe,
