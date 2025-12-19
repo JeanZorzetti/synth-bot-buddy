@@ -284,21 +284,25 @@ python crash_survival_realistic_backtest.py
 - Lista de trades com SL/TP/Timeout
 - Equity curve
 
-### **Fase 2: Comparar Resultados**
+### **Fase 2: Comparar Resultados** ✅ COMPLETO
 
 | Métrica | Backtest Original | Backtest Realista | Forward Testing |
 |---------|-------------------|-------------------|-----------------|
-| Win Rate | 91.81% | ??? | 14.3% |
-| Trades | 1,478 | ??? | 8 |
-| P&L | N/A | ??? | -$2,653 (-26.5%) |
+| Win Rate | 91.81% | **38.10%** ❌ | 14.3% |
+| Trades | 1,478 | **63** | 8 |
+| P&L | N/A | **-$31.48 (-0.31%)** | -$2,653 (-26.5%) |
+| Profit Factor | N/A | **0.21** ❌ | N/A |
+| Sharpe Ratio | N/A | **-9.77** ❌ | N/A |
+| Max Drawdown | N/A | **0.33%** | 26.5% |
+| Exit Breakdown | N/A | **TP: 0% / SL: 4.8% / Timeout: 95.2%** | N/A |
 
-### **Fase 3: Tomar Decisão**
+### **Fase 3: Decisão Tomada** ✅
 
-**Se Backtest Realista > 60% win rate:**
-→ Modelo está OK, problema é na implementação do forward testing
+**Backtest Realista: 38.10% win rate (< 60%)**
 
-**Se Backtest Realista < 60% win rate:**
-→ Overfitting confirmado, modelo precisa ser retreinado
+❌ **OVERFITTING CONFIRMADO!**
+
+→ Modelo precisa ser retreinado com target correto ("TP antes de SL" ao invés de "candles até crash")
 
 ---
 
@@ -344,14 +348,24 @@ Considerar M1 para trades mais rápidos.
 
 ## 🚀 PRÓXIMOS PASSOS
 
-1. ⏳ **Executar backtest realista no servidor** (aguardando)
-2. ⏳ **Analisar resultados e comparar**
-3. ⏳ **Decidir próxima ação:**
-   - Se aprovado: Otimizar forward testing
-   - Se reprovado: Retreinar modelo com target correto
+1. ✅ **Executar backtest realista** - COMPLETO
+   - Win Rate: 38.10% (< 60% = REPROVADO)
+   - Overfitting confirmado
+
+2. ✅ **Analisar resultados** - COMPLETO
+   - 95% dos trades fecham por timeout
+   - 0% atingem TP
+   - Profit Factor: 0.21 (perda)
+
+3. ⏳ **RETREINAR MODELO COM TARGET CORRETO**
+   - Opção 1: Prever "TP antes de SL" (binário) ⭐ RECOMENDADO
+   - Opção 2: Mudar timeframe (M5 → M1)
+   - Opção 3: TP/SL dinâmicos baseados em "candles_to_risk"
 
 ---
 
-**Status:** 🟡 **AGUARDANDO VALIDAÇÃO**
+**Status:** 🔴 **OVERFITTING CONFIRMADO - MODELO REPROVADO**
 
-*Última atualização: 19/12/2025 19:15*
+**Ação Necessária:** Retreinar com target correto
+
+*Última atualização: 19/12/2025 21:45*
