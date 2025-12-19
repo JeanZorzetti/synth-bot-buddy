@@ -1,0 +1,20 @@
+{
+  "experiment": "lstm_scalping",
+  "model": "LSTM",
+  "architecture": "128-64-32-3 (2 LSTM layers + Dense)",
+  "lookback": 50,
+  "learning_rate": 0.001,
+  "batch_size": 256,
+  "epochs_trained": 26,
+  "tp_pct": 0.2,
+  "sl_pct": 0.1,
+  "win_rate": 0.5433027011974381,
+  "accuracy": 0.5022525421547175,
+  "long_accuracy": 1.0,
+  "short_accuracy": 0.0,
+  "improvement_vs_xgboost_baseline": 3.4302701197438057,
+  "improvement_vs_xgboost_advanced": 3.830270119743806,
+  "goal_achieved": false,
+  "total_parameters": 120451,
+  "timestamp": "2025-12-18T22:50:57.786207"
+}

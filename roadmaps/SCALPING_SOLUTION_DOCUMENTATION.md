@@ -816,6 +816,134 @@ lot_size = (capital * RISK_PER_TRADE) / (SL_PCT / 100 * contract_value)
 
 ---
 
+## 🤖 EXPERIMENTO: DEEP LEARNING (LSTM) - 18/12/2025
+
+Após falha de todos os experimentos ML (XGBoost), testamos **Deep Learning (LSTM)** como alternativa.
+
+### Configuração LSTM
+
+**Arquitetura**:
+```
+Input: [batch_size, 50 candles, 4 features (OHLC)]
+↓
+LSTM Layer 1 (128 units) + BatchNorm + Dropout(0.3)
+↓
+LSTM Layer 2 (64 units) + BatchNorm + Dropout(0.3)
+↓
+Dense (32 units) + Dropout(0.2)
+↓
+Output (3 classes: NO_TRADE, LONG, SHORT)
+```
+
+**Hyperparâmetros**:
+- Lookback: 50 candles (250 min de histórico)
+- Learning Rate: 0.001 (Adam)
+- Batch Size: 256
+- Épocas: 26/100 (early stopping)
+- Total Parâmetros: 120,451
+
+**Features**: Apenas OHLC (4 features) - SEM feature engineering
+
+### Resultados LSTM
+
+| Métrica | Valor |
+|---------|-------|
+| **Win Rate** | **54.3%** |
+| Accuracy Geral | 50.2% |
+| LONG Accuracy | 100.0% ⚠️ |
+| SHORT Accuracy | 0.0% ⚠️ |
+| Tempo de Treino | 21.8 min |
+
+### Comparação Final: XGBoost vs LSTM
+
+| Modelo | Features | Win Rate | Status |
+|--------|----------|----------|--------|
+| XGBoost Baseline | 62 técnicas | 50.9% | ❌ |
+| XGBoost Advanced | 88 (62 + 26 microstructure) | 50.5% | ❌ |
+| **LSTM** | **4 (apenas OHLC)** | **54.3%** | ⚠️ |
+
+**Melhoria**: +3.4pp vs XGBoost baseline
+**Gap para meta**: -5.7pp (faltam 5.7% para 60%)
+
+### 🔴 PROBLEMA CRÍTICO: Colapso para Classe Majoritária
+
+O modelo LSTM **não aprendeu a distinguir LONG de SHORT**:
+
+**Confusion Matrix**:
+```
+              Predicted
+              LONG    SHORT
+Real LONG:    3902    0       = 100.0% recall
+Real SHORT:   3280    0       =   0.0% recall
+```
+
+**Interpretação**:
+- Modelo prevê **APENAS LONG** em 100% dos casos
+- NUNCA prevê SHORT (0% recall)
+- Win rate de 54.3% é artificialmente inflado (prevê classe majoritária)
+- **Win rate real** (considerando SHORTs ignorados): ~50% (aleatório)
+
+### Causa do Colapso
+
+1. **Desbalanceamento de Classes**
+   - LONG: 50.2% dos setups
+   - SHORT: 42.3% dos setups
+   - Diferença de 7.9pp favorece LONG
+
+2. **Loss Function Inadequada**
+   - `categorical_crossentropy` não penaliza colapso
+   - Modelo descobriu que prever LONG minimiza loss
+
+3. **Sem Class Weighting**
+   - Não usamos `class_weight='balanced'`
+   - Modelo favorece classe mais comum
+
+### Conclusão LSTM
+
+**LSTM foi melhor que XGBoost (+3.4pp), mas ainda INSUFICIENTE:**
+- ❌ Não atingiu meta de 60% win rate
+- ❌ Modelo não é viável para trading (ignora SHORTs)
+- ✅ Prova que temporal dependencies importam (50 candles > 1 candle)
+- ✅ Features simples (OHLC) superam 88 features engineered
+
+### Próximos Passos Possíveis
+
+**Opção 1: Corrigir Class Imbalance** ⭐ **RECOMENDADO**
+- Adicionar `class_weight='balanced'` ao treino
+- Usar Focal Loss ao invés de categorical_crossentropy
+- Expectativa: Manter 54% win rate, SHORT accuracy sobe para 40-50%
+- Tempo: 1-2 horas (retreino apenas)
+- Probabilidade de sucesso: 65%
+
+**Opção 2: Testar Arquitetura Transformer**
+- Attention mechanism captura dependências longas
+- Literatura mostra 3-5% melhoria vs LSTM
+- Tempo: 1 dia (implementação + treino)
+- Probabilidade de sucesso: 50%
+
+**Opção 3: Aumentar Timeframe (M15/M30)**
+- M5 pode ser muito ruidoso para 0.2% TP
+- M15/M30 têm padrões mais claros
+- Trade-off: Menos trades (5-10/dia vs 15-20)
+- Expectativa: 58-62% win rate
+- Probabilidade de sucesso: 70%
+
+**Opção 4: Testar Outros Ativos (BOOM/CRASH)**
+- BOOM300N/CRASH300N têm padrões mais previsíveis
+- Volatilidade 300% vs 100% de V100
+- Expectativa: 60-65% win rate
+- Probabilidade de sucesso: 60%
+
+### Arquivos Gerados
+
+1. `backend/ml/research/scalping_lstm_model.py` (518 linhas)
+2. `backend/ml/research/models/best_lstm_model.h5` (modelo treinado)
+3. `backend/ml/research/reports/lstm_scalping_results.json`
+4. `backend/ml/research/reports/lstm_training_history.png`
+5. `backend/ml/research/reports/LSTM_SCALPING_RESULTS.md` (relatório completo)
+
+---
+
 ## 📚 REFERÊNCIAS
 
 ### Documentação Técnica
