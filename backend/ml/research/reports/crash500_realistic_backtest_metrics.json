@@ -1,0 +1,23 @@
+{
+  "total_trades": 63,
+  "winning_trades": 24,
+  "losing_trades": 39,
+  "win_rate": 38.095238095238095,
+  "avg_pnl": -0.4997194540159831,
+  "avg_win": 0.3412595858093696,
+  "avg_loss": -1.0172450169854308,
+  "total_pnl": -31.482325603010395,
+  "total_pnl_pct": -0.31482325603010397,
+  "profit_factor": 0.20644573868934452,
+  "sharpe_ratio": -9.770592608712569,
+  "max_drawdown_pct": 0.32562698690886466,
+  "avg_hold_candles": 20.555555555555557,
+  "tp_trades": 0,
+  "sl_trades": 3,
+  "timeout_trades": 60,
+  "tp_rate": 0.0,
+  "sl_rate": 4.761904761904762,
+  "timeout_rate": 95.23809523809523,
+  "initial_capital": 10000.0,
+  "final_capital": 9968.51767439699
+}

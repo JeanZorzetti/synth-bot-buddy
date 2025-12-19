@@ -10,6 +10,10 @@ Backtest que simula CORRETAMENTE a execução de trades com:
 Objetivo: Validar se o modelo LSTM Survival realmente funciona em condições reais
 """
 
+import os
+# Force CPU only (evita problemas com CUDA)
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
 import torch
 import pandas as pd
 import numpy as np
@@ -406,7 +410,7 @@ def main():
     print(f"\n[MODEL] Carregando modelo treinado...")
     model_path = Path(__file__).parent / "models" / "crash_survival_lstm.pth"
 
-    model = LSTMSurvivalModel(input_dim=5, hidden_dim=128, num_layers=3)
+    model = LSTMSurvivalModel(input_dim=5, hidden_dim1=128, hidden_dim2=64)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
