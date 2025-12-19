@@ -143,12 +143,13 @@ class CRASH500Predictor:
 
         return tensor
 
-    def predict(self, candles_df: pd.DataFrame) -> Dict:
+    def predict(self, candles_df: pd.DataFrame, return_confidence: bool = True) -> Dict:
         """
         Gera predição de risco
 
         Args:
             candles_df: DataFrame com OHLC histórico
+            return_confidence: Compatibilidade com MLPredictor (sempre retorna confidence)
 
         Returns:
             Dict com:
