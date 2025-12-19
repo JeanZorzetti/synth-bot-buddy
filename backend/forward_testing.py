@@ -397,6 +397,8 @@ class ForwardTestingEngine:
         3. Atualiza posições existentes
         4. Registra métricas
         """
+        logger.info(f"🔄 Trading loop iniciado! is_running={self.is_running}, symbols={self.symbols}")
+
         while self.is_running:
             try:
                 # Verificar se tempo mínimo passou desde última previsão
@@ -406,10 +408,13 @@ class ForwardTestingEngine:
                         await asyncio.sleep(1)
                         continue
 
+                logger.info(f"🔁 Iteração do trading loop - processando {len(self.symbols)} símbolo(s)")
+
                 # Processar cada símbolo
                 for symbol in self.symbols:
                     if not self.is_running:
                         break
+                    logger.info(f"📍 Processando símbolo: {symbol}")
                     await self._process_symbol(symbol)
 
                 # Verificar condições de alerta (global)
