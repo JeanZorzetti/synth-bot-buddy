@@ -623,9 +623,9 @@ class ForwardTestingEngine:
         try:
             # Determinar direção
             pred_value = prediction['prediction']
-            if pred_value in ['UP', 'PRICE_UP']:
+            if pred_value in ['UP', 'PRICE_UP', 'LONG']:  # Incluir 'LONG' do CRASH500
                 position_type = PositionType.LONG
-            elif pred_value in ['DOWN', 'PRICE_DOWN']:
+            elif pred_value in ['DOWN', 'PRICE_DOWN', 'SHORT']:  # Incluir 'SHORT' do CRASH500
                 position_type = PositionType.SHORT
             else:
                 logger.warning(f"Previsão inválida: {pred_value}")
