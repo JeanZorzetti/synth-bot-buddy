@@ -111,23 +111,29 @@ class CRASH500Predictor:
         Returns:
             Tensor normalizado [1, lookback, 5] ou None se insuficiente
         """
-        if len(candles_df) < self.lookback:
-            logger.warning(f"Candles insuficientes: {len(candles_df)} < {self.lookback}")
+        # Precisamos de lookback + 20 candles extras para calcular rolling(20) sem perder dados
+        required_candles = self.lookback + 20
+
+        if len(candles_df) < required_candles:
+            logger.warning(f"Candles insuficientes: {len(candles_df)} < {required_candles}")
             return None
 
-        # Pegar últimos lookback candles
-        recent_candles = candles_df.iloc[-self.lookback:].copy()
+        # Pegar últimos (lookback + 20) candles para calcular features
+        recent_candles = candles_df.iloc[-required_candles:].copy()
 
         # Calcular volatilidade realizada
         recent_candles['return'] = recent_candles['close'].pct_change()
         recent_candles['realized_vol'] = recent_candles['return'].rolling(window=20).std()
 
-        # Remover NaNs
+        # Remover NaNs e pegar últimos lookback candles
         recent_candles = recent_candles.dropna()
 
         if len(recent_candles) < self.lookback:
             logger.warning(f"Candles insuficientes após remover NaNs: {len(recent_candles)}")
             return None
+
+        # Pegar exatamente os últimos lookback candles após processar features
+        recent_candles = recent_candles.iloc[-self.lookback:]
 
         # Features: OHLC + realized_vol
         features = recent_candles[['open', 'high', 'low', 'close', 'realized_vol']].values.astype(np.float32)
