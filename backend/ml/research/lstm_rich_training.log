@@ -1,0 +1,79 @@
+c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\scalping_lstm_rich_features.py:323: RuntimeWarning: invalid value encountered in scalar divide
+  print(f"   Real LONG:  {cm[0,0]:4d}  {cm[0,1]:4d}  ({cm[0,0]/(cm[0,0]+cm[0,1]):.1%} recall)")
+c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\scalping_lstm_rich_features.py:324: RuntimeWarning: invalid value encountered in scalar divide
+  print(f"   Real SHORT: {cm[1,0]:4d}  {cm[1,1]:4d}  ({cm[1,1]/(cm[1,0]+cm[1,1]):.1%} recall)")
+======================================================================
+LSTM COM FEATURES ENRIQUECIDAS (24 features)
+======================================================================
+
+[DEVICE] cpu
+
+[LOAD] Carregando dataset com features enriquecidas...
+   Dataset: 51,789 candles
+   Features: 23
+
+[DATASET] Criando datasets...
+[DATASET] Features utilizadas: 23
+   close, high, low, open, rsi_7, rsi_14, macd, macd_signal, macd_hist, stoch_k...
+   Train: 36,217
+   Val: 7,760
+   Test: 7,762
+
+[MODEL] Criando LSTM Rich...
+   Input dim: 23 features
+   Total parâmetros: 130,563
+
+[TRAIN] Treinando LSTM Rich...
+Epoch 1/50 - Train Loss: 1.0780, Train Acc: 0.4493 - Val Loss: 1.0713, Val Acc: 0.4534
+Epoch 2/50 - Train Loss: 1.0684, Train Acc: 0.4593 - Val Loss: 1.0697, Val Acc: 0.4534
+Epoch 3/50 - Train Loss: 1.0666, Train Acc: 0.4597 - Val Loss: 1.0682, Val Acc: 0.4534
+Epoch 4/50 - Train Loss: 1.0662, Train Acc: 0.4598 - Val Loss: 1.0679, Val Acc: 0.4534
+Epoch 5/50 - Train Loss: 1.0657, Train Acc: 0.4598 - Val Loss: 1.0677, Val Acc: 0.4534
+Epoch 6/50 - Train Loss: 1.0647, Train Acc: 0.4598 - Val Loss: 1.0682, Val Acc: 0.4534
+Epoch 7/50 - Train Loss: 1.0635, Train Acc: 0.4598 - Val Loss: 1.0683, Val Acc: 0.4534
+Epoch 8/50 - Train Loss: 1.0639, Train Acc: 0.4598 - Val Loss: 1.0687, Val Acc: 0.4534
+Epoch 9/50 - Train Loss: 1.0637, Train Acc: 0.4598 - Val Loss: 1.0686, Val Acc: 0.4534
+Epoch 10/50 - Train Loss: 1.0637, Train Acc: 0.4598 - Val Loss: 1.0684, Val Acc: 0.4534
+Epoch 11/50 - Train Loss: 1.0632, Train Acc: 0.4598 - Val Loss: 1.0692, Val Acc: 0.4534
+Epoch 12/50 - Train Loss: 1.0621, Train Acc: 0.4598 - Val Loss: 1.0690, Val Acc: 0.4534
+Epoch 13/50 - Train Loss: 1.0622, Train Acc: 0.4598 - Val Loss: 1.0693, Val Acc: 0.4534
+Epoch 14/50 - Train Loss: 1.0619, Train Acc: 0.4598 - Val Loss: 1.0697, Val Acc: 0.4534
+Epoch 15/50 - Train Loss: 1.0617, Train Acc: 0.4598 - Val Loss: 1.0697, Val Acc: 0.4534
+
+Early stopping após 15 épocas
+
+[OK] Treinamento concluído! Best val loss: 1.0677
+
+[EVAL] Avaliando em Test Set...
+
+======================================================================
+RESULTADOS FINAIS - LSTM RICH
+======================================================================
+
+   WIN RATE (LONG+SHORT): 0.00%
+   LONG Accuracy: 0.00%
+   SHORT Accuracy: 0.00%
+
+   Total trades no test: 4,200
+   LONG: 2,127 (50.6%)
+   SHORT: 2,073 (49.4%)
+
+   Confusion Matrix (LONG=1, SHORT=2):
+   Predicted:  LONG  SHORT
+   Real LONG:     0     0  (nan% recall)
+   Real SHORT:    0     0  (nan% recall)
+
+======================================================================
+COMPARACAO: LSTM Baseline vs LSTM Rich
+======================================================================
+
+   Metrica          | Baseline | Rich     | Delta
+   -----------------+----------+----------+-------
+   Features         | 4 OHLC   | 24       | +20
+   Win Rate         | 54.3%    | 0.0%   | -54.3pp
+   LONG Accuracy    | 100.0%   | 0.0%  | -100.0pp
+   SHORT Accuracy   | 0.0%     | 0.0%  | +0.0pp
+
+   STATUS: [FALHOU] <= baseline
+
+======================================================================

@@ -1,0 +1,50 @@
+======================================================================
+CRASH 500 - LSTM SURVIVAL MODEL
+======================================================================
+
+[DEVICE] cpu
+
+[LOAD] Carregando dataset...
+   Candles: 10,000
+
+[DATASET] Criando datasets...
+   Train: 6,965
+   Val: 1,492
+   Test: 1,493
+
+[MODEL] Criando LSTM Survival...
+   Total parametros: 121,281
+
+[TRAIN] Treinando LSTM Survival...
+Epoch 1/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 2/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 3/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 4/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 5/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 6/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 7/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 8/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 9/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+Epoch 10/50 - Train Loss: nan, Train MAE: nan - Val Loss: nan, Val MAE: nan
+
+Early stopping apos 10 epocas
+
+[OK] Treinamento concluido! Best val loss: inf
+
+[BACKTEST] Testando estratégia...
+Traceback (most recent call last):
+  File "c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\crash_survival_model.py", line 339, in <module>
+    main()
+    ~~~~^^
+  File "c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\crash_survival_model.py", line 300, in main
+    model.load_state_dict(torch.load(model_path))
+                          ~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 1484, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 759, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 740, in __init__
+    super().__init__(open(name, mode))
+                     ~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'c:\\Users\\jeanz\\OneDrive\\Desktop\\Jizreel\\synth-bot-buddy-main\\backend\\ml\\research\\models\\crash_survival_lstm.pth'

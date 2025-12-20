@@ -1,0 +1,97 @@
+======================================================================
+SCALPING MASTER - MCA (Mamba-Convolutional-Attention)
+Arquitetura Híbrida Proprietária
+======================================================================
+
+[DEVICE] cpu
+
+[LOAD] Carregando dataset com labels pessimistas...
+   Dataset: 51838 candles
+
+[LABEL] Gerando labels...
+[OK] Labeler inicializado:
+   - TP: 0.2% / SL: 0.1% (R:R 2.0)
+   - Max timeout: 20 candles (100 min)
+   - Total candles: 51838
+
+[LABEL] Gerando labels...
+   Processando candle 0/51818...
+   Processando candle 5000/51818...
+   Processando candle 10000/51818...
+   Processando candle 15000/51818...
+   Processando candle 20000/51818...
+   Processando candle 25000/51818...
+   Processando candle 30000/51818...
+   Processando candle 35000/51818...
+   Processando candle 40000/51818...
+   Processando candle 45000/51818...
+   Processando candle 50000/51818...
+[OK] Labels gerados!
+
+[DISTRIBUICAO DE LABELS]
+   LONG (1):      14148 ( 27.3%)
+   SHORT (-1):    13919 ( 26.9%)
+   NO_TRADE (0):  23771 ( 45.9%)
+   Total:         51838
+
+[ANALISE]
+   Setup viáveis: 54.1%
+   [OK] Distribuicao OK (54.1% viaveis)
+
+[DATASET] Criando datasets...
+   Train: 36216
+   Val: 7760
+   Test: 7762
+
+[MODEL] Criando ScalpingMaster-MCA...
+   Total parâmetros: 76,035
+
+[TRAIN] Iniciando treinamento ScalpingMaster-MCA...
+   Epocas: 50
+   Patience: 10
+Epoch 1/50 - Train Loss: 0.3383, Train Acc: 0.2812 - Val Loss: 0.3120, Val Acc: 0.2745
+Epoch 2/50 - Train Loss: 0.3145, Train Acc: 0.2732 - Val Loss: 0.3033, Val Acc: 0.2786
+Epoch 3/50 - Train Loss: 0.3131, Train Acc: 0.2715 - Val Loss: 0.3087, Val Acc: 0.2722
+Epoch 4/50 - Train Loss: 0.3112, Train Acc: 0.2702 - Val Loss: 0.3090, Val Acc: 0.2745
+Epoch 5/50 - Train Loss: 0.3117, Train Acc: 0.2704 - Val Loss: 0.3088, Val Acc: 0.2722
+Epoch 6/50 - Train Loss: 0.3127, Train Acc: 0.2674 - Val Loss: 0.3090, Val Acc: 0.2745
+Epoch 7/50 - Train Loss: 0.3099, Train Acc: 0.2724 - Val Loss: 0.3088, Val Acc: 0.2745
+Epoch 8/50 - Train Loss: 0.3107, Train Acc: 0.2728 - Val Loss: 0.3087, Val Acc: 0.2722
+Epoch 9/50 - Train Loss: 0.3112, Train Acc: 0.2683 - Val Loss: 0.3083, Val Acc: 0.2745
+Epoch 10/50 - Train Loss: 0.3101, Train Acc: 0.2697 - Val Loss: 0.3085, Val Acc: 0.2722
+Epoch 11/50 - Train Loss: 0.3101, Train Acc: 0.2695 - Val Loss: 0.3084, Val Acc: 0.2722
+Epoch 12/50 - Train Loss: 0.3108, Train Acc: 0.2699 - Val Loss: 0.3086, Val Acc: 0.2722
+
+Early stopping após 12 épocas
+
+[OK] Treinamento concluído!
+   Best val loss: 0.3033
+
+[EVAL] Avaliando em Test Set...
+
+   Test Loss: 0.3083
+   Test Accuracy: 0.2740
+
+[ANALYSIS] Análise detalhada...
+
+   LONG Accuracy: 100.00%
+   SHORT Accuracy: 0.00%
+   WIN RATE (LONG+SHORT): 50.64%
+
+   Total trades: 4200
+   LONG: 2127 (50.6%)
+   SHORT: 2073 (49.4%)
+
+   Confusion Matrix (LONG=1, SHORT=2):
+   Predicted:  LONG  SHORT
+   Real LONG:  2127     0
+   Real SHORT: 2073     0
+
+======================================================================
+TREINAMENTO COMPLETO!
+Modelo salvo em: c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\models\best_scalping_mca.pth
+======================================================================
+
+======================================================================
+TREINAMENTO CONCLUÍDO!
+======================================================================

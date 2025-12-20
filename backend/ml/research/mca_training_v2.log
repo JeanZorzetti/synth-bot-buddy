@@ -1,0 +1,106 @@
+======================================================================
+SCALPING MASTER - MCA (Mamba-Convolutional-Attention)
+Arquitetura Híbrida Proprietária
+======================================================================
+
+[DEVICE] cpu
+
+[LOAD] Carregando dataset com labels pessimistas...
+   Dataset: 51838 candles
+
+[LABEL] Gerando labels...
+[OK] Labeler inicializado:
+   - TP: 0.2% / SL: 0.1% (R:R 2.0)
+   - Max timeout: 20 candles (100 min)
+   - Total candles: 51838
+
+[LABEL] Gerando labels...
+   Processando candle 0/51818...
+   Processando candle 5000/51818...
+   Processando candle 10000/51818...
+   Processando candle 15000/51818...
+   Processando candle 20000/51818...
+   Processando candle 25000/51818...
+   Processando candle 30000/51818...
+   Processando candle 35000/51818...
+   Processando candle 40000/51818...
+   Processando candle 45000/51818...
+   Processando candle 50000/51818...
+[OK] Labels gerados!
+
+[DISTRIBUICAO DE LABELS]
+   LONG (1):      14148 ( 27.3%)
+   SHORT (-1):    13919 ( 26.9%)
+   NO_TRADE (0):  23771 ( 45.9%)
+   Total:         51838
+
+[ANALISE]
+   Setup viáveis: 54.1%
+   [OK] Distribuicao OK (54.1% viaveis)
+
+[DATASET] Criando datasets...
+   Train: 36216
+   Val: 7760
+   Test: 7762
+
+[MODEL] Criando ScalpingMaster-MCA...
+   Total parâmetros: 76,035
+
+[TRAIN] Iniciando treinamento ScalpingMaster-MCA...
+   Epocas: 50
+   Patience: 10
+Epoch 1/50 - Train Loss: 0.3390, Train Acc: 0.2710 - Val Loss: 0.2993, Val Acc: 0.2753
+Epoch 2/50 - Train Loss: 0.3012, Train Acc: 0.2752 - Val Loss: 0.2979, Val Acc: 0.2722
+Epoch 3/50 - Train Loss: 0.3035, Train Acc: 0.2701 - Val Loss: 0.2976, Val Acc: 0.2722
+Epoch 4/50 - Train Loss: 0.3010, Train Acc: 0.2722 - Val Loss: 0.2969, Val Acc: 0.2713
+Epoch 5/50 - Train Loss: 0.3010, Train Acc: 0.2669 - Val Loss: 0.2971, Val Acc: 0.2745
+Epoch 6/50 - Train Loss: 0.2998, Train Acc: 0.2711 - Val Loss: 0.2974, Val Acc: 0.2722
+Epoch 7/50 - Train Loss: 0.3002, Train Acc: 0.2683 - Val Loss: 0.2977, Val Acc: 0.2745
+Epoch 8/50 - Train Loss: 0.2995, Train Acc: 0.2700 - Val Loss: 0.2970, Val Acc: 0.2745
+Epoch 9/50 - Train Loss: 0.2991, Train Acc: 0.2712 - Val Loss: 0.2977, Val Acc: 0.2722
+Epoch 10/50 - Train Loss: 0.2997, Train Acc: 0.2731 - Val Loss: 0.2970, Val Acc: 0.2745
+Epoch 11/50 - Train Loss: 0.2996, Train Acc: 0.2704 - Val Loss: 0.2968, Val Acc: 0.2745
+Epoch 12/50 - Train Loss: 0.2995, Train Acc: 0.2673 - Val Loss: 0.2968, Val Acc: 0.2745
+Epoch 13/50 - Train Loss: 0.2988, Train Acc: 0.2681 - Val Loss: 0.2968, Val Acc: 0.2745
+Epoch 14/50 - Train Loss: 0.2994, Train Acc: 0.2689 - Val Loss: 0.2969, Val Acc: 0.2745
+Epoch 15/50 - Train Loss: 0.2981, Train Acc: 0.2695 - Val Loss: 0.2975, Val Acc: 0.2705
+Epoch 16/50 - Train Loss: 0.2988, Train Acc: 0.2696 - Val Loss: 0.2971, Val Acc: 0.2722
+Epoch 17/50 - Train Loss: 0.2986, Train Acc: 0.2693 - Val Loss: 0.2970, Val Acc: 0.2745
+Epoch 18/50 - Train Loss: 0.2978, Train Acc: 0.2704 - Val Loss: 0.2968, Val Acc: 0.2745
+Epoch 19/50 - Train Loss: 0.2974, Train Acc: 0.2736 - Val Loss: 0.2971, Val Acc: 0.2722
+Epoch 20/50 - Train Loss: 0.2982, Train Acc: 0.2691 - Val Loss: 0.2969, Val Acc: 0.2745
+Epoch 21/50 - Train Loss: 0.2975, Train Acc: 0.2706 - Val Loss: 0.2970, Val Acc: 0.2722
+
+Early stopping após 21 épocas
+
+[OK] Treinamento concluído!
+   Best val loss: 0.2968
+
+[EVAL] Avaliando em Test Set...
+
+   Test Loss: 0.2967
+   Test Accuracy: 0.2740
+
+[ANALYSIS] Análise detalhada...
+
+   LONG Accuracy: 100.00%
+   SHORT Accuracy: 0.00%
+   WIN RATE (LONG+SHORT): 50.64%
+
+   Total trades: 4200
+   LONG: 2127 (50.6%)
+   SHORT: 2073 (49.4%)
+
+   Confusion Matrix (LONG=1, SHORT=2):
+   Predicted:  LONG  SHORT
+   Real LONG:  2127     0
+   Real SHORT: 2073     0
+
+======================================================================
+TREINAMENTO COMPLETO!
+Modelo salvo em: c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\models\best_scalping_mca.pth
+======================================================================
+
+======================================================================
+TREINAMENTO CONCLUÍDO!
+======================================================================

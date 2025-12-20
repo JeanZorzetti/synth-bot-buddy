@@ -1,0 +1,94 @@
+======================================================================
+SCALPING MASTER - MCA (Mamba-Convolutional-Attention)
+Arquitetura Híbrida Proprietária
+======================================================================
+
+[DEVICE] cpu
+
+[LOAD] Carregando dataset com labels pessimistas...
+   Dataset: 51838 candles
+
+[LABEL] Gerando labels...
+[OK] Labeler inicializado:
+   - TP: 0.2% / SL: 0.1% (R:R 2.0)
+   - Max timeout: 20 candles (100 min)
+   - Total candles: 51838
+
+[LABEL] Gerando labels...
+   Processando candle 0/51818...
+   Processando candle 5000/51818...
+   Processando candle 10000/51818...
+   Processando candle 15000/51818...
+   Processando candle 20000/51818...
+   Processando candle 25000/51818...
+   Processando candle 30000/51818...
+   Processando candle 35000/51818...
+   Processando candle 40000/51818...
+   Processando candle 45000/51818...
+   Processando candle 50000/51818...
+[OK] Labels gerados!
+
+[DISTRIBUICAO DE LABELS]
+   LONG (1):      14148 ( 27.3%)
+   SHORT (-1):    13919 ( 26.9%)
+   NO_TRADE (0):  23771 ( 45.9%)
+   Total:         51838
+
+[ANALISE]
+   Setup viáveis: 54.1%
+   [OK] Distribuicao OK (54.1% viaveis)
+
+[DATASET] Criando datasets...
+   Train: 36216
+   Val: 7760
+   Test: 7762
+
+[MODEL] Criando ScalpingMaster-MCA...
+   Total parâmetros: 76,035
+
+[TRAIN] Iniciando treinamento ScalpingMaster-MCA...
+   Epocas: 50
+   Patience: 10
+Epoch 1/50 - Train Loss: 0.2952, Train Acc: 0.2812 - Val Loss: 0.2885, Val Acc: 0.2720
+Epoch 2/50 - Train Loss: 0.2902, Train Acc: 0.2719 - Val Loss: 0.2859, Val Acc: 0.2745
+Epoch 3/50 - Train Loss: 0.2875, Train Acc: 0.2742 - Val Loss: 0.2885, Val Acc: 0.2722
+Epoch 4/50 - Train Loss: 0.2884, Train Acc: 0.2720 - Val Loss: 0.2880, Val Acc: 0.2720
+Epoch 5/50 - Train Loss: 0.2884, Train Acc: 0.2709 - Val Loss: 0.2856, Val Acc: 0.2745
+Epoch 6/50 - Train Loss: 0.2896, Train Acc: 0.2684 - Val Loss: 0.2881, Val Acc: 0.2722
+Epoch 7/50 - Train Loss: 0.2863, Train Acc: 0.2732 - Val Loss: 0.2885, Val Acc: 0.2722
+Epoch 8/50 - Train Loss: 0.2883, Train Acc: 0.2698 - Val Loss: 0.2886, Val Acc: 0.2722
+Epoch 9/50 - Train Loss: 0.2898, Train Acc: 0.2674 - Val Loss: 0.2853, Val Acc: 0.2745
+Epoch 10/50 - Train Loss: 0.2880, Train Acc: 0.2696 - Val Loss: 0.2855, Val Acc: 0.2745
+Epoch 11/50 - Train Loss: 0.2875, Train Acc: 0.2703 - Val Loss: 0.2856, Val Acc: 0.2745
+Epoch 12/50 - Train Loss: 0.2868, Train Acc: 0.2713 - Val Loss: 0.2847, Val Acc: 0.2753
+Epoch 13/50 - Train Loss: 0.2845, Train Acc: 0.2747 - Val Loss: 0.2855, Val Acc: 0.2745
+Epoch 14/50 - Train Loss: 0.2862, Train Acc: 0.2717 - Val Loss: 0.2853, Val Acc: 0.2745
+Epoch 15/50 - Train Loss: 0.2876, Train Acc: 0.2689 - Val Loss: 0.2852, Val Acc: 0.2745
+Epoch 16/50 - Train Loss: 0.2876, Train Acc: 0.2691 - Val Loss: 0.2852, Val Acc: 0.2745
+Epoch 17/50 - Train Loss: 0.2875, Train Acc: 0.2689 - Val Loss: 0.2882, Val Acc: 0.2722
+Epoch 18/50 - Train Loss: 0.2861, Train Acc: 0.2709 - Val Loss: 0.2852, Val Acc: 0.2745
+Epoch 19/50 - Train Loss: 0.2867, Train Acc: 0.2694 - Val Loss: 0.2851, Val Acc: 0.2745
+Epoch 20/50 - Train Loss: 0.2853, Train Acc: 0.2721 - Val Loss: 0.2852, Val Acc: 0.2745
+Epoch 21/50 - Train Loss: 0.2841, Train Acc: 0.2735 - Val Loss: 0.2893, Val Acc: 0.2680
+Epoch 22/50 - Train Loss: 0.2851, Train Acc: 0.2720 - Val Loss: 0.2883, Val Acc: 0.2722
+
+Early stopping após 22 épocas
+
+[OK] Treinamento concluído!
+   Best val loss: 0.2847
+
+[EVAL] Avaliando em Test Set...
+Traceback (most recent call last):
+  File "c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\scalping_mamba_hybrid.py", line 617, in <module>
+  File "c:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\scalping_mamba_hybrid.py", line 605, in main
+    total_params = sum(p.numel() for p in model.parameters())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 1484, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 759, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\.venv\Lib\site-packages\torch\serialization.py", line 740, in __init__
+    super().__init__(open(name, mode))
+                     ~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'models/best_scalping_mca.pth'
