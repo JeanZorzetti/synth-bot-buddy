@@ -1,0 +1,94 @@
+======================================================================
+CRASH300N - FFT ANALYSIS (O TESTE DEFINITIVO)
+======================================================================
+
+Objetivo: Detectar ciclos ocultos via analise de frequencia
+Se houver periodicidade (300, 500, etc.), FFT mostra pico
+Se FFT = flat -> Ruido Branco (Poisson) confirmado
+
+[LOAD] CRASH300N_1min_180days.csv
+  Total candles: 259,181
+
+[EXTRACT] Detectando crashes e calculando intervalos...
+  Total crashes: 4,995
+  Total intervalos: 4,994
+  Media: 51.86 candles
+  Std: 51.16 candles
+
+======================================================================
+FFT - ANALISE DE FREQUENCIA
+======================================================================
+
+[FFT] Computed
+  Samples: 4994
+  Frequency range: 0 to 0.499800 cycles/candle
+
+[DOMINANT FREQUENCIES] Top 10:
+Rank   | Freq (1/candle)    | Period (candles)     | Power           | Power %   
+-------+--------------------+----------------------+-----------------+-----------
+1      | 0.293953           | 3.40                 | 1.11e+08        | 100.00    %
+2      | 0.333600           | 3.00                 | 8.30e+07        | 74.96     %
+3      | 0.273929           | 3.65                 | 7.80e+07        | 70.47     %
+4      | 0.094714           | 10.56                | 7.61e+07        | 68.73     %
+5      | 0.453544           | 2.20                 | 7.39e+07        | 66.80     %
+6      | 0.327393           | 3.05                 | 7.38e+07        | 66.68     %
+7      | 0.236884           | 4.22                 | 7.20e+07        | 65.01     %
+8      | 0.079495           | 12.58                | 6.78e+07        | 61.22     %
+9      | 0.277333           | 3.61                 | 6.75e+07        | 60.98     %
+10     | 0.350421           | 2.85                 | 6.70e+07        | 60.51     %
+
+[SPECTRAL FLATNESS]
+  Valor: 0.571373
+  Interpretacao:
+    1.0 = Ruido Branco (sem periodicidade)
+    0.0 = Tons puros (forte periodicidade)
+
+[KOLMOGOROV-SMIRNOV TEST]
+  H0: Power spectrum segue distribuicao de ruido branco
+  KS Statistic: 0.011547
+  P-value: 0.889418
+  Resultado: NAO rejeitamos H0 (p > 0.05)
+           -> Consistente com RUIDO BRANCO
+
+[EXPECTED PERIOD TEST]
+  Periodo esperado: 300.0 candles (CRASH300N)
+  Frequencia esperada: 0.003333 cycles/candle
+
+  Frequencia mais proxima encontrada:
+    Freq: 0.003404
+    Periodo: 293.76 candles
+    Power: 7.92e+06 (7.16% do maximo)
+
+  -> SEM evidencia de ciclo em ~300 candles
+
+[PLOT] Graficos salvos em: C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\reports\crash300n_fft_analysis.png
+
+======================================================================
+VEREDICTO FINAL - FFT ANALYSIS
+======================================================================
+
+[CRITERIOS]
+  1. Spectral Flatness: 0.5714 <= 0.8 -> ESTRUTURA
+  2. KS p-value: 0.8894 > 0.05 -> RUIDO BRANCO
+  3. Power em ~300: 7.16% < 10% -> SEM CICLO
+
+[SCORE] 2/3 criterios de ruido branco
+
+======================================================================
+VEREDICTO: PROVAVEL RUIDO BRANCO (Edge Fraco)
+======================================================================
+
+  2/3 criterios apontam para ruido branco
+  Existe possibilidade de estrutura fraca, mas muito pequena
+
+  POSSIBILIDADE:
+  >> Periodo muito longo (> 4994 intervalos)
+  >> Ou periodicidade mascarada por ruido forte
+
+  RECOMENDACAO:
+  >> Necessario mais dados (anos de historico)
+  >> Ou migrar para Forex/Indices reais
+
+======================================================================
+
+[SAVE] Resultados salvos em: C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\reports\crash300n_fft_results.json

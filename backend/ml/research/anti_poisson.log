@@ -1,0 +1,108 @@
+======================================================================
+CRASH300N - ESTRATEGIA ANTI-POISSON
+======================================================================
+
+Premissa: Crashes sao Poisson (nao previsiveis)
+Objetivo: Dimensionar position size para sobreviver desertos
+
+[LOAD] CRASH300N_1min_180days.csv
+  Total candles: 259,181
+
+[EXTRACT] Detectando crashes e calculando intervalos...
+  Total crashes: 4,995
+  Total intervalos: 4,994
+  Media: 51.86 candles
+  Std: 51.16 candles
+
+======================================================================
+ESTATISTICA DE EXTREMOS (Tail Risk)
+======================================================================
+
+[DISTRIBUICAO DOS INTERVALOS]
+Percentil    | Intervalo (candles)    | Interpretacao                 
+-------------+------------------------+-------------------------------
+50.00       % | 36.0                   | Mediana (50% dos casos)       
+75.00       % | 72.0                   | 3/4 dos casos                 
+90.00       % | 120.0                  | 90% dos casos                 
+95.00       % | 157.0                  | 95% dos casos                 
+99.00       % | 236.1                  | 99% dos casos (1 em 100)      
+99.50       % | 261.0                  | 99.5% dos casos (1 em 200)    
+99.90       % | 318.1                  | 99.9% dos casos (1 em 1000)   
+99.99       % | 404.5                  | 99.99% dos casos (1 em 10k)   
+
+[TESTE: Intervalo ~ Exponencial?]
+  H0: Intervalos seguem distribuicao Exponencial
+  KS Statistic: 0.026432
+  P-value: 0.061058
+  Resultado: NAO rejeitamos H0 (p > 0.05)
+           -> Consistente com POISSON
+
+======================================================================
+CALCULO DE POSITION SIZE (Gestao de Ruina)
+======================================================================
+
+[PREMISSAS]
+  Saldo: $1000.00
+  Asset: CRASH300N (sobe entre crashes)
+  Risco: Crash de ~50-100 points (1.5% do indice)
+  Estrategia: LONG continuo (Carry Trade)
+
+[ANALISE DE DRAWDOWN]
+  Crash magnitude (tipico): 1.5%
+
+[POSITION SIZE SEGURO]
+Confianca    | Max Intervalo   | Max Drawdown    | Position Size   | Leverage  
+-------------+-----------------+-----------------+-----------------+-----------
+95.0        % | 157.0           | 1.5            % | $1333.33        | 1.3       x
+99.0        % | 236.1           | 1.5            % | $1333.33        | 1.3       x
+99.9        % | 318.1           | 1.5            % | $1333.33        | 1.3       x
+
+======================================================================
+EXPECTATIVA DE LUCRO (Carry Trade)
+======================================================================
+
+[CARRY TRADE STATS]
+  Rise medio por candle (sem crash): 0.0125%
+  Rise acumulado em 50 candles: 0.63%
+
+[EXPECTATIVA POR CICLO]
+  Intervalo medio: 51.9 candles
+  Rise esperado: 0.65%
+  Crash loss: 1.50%
+  Net Return: -0.85%
+
+  -> EXPECTATIVA NEGATIVA (estrategia nao viavel)
+
+======================================================================
+SIMULACAO DE MONTE CARLO (10,000 trades)
+======================================================================
+
+[RESULTADOS]
+  Balance final medio: $1830.92
+  Balance final mediano: $1827.80
+  Min: $1490.27
+  Max: $2214.53
+  Std: $89.65
+
+  Probabilidade de Ruina: 0.00%
+
+[PLOT] Graficos salvos em: C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\reports\crash300n_anti_poisson_strategy.png
+
+======================================================================
+VEREDICTO FINAL - ESTRATEGIA ANTI-POISSON
+======================================================================
+
+NAO VIAVEL - Expectativa negativa ou risco de ruina alto
+
+  Expectativa por ciclo: -0.85%
+  Probabilidade de ruina: 0.00%
+
+  RAZAO:
+  >> Carry trade nao compensa o risco de crash
+
+  RECOMENDACAO:
+  >> Migrar para Forex/Indices reais
+  >> Ou aceitar que CRASH/BOOM e casa de apostas (nao trading)
+
+======================================================================
+
