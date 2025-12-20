@@ -1,0 +1,85 @@
+======================================================================
+CRASH300N - CRIPTOANÁLISE DE PRNG
+======================================================================
+
+Objetivo: Determinar se algoritmo usa MT19937 (vulnerável)
+         ou CSPRNG (seguro)
+
+[LOAD] CRASH300N_1min_180days.csv
+  Total candles: 259,181
+
+[EXTRACT] Extraindo sequência de crashes...
+  Total candles: 259,181
+  Total crashes: 4,995
+  Crash rate: 1.93%
+
+======================================================================
+ANÁLISE DE PADRÕES DE BITS
+======================================================================
+
+[BIT FREQUENCY]
+  0s: 254,186 (98.07%)
+  1s: 4,995 (1.93%)
+
+  Chi-square statistic: 239586.06
+  Critical value (95%): 3.841
+  -> Distribuição NÃO-UNIFORME (viés detectado)
+
+[RUNS TEST]
+  Actual runs: 9801
+  Expected runs: 9798.5
+  Z-score: 0.13
+  Critical Z: ±1.96 (95% confidence)
+  -> Runs são ALEATÓRIOS (consistente com RNG)
+
+[AUTOCORRELAÇÃO]
+  Lag   1: -0.000258
+  Lag   2: -0.003320
+  Lag   5: -0.000463
+  Lag  10: +0.000353
+  Lag  20: +0.000761
+  Lag  50: +0.000767
+  Lag 100: +0.001175
+
+  -> Autocorrelação BAIXA (consistente com RNG)
+
+======================================================================
+TENTATIVA DE CRACKING MT19937
+======================================================================
+
+[MÉTODO]
+  MT19937 requer 624 outputs de 32-bit para clonar
+  Temos: 4,995 crashes (eventos binários)
+
+[LIMITAÇÃO CRÍTICA]
+  Crashes são BINÁRIOS (1-bit de informação por candle)
+  MT19937 gera FLOAT (32-bit de informação)
+  Perda de informação: 32:1
+
+  Estado MT19937: 19,968 bits
+  Info por candle: 1 bit
+  Candles necessários: 19,968.0
+  Candles disponíveis: 259,181
+  -> SUFICIENTE (em teoria)
+
+[RECONSTRUÇÃO ESTATÍSTICA]
+  Tentando reconstruir valores float a partir de crashes...
+  Reconstruídos: 1000 valores float
+  Range: [0.0017, 0.9999]
+  Mean: 0.5196
+
+[VEREDICTO PARCIAL]
+Traceback (most recent call last):
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\crack_crash300n_rng.py", line 365, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\crack_crash300n_rng.py", line 302, in main
+    attempt_mt19937_crack(crashes, crash_indices)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\crack_crash300n_rng.py", line 215, in attempt_mt19937_crack
+    print(f"  \u274c Impossível clonar MT19937 com informação binária")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>

@@ -1,0 +1,56 @@
+======================================================================
+CRASH300N - PRNG CRACKING (CRIPTOGRAFIA VS ESTATISTICA)
+Objetivo: Clonar o estado do Mersenne Twister (se usado)
+======================================================================
+WARNING: Biblioteca 'randcrack' nao encontrada.
+   Para teste real, instale: pip install randcrack
+   Continuando com analise de entropia de bits...
+
+[LOAD] Total candles: 259,181
+
+[DADOS] Analisando 217,409 ticks de subida
+Tese: A magnitude da subida vem de um RNG previsivel?
+
+[ANALISE DE BITS]
+  Total Bits: 32,000
+  Zeros: 21,947 (68.58%)
+  Ones:  10,053 (31.42%)
+  Ratio 1s/0s: 0.31416 (Ideal: 0.50000)
+  Chi-Square Score: 4420.8511 (Critical: 3.84)
+  ALERTA: Distribuicao de bits NAO e aleatoria (p < 0.05)
+     Possivel vies no gerador ou na quantizacao!
+
+[BUSCA DE REPETICAO DE SEQUENCIA]
+  Analisando sequencias em 217,409 ticks...
+  Bins: [0.00049026 0.00053023]
+
+  PADRAO ENCONTRADO! Sequencia de tamanho 3 repetiu 343 vezes.
+  Padrao: [0 1 0]...
+  Isso sugere um RNG de ciclo curto ou logica deterministica simples.
+
+[AUTOCORRELACAO DE BITS]
+  Lag    1: +0.263417
+  Lag   10: -0.074507
+  Lag  100: +0.134557
+  Lag 1000: -0.020808
+
+  ALERTA: Autocorrelacao alta (0.2634)
+  Bits tem MEMORIA (nao e aleatorio verdadeiro)
+
+======================================================================
+VEREDICTO DE SEGURANCA
+======================================================================
+
+VULNERABILIDADE POTENCIAL DETECTADA
+   Os numeros mostram vies estatistico ou repeticao.
+   Isso nao e um CSPRNG perfeito.
+
+   EVIDENCIAS:
+   - Chi-square: 4420.8511 > 3.84 (vies nos bits)
+   - Sequencias repetidas: 343 ocorrencias
+   - Autocorrelacao: 0.2634 > 0.05 (memoria)
+
+   ACAO: Tentar RandCrack com dados brutos de WebSocket (Tick Data).
+
+======================================================================
+
