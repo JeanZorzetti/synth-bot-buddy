@@ -493,13 +493,13 @@ def main():
     print(f"{'='*70}")
 
     if results['metrics']['win_rate'] >= 60:
-        print("✅ MODELO APROVADO para produção!")
+        print("MODELO APROVADO para producao!")
         print(f"   Win rate realista: {results['metrics']['win_rate']:.2f}% (>= 60%)")
     else:
-        print("❌ MODELO REPROVADO")
+        print("MODELO REPROVADO")
         print(f"   Win rate realista: {results['metrics']['win_rate']:.2f}% (< 60%)")
         print("\n   OVERFITTING CONFIRMADO!")
-        print("   O backtest original de 91.81% não refletiu a realidade.")
+        print("   O backtest original de 91.81% nao refletiu a realidade.")
 
     print(f"\n{'='*70}\n")
 
