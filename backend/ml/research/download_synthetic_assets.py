@@ -2,8 +2,10 @@
 Download de dados históricos de ativos sintéticos da Deriv
 
 Ativos suportados:
+- CRASH300: Sobe gradualmente e crasha a cada ~300 ticks (mais frequente)
 - CRASH500: Sobe gradualmente e crasha a cada ~500 ticks
 - CRASH1000: Sobe gradualmente e crasha a cada ~1000 ticks (mais lento)
+- BOOM300: Desce gradualmente e explode a cada ~300 ticks (mais frequente)
 - BOOM500: Desce gradualmente e explode a cada ~500 ticks
 - BOOM1000: Desce gradualmente e explode a cada ~1000 ticks (mais lento)
 
@@ -18,9 +20,15 @@ import sys
 
 # Mapeamento de símbolos e granularidades
 SYMBOLS = {
+    'CRASH300': 'CRASH300N',  # Símbolo correto na API
     'CRASH500': 'CRASH500',
+    'CRASH600': 'CRASH600',
+    'CRASH900': 'CRASH900',
     'CRASH1000': 'CRASH1000',
+    'BOOM300': 'BOOM300N',    # Símbolo correto na API
     'BOOM500': 'BOOM500',
+    'BOOM600': 'BOOM600',
+    'BOOM900': 'BOOM900',
     'BOOM1000': 'BOOM1000',
 }
 
