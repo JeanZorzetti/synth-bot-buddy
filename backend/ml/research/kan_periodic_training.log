@@ -1,0 +1,150 @@
+======================================================================
+CRASH300N - KAN PERIÓDICO (Splines Senoidais)
+Objetivo: Detectar ciclos/periodicidade no PRNG
+======================================================================
+
+[LOAD] CRASH300N_1min_180days.csv
+
+[PREP] Calculando intervalos entre crashes...
+  Total Crashes: 4995
+  Total Intervalos: 4994
+  Media: 51.86 candles
+  Std: 51.16 candles
+  Min: 1 | Max: 430
+
+[NORM] Valores normalizados em [0, 1]
+  Max clip: 1000.0 candles
+
+[DATASET] Sequences: 4989
+  Train: 3991 (80.0%)
+  Test:  998 (20.0%)
+
+[MODEL] KAN Periódico
+  Architecture: [5, 16, 1]
+  - Input: 5 intervalos anteriores
+  - Hidden: 16 nodes (KANLayer com splines senoidais)
+  - Output: 1 (próximo intervalo)
+  Total parameters: 576
+
+[TRAINING] Otimizador: AdamW (lr=0.01, weight_decay=1e-5)
+  Epochs: 200
+  Buscando por periodicidade no PRNG...
+
+  Epoch   0 | Train Loss: 0.516842 | Val Loss: 0.313025
+  Epoch  20 | Train Loss: 0.017051 | Val Loss: 0.017430
+  Epoch  40 | Train Loss: 0.004747 | Val Loss: 0.005790
+  Epoch  60 | Train Loss: 0.003342 | Val Loss: 0.004099
+  Epoch  80 | Train Loss: 0.002919 | Val Loss: 0.003626
+  Epoch 100 | Train Loss: 0.002769 | Val Loss: 0.003497
+  Epoch 120 | Train Loss: 0.002687 | Val Loss: 0.003407
+  Epoch 140 | Train Loss: 0.002634 | Val Loss: 0.003359
+  Epoch 160 | Train Loss: 0.002597 | Val Loss: 0.003325
+  Epoch 180 | Train Loss: 0.002569 | Val Loss: 0.003303
+
+  Training completo!
+
+======================================================================
+AVALIAÇÃO FINAL
+======================================================================
+
+[RESULTADOS]
+  KAN Periódico:
+    MAE:  42.38 candles
+    RMSE: 57.36 candles
+
+  Baseline (prever média):
+    MAE:  41.17 candles
+    RMSE: 56.07 candles
+
+[IMPROVEMENT]
+  MAE:  -2.93%
+  RMSE: -2.30%
+Traceback (most recent call last):
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\train_crash300n_kan_periodic.py", line 322, in <module>
+    train_kan()
+    ~~~~~~~~~^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\train_crash300n_kan_periodic.py", line 228, in train_kan
+    plt.axhline(y=baseline_pred[0], color='g', linestyle=':', linewidth=1, label=f'Baseline (Mean={baseline_pred[0]:.1f})')
+                                                                                                  ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unsupported format string passed to numpy.ndarray.__format__
+C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\train_crash300n_kan_periodic.py:228: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  baseline_mean = float(baseline_pred[0])
+======================================================================
+CRASH300N - KAN PERIÓDICO (Splines Senoidais)
+Objetivo: Detectar ciclos/periodicidade no PRNG
+======================================================================
+
+[LOAD] CRASH300N_1min_180days.csv
+
+[PREP] Calculando intervalos entre crashes...
+  Total Crashes: 4995
+  Total Intervalos: 4994
+  Media: 51.86 candles
+  Std: 51.16 candles
+  Min: 1 | Max: 430
+
+[NORM] Valores normalizados em [0, 1]
+  Max clip: 1000.0 candles
+
+[DATASET] Sequences: 4989
+  Train: 3991 (80.0%)
+  Test:  998 (20.0%)
+
+[MODEL] KAN Periódico
+  Architecture: [5, 16, 1]
+  - Input: 5 intervalos anteriores
+  - Hidden: 16 nodes (KANLayer com splines senoidais)
+  - Output: 1 (próximo intervalo)
+  Total parameters: 576
+
+[TRAINING] Otimizador: AdamW (lr=0.01, weight_decay=1e-5)
+  Epochs: 200
+  Buscando por periodicidade no PRNG...
+
+  Epoch   0 | Train Loss: 0.324072 | Val Loss: 0.180677
+  Epoch  20 | Train Loss: 0.009743 | Val Loss: 0.011516
+  Epoch  40 | Train Loss: 0.004434 | Val Loss: 0.005370
+  Epoch  60 | Train Loss: 0.003036 | Val Loss: 0.003948
+  Epoch  80 | Train Loss: 0.002736 | Val Loss: 0.003610
+  Epoch 100 | Train Loss: 0.002630 | Val Loss: 0.003478
+  Epoch 120 | Train Loss: 0.002571 | Val Loss: 0.003409
+  Epoch 140 | Train Loss: 0.002533 | Val Loss: 0.003356
+  Epoch 160 | Train Loss: 0.002506 | Val Loss: 0.003317
+  Epoch 180 | Train Loss: 0.002487 | Val Loss: 0.003290
+
+  Training completo!
+
+======================================================================
+AVALIAÇÃO FINAL
+======================================================================
+
+[RESULTADOS]
+  KAN Periódico:
+    MAE:  42.07 candles
+    RMSE: 57.18 candles
+
+  Baseline (prever média):
+    MAE:  41.17 candles
+    RMSE: 56.07 candles
+
+[IMPROVEMENT]
+  MAE:  -2.17%
+  RMSE: -1.98%
+
+[PLOT] Gráfico salvo em: C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\reports\crash300n_kan_periodic_results.png
+
+======================================================================
+VEREDICTO FINAL
+======================================================================
+
+Traceback (most recent call last):
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\train_crash300n_kan_periodic.py", line 323, in <module>
+    train_kan()
+    ~~~~~~~~~^^
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\ml\research\train_crash300n_kan_periodic.py", line 300, in train_kan
+    print(f"\u274c FALHOU - SEM PERIODICIDADE")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
