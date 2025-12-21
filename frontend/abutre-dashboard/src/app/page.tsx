@@ -7,29 +7,37 @@ import EquityCurve from '@/components/EquityCurve'
 import CurrentPosition from '@/components/CurrentPosition'
 import MarketMonitor from '@/components/MarketMonitor'
 import TradesTable from '@/components/TradesTable'
-import type { BalanceSnapshot, PositionState, MarketData, Trade } from '@/types'
-
-// Mock data for development
-const mockData = {
-  balance: 2805.10,
-  roi: 40.25,
-  winRate: 100,
-  maxDrawdown: 24.81,
-  totalTrades: 1018,
-  isConnected: false,
-  botStatus: 'stopped' as const,
-  position: null as PositionState | null,
-  marketData: null as MarketData | null,
-  balanceHistory: [] as BalanceSnapshot[],
-  trades: [] as Trade[],
-}
+import { useDashboard } from '@/hooks/useDashboard'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
 
+  // Zustand store state
+  const {
+    isConnected,
+    botStatus,
+    currentBalance,
+    position,
+    marketData,
+    riskStats,
+    trades,
+    balanceHistory,
+  } = useDashboard()
+
+  // Initialize WebSocket connection
+  useWebSocket()
+
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Calculate metrics from risk stats or use defaults
+  const balance = currentBalance || riskStats?.current_balance || 2000
+  const roi = riskStats?.roi_pct || 0
+  const winRate = riskStats?.win_rate_pct || 0
+  const maxDrawdown = riskStats?.max_drawdown_pct ? riskStats.max_drawdown_pct * 100 : 0
+  const totalTrades = riskStats?.total_trades || 0
 
   if (!mounted) {
     return (
@@ -58,22 +66,22 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               {/* Connection Status */}
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${mockData.isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
                 <span className="text-sm text-slate-400">
-                  {mockData.isConnected ? 'Connected' : 'Disconnected'}
+                  {isConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
 
               {/* Bot Status */}
               <div className="px-3 py-1.5 rounded-lg bg-slate-800 text-sm font-medium">
-                Status: <span className="text-slate-300">{mockData.botStatus.toUpperCase()}</span>
+                Status: <span className="text-slate-300">{botStatus.toUpperCase()}</span>
               </div>
 
               {/* Balance */}
               <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-sky-500/10 to-blue-600/10 border border-sky-500/20">
                 <div className="text-xs text-slate-400">Balance</div>
                 <div className="text-lg font-bold text-sky-400">
-                  ${mockData.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -88,8 +96,8 @@ export default function DashboardPage() {
           {/* Balance Card */}
           <MetricCard
             title="Current Balance"
-            value={`$${mockData.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            change={`+$${(mockData.balance - 2000).toFixed(2)}`}
+            value={`$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            change={`+$${(balance - 2000).toFixed(2)}`}
             changeType="positive"
             icon={<TrendingUp className="w-5 h-5" />}
             iconColor="text-sky-500"
@@ -99,7 +107,7 @@ export default function DashboardPage() {
           {/* ROI Card */}
           <MetricCard
             title="ROI"
-            value={`${mockData.roi.toFixed(2)}%`}
+            value={`${roi.toFixed(2)}%`}
             change="vs. $2,000 initial"
             changeType="positive"
             icon={<Activity className="w-5 h-5" />}
@@ -110,8 +118,8 @@ export default function DashboardPage() {
           {/* Win Rate Card */}
           <MetricCard
             title="Win Rate"
-            value={`${mockData.winRate}%`}
-            change={`${mockData.totalTrades} trades`}
+            value={`${winRate.toFixed(1)}%`}
+            change={`${totalTrades} trades`}
             changeType="positive"
             icon={<Target className="w-5 h-5" />}
             iconColor="text-green-500"
@@ -121,7 +129,7 @@ export default function DashboardPage() {
           {/* Max Drawdown Card */}
           <MetricCard
             title="Max Drawdown"
-            value={`${mockData.maxDrawdown.toFixed(2)}%`}
+            value={`${maxDrawdown.toFixed(2)}%`}
             change="Limit: 25%"
             changeType="warning"
             icon={<AlertTriangle className="w-5 h-5" />}
@@ -136,7 +144,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
               <h2 className="text-lg font-semibold mb-4">Equity Curve</h2>
-              <EquityCurve data={mockData.balanceHistory} />
+              <EquityCurve data={balanceHistory} />
             </div>
           </div>
 
@@ -144,7 +152,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-1">
             <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
               <h2 className="text-lg font-semibold mb-4">Current Position</h2>
-              <CurrentPosition position={mockData.position} />
+              <CurrentPosition position={position} />
             </div>
           </div>
         </div>
@@ -154,13 +162,13 @@ export default function DashboardPage() {
           {/* Market Monitor */}
           <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
             <h2 className="text-lg font-semibold mb-4">Market Monitor</h2>
-            <MarketMonitor data={mockData.marketData} />
+            <MarketMonitor data={marketData} />
           </div>
 
           {/* Recent Trades */}
           <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Trades</h2>
-            <TradesTable trades={mockData.trades} maxRows={8} />
+            <TradesTable trades={trades} maxRows={8} />
           </div>
         </div>
 
@@ -170,7 +178,11 @@ export default function DashboardPage() {
             🦅 Abutre Bot v1.0.0 | Validated: +40.25% ROI (180 days) | 100% Win Rate
           </p>
           <p className="mt-1 text-xs">
-            ⚠️ Demo Mode - Connect backend to enable real-time trading
+            {isConnected ? (
+              <>✅ Connected to backend - Real-time data active</>
+            ) : (
+              <>⚠️ Disconnected - Waiting for backend connection...</>
+            )}
           </p>
         </div>
       </main>
