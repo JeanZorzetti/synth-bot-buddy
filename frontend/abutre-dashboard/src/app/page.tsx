@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { TrendingUp, Activity, Target, AlertTriangle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { TrendingUp, Activity, Target, AlertTriangle, Settings } from 'lucide-react'
 import MetricsCard from '@/components/MetricsCard'
 import EquityCurve from '@/components/EquityCurve'
 import CurrentPosition from '@/components/CurrentPosition'
@@ -12,6 +13,7 @@ import { useWebSocket } from '@/hooks/useWebSocket'
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   // Zustand store state
   const {
@@ -84,6 +86,15 @@ export default function DashboardPage() {
                   ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
+
+              {/* Settings Button */}
+              <button
+                onClick={() => router.push('/settings')}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5 text-slate-400" />
+              </button>
             </div>
           </div>
         </div>

@@ -112,7 +112,7 @@ Lucro/Trade: $0.79
 
 ---
 
-### 🔄 FASE 2: Frontend - Dashboard (EM ANDAMENTO - 60%)
+### 🔄 FASE 2: Frontend - Dashboard (EM ANDAMENTO - 70%)
 
 **Status:** 🔄 Em Andamento | **Commit:** (próximo) | **Data:** 2025-01-21
 
@@ -232,27 +232,48 @@ Lucro/Trade: $0.79
 - [x] `.env.example` - Variáveis de ambiente
   - [x] NEXT_PUBLIC_WS_URL (default: http://localhost:8000)
 
-#### 2.8. Página de Configuração (PRÓXIMO) ⏳
-- [ ] `app/settings/page.tsx`
-  - [ ] Form para ajustar parâmetros:
-    - Delay Threshold (6-12)
-    - Max Level (8-12)
-    - Initial Stake ($0.50-$5.00)
-    - Auto-trading ON/OFF
-  - [ ] Botão: "Save & Restart Bot"
-  - [ ] Warning: "Changing parameters requires backtest validation"
+#### 2.8. Página de Configuração ✅
+- [x] `app/settings/page.tsx` (~320 linhas)
+  - [x] Bot Controls (Start/Pause/Stop buttons)
+  - [x] Form para ajustar parâmetros:
+    - [x] Delay Threshold (6-12) - Range slider
+    - [x] Max Level (8-12) - Range slider
+    - [x] Initial Stake ($0.50-$5.00) - Number input
+    - [x] Multiplier (1.5x-3.0x) - Number input
+    - [x] Max Drawdown (15%-35%) - Number input
+    - [x] Auto-trading ON/OFF - Checkbox
+  - [x] Save & Apply Settings button
+  - [x] Warning: "Changing parameters requires backtest validation"
+  - [x] Validação de valores (min/max ranges)
+  - [x] Integração com WebSocket (sendBotCommand, updateSettings)
+  - [x] Cancel button (volta para dashboard)
 
-#### 2.9. Sistema de Alertas (PRÓXIMO) ⏳
-- [ ] `components/AlertSystem.tsx`
-  - [ ] Toast notifications
-  - [ ] Tipos de alerta:
-    - 🟢 "Gatilho detectado! Entrando SELL..."
-    - 🟡 "Subindo para Nível 3..."
-    - ✅ "WIN! +$7.60"
-    - 🔴 "Max Drawdown atingido! Bot pausado"
-  - [ ] Som opcional (beep no trigger)
+- [x] `app/page.tsx` - Settings button adicionado
+  - [x] Botão de Settings no header (ícone de engrenagem)
+  - [x] Navigation para /settings via useRouter
 
-**Total FASE 2 até agora:** 10 arquivos criados, ~1,400 linhas de código, dashboard funcional com WebSocket real-time
+#### 2.9. Sistema de Alertas ✅
+- [x] `components/Toast.tsx` (~85 linhas)
+  - [x] ToastNotification component
+  - [x] ToastContainer component
+  - [x] 4 tipos de alerta: success, error, warning, info
+  - [x] Auto-dismiss com duration configurável (default: 5s)
+  - [x] Ícones customizados (CheckCircle, XCircle, AlertTriangle, Info)
+  - [x] Animações slide-in/slide-out
+  - [x] Close button manual
+
+- [x] `hooks/useToast.ts` (~50 linhas)
+  - [x] Hook para gerenciar toasts
+  - [x] Métodos: success(), error(), warning(), info()
+  - [x] addToast() e removeToast()
+  - [x] Geração automática de IDs únicos
+
+- [x] `app/globals.css` - Animações CSS
+  - [x] @keyframes slideInRight
+  - [x] @keyframes slideOutRight
+  - [x] Classes: animate-slide-in-right, animate-slide-out-right
+
+**Total FASE 2 até agora:** 13 arquivos criados, ~1,900 linhas de código, sistema completo e funcional
 
 ---
 
@@ -466,7 +487,7 @@ GitHub Actions      # Automation
 | Milestone | Data Alvo | Status | Progresso |
 |-----------|-----------|--------|-----------|
 | M1: Backend Core Completo | Semana 1 | ✅ Completo | 100% |
-| M2: Frontend Dashboard | Semana 2 | 🔄 Em andamento | 60% |
+| M2: Frontend Dashboard | Semana 2 | 🔄 Em andamento | 70% |
 | M3: Forward Test (Demo) | Semana 3-6 | ⏳ Pendente | 0% |
 | M4: Paper Trading | Semana 7-14 | ⏳ Pendente | 0% |
 | M5: Live Micro | Semana 15-18 | ⏳ Pendente | 0% |
@@ -477,7 +498,7 @@ GitHub Actions      # Automation
 ```
 FASE 0: Pesquisa e Validação          ✅ 100%
 FASE 1: Backend - Core Engine          ✅ 100%
-FASE 2: Frontend - Dashboard           🔄 60%
+FASE 2: Frontend - Dashboard           🔄 70%
 FASE 3: Validação                      ⏳ 0%
 FASE 4: Deploy                         ⏳ 0%
 FASE 5: Otimização                     ⏳ 0%
