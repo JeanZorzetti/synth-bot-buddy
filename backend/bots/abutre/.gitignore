@@ -1,0 +1,58 @@
+# ==================== ABUTRE BOT - GITIGNORE ====================
+
+# Environment variables (CRITICAL - NEVER COMMIT!)
+.env
+.env.local
+.env.*.local
+
+# Database files (contains trade history)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Log files
+logs/*.log
+logs/*.log.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Model files (if any ML models are trained)
+models/*.h5
+models/*.pth
+models/*.onnx
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IMPORTANT NOTES:
+# - NEVER commit .env with real API tokens
+# - Database may contain sensitive trade data
+# - Logs may contain API keys or personal info
+# - Always use demo account for development
