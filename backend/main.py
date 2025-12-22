@@ -35,6 +35,9 @@ from prometheus_client import generate_latest, REGISTRY
 from forward_testing import ForwardTestingEngine, get_forward_testing_engine
 from ml_retrain_service import MLRetrainService, get_retrain_service
 
+# Abutre Events API
+from api.routes.abutre_events import router as abutre_events_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -346,6 +349,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Register Abutre Events routes
+app.include_router(abutre_events_router)
 
 # --- Event Handlers ---
 
