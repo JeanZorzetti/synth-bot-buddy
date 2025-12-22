@@ -27,6 +27,14 @@ from .strategies.abutre_strategy import AbutreStrategy
 from .strategies.risk_manager import RiskManager, RiskViolation
 from .utils.logger import default_logger as logger, trade_logger
 
+# Import manager for WebSocket broadcasts
+import sys
+from pathlib import Path
+backend_path = str(Path(__file__).parent.parent.parent)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+from abutre_manager import get_abutre_manager
+
 
 class AbutreBot:
     """Main bot orchestrator"""
@@ -134,14 +142,12 @@ class AbutreBot:
         """Handle balance update"""
         self.risk_manager.update_balance(balance)
 
-        # Emit to dashboard
-        stats = self.risk_manager.get_stats()
-        if self.ws_server:
-            await self.ws_server.emit_balance_update(
-                balance=stats['current_balance'],
-                peak=stats['peak_balance'],
-                drawdown_pct=stats['current_drawdown_pct']
-            )
+        # Broadcast via AbutreManager (FastAPI WebSocket)
+        try:
+            manager = get_abutre_manager()
+            await manager.broadcast_risk_stats()
+        except Exception as e:
+            logger.debug(f"Could not broadcast balance update: {e}")
 
         # Log balance snapshot every 100 candles
         if self.market_handler.candle_count % 100 == 0:
@@ -173,33 +179,23 @@ class AbutreBot:
         # Get current streak
         streak_count, streak_direction = self.market_handler.get_current_streak()
 
-        # Emit candle to dashboard
-        if self.ws_server:
-            await self.ws_server.emit_new_candle({
-                'timestamp': candle.timestamp.isoformat(),
-                'open': candle.open,
-                'high': candle.high,
-                'low': candle.low,
-                'close': candle.close,
-                'color': candle.color
-            })
+        # Broadcast market data via AbutreManager (FastAPI WebSocket)
+        try:
+            manager = get_abutre_manager()
 
-            # Emit market data
-            await self.ws_server.emit_market_data(
-                symbol=config.SYMBOL,
-                price=candle.close,
-                streak_count=streak_count,
-                streak_direction='GREEN' if streak_direction == 1 else 'RED'
-            )
+            # Update manager's market data
+            manager.market_data = {
+                'symbol': config.SYMBOL,
+                'current_price': candle.close,
+                'current_streak_count': streak_count,
+                'current_streak_direction': streak_direction
+            }
 
-        # Emit via FastAPI callback (when disable_ws=True)
-        if self.on_market_data_callback:
-            await self.on_market_data_callback(
-                symbol=config.SYMBOL,
-                price=candle.close,
-                streak_count=streak_count,
-                streak_direction='GREEN' if streak_direction == 1 else 'RED'
-            )
+            # Broadcast to all clients
+            await manager.broadcast_market_data()
+
+        except Exception as e:
+            logger.debug(f"Could not broadcast market data: {e}")
 
         # Analyze with strategy
         signal = self.strategy.analyze_candle(candle, streak_count, streak_direction)
