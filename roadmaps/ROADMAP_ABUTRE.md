@@ -324,12 +324,45 @@ Lucro/Trade: $0.79
   - [x] python-socketio==5.10.0
   - [x] python-engineio==4.8.0
 
-**Arquivos modificados:** 2 arquivos, ~450 linhas adicionadas
-- `backend/bots/abutre/main.py` - Integração WebSocket
-- `backend/bots/abutre/requirements.txt` - Dependências
+- [x] Integrar dashboard no frontend principal
+  - [x] Migrar componentes de Next.js para React Router
+  - [x] Criar rota `/abutre` no frontend principal
+  - [x] Atualizar Sidebar com link interno
+  - [x] Instalar dependências (zustand, socket.io-client)
+  - [x] Corrigir erros de build Vercel:
+    - [x] Remover membro duplicado `getRiskMetrics` em apiClient.ts
+    - [x] Adicionar extensões de arquivo no vite.config.ts
+    - [x] Import explícito de websocket-client.ts
+    - [x] Adicionar websocket-client.ts ao repositório Git
 
-**Arquivos criados:** 1 arquivo, 320 linhas
-- `backend/bots/abutre/core/websocket_server.py` - Servidor Socket.IO
+**Arquivos modificados:** 5 arquivos, ~460 linhas adicionadas
+- `backend/bots/abutre/main.py` - Integração WebSocket
+- `backend/bots/abutre/requirements.txt` - Dependências Socket.IO
+- `frontend/src/App.tsx` - Rota `/abutre`
+- `frontend/src/components/Sidebar.tsx` - Link interno
+- `frontend/src/services/apiClient.ts` - Fix duplicação
+- `frontend/vite.config.ts` - Configuração de extensões
+
+**Arquivos criados:** 13 arquivos, ~2,200 linhas
+
+- `backend/bots/abutre/core/websocket_server.py` - Servidor Socket.IO (320 linhas)
+- `frontend/src/pages/AbutreDashboard.tsx` - Dashboard adaptado (200 linhas)
+- `frontend/src/components/abutre/CurrentPosition.tsx` (200 linhas)
+- `frontend/src/components/abutre/EquityCurve.tsx` (220 linhas)
+- `frontend/src/components/abutre/MarketMonitor.tsx` (180 linhas)
+- `frontend/src/components/abutre/MetricsCard.tsx` (50 linhas)
+- `frontend/src/components/abutre/Toast.tsx` (85 linhas)
+- `frontend/src/components/abutre/TradesTable.tsx` (160 linhas)
+- `frontend/src/hooks/useDashboard.ts` - Zustand store (90 linhas)
+- `frontend/src/hooks/useToast.ts` (50 linhas)
+- `frontend/src/hooks/useWebSocket.ts` (180 linhas)
+- `frontend/src/lib/websocket-client.ts` - Cliente Socket.IO (328 linhas)
+- `frontend/src/index.ts` - Exports centralizados
+
+**Deploy Status:**
+
+- ✅ Build local passou (21.16s)
+- ⏳ Aguardando deploy Vercel (commit 9afe5d1)
 
 #### 3.1. Forward Test (30 dias)
 - [ ] Rodar bot em **DEMO account**
