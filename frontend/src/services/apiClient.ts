@@ -484,11 +484,6 @@ class APIClient {
     return response.data;
   }
 
-  async getRiskMetrics(): Promise<any> {
-    const response = await this.api.get('/v1/risk/metrics');
-    return response.data;
-  }
-
   async getVaRAnalysis(): Promise<any> {
     const response = await this.api.get('/v1/risk/var');
     return response.data;
