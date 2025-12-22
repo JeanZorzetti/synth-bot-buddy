@@ -142,6 +142,9 @@ class AbutreBot:
         """Handle balance update"""
         self.risk_manager.update_balance(balance)
 
+        # Get stats for logging
+        stats = self.risk_manager.get_stats()
+
         # Broadcast via AbutreManager (FastAPI WebSocket)
         try:
             manager = get_abutre_manager()
