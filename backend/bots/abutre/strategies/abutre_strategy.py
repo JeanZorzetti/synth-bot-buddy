@@ -40,11 +40,15 @@ class TradingSignal:
         self.timestamp = datetime.now()
 
     def __repr__(self):
+        stake_str = f"${self.stake:.2f}" if self.stake is not None else "$0.00"
+        level_str = str(self.level) if self.level is not None else "N/A"
+        direction_str = self.direction if self.direction is not None else "N/A"
+
         return (
             f"TradingSignal({self.action} | "
-            f"Direction: {self.direction} | "
-            f"Stake: ${self.stake:.2f if self.stake else 0} | "
-            f"Level: {self.level} | "
+            f"Direction: {direction_str} | "
+            f"Stake: {stake_str} | "
+            f"Level: {level_str} | "
             f"Reason: {self.reason})"
         )
 
