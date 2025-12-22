@@ -362,12 +362,30 @@ Lucro/Trade: $0.79
 **Deploy Status:**
 
 - ✅ Build local passou (21.16s)
-- ⏳ Aguardando deploy Vercel (commit 9afe5d1)
+- ✅ Deploy Vercel completo (commit 841044b)
+- ✅ Dashboard acessível: <https://botderiv.rollabs.com.br/abutre>
+- ✅ WebSocket configurado: wss://botderivapi.roilabs.com.br/ws/dashboard
+
+**Configuração Produção:**
+
+- ✅ Token DEMO configurado (.env criado)
+- ✅ Script de inicialização (start_bot.py)
+- ✅ Guia completo (SETUP_DERIV_API.md - 516 linhas)
+- ✅ WebSocket migrado de Socket.IO para FastAPI nativo
+- ✅ Conexão ao backend Easypanel (VPS)
 
 #### 3.1. Forward Test (30 dias)
+
+- [x] Configurar ambiente de produção
+  - [x] Dashboard integrado ao frontend principal
+  - [x] WebSocket conectando ao backend Easypanel
+  - [x] Token DEMO configurado
+  - [x] Guia de configuração completo
+
 - [ ] Rodar bot em **DEMO account**
-  - [ ] Configurar API token de demo
-  - [ ] Iniciar bot com banca virtual $2,000
+  - [ ] Iniciar bot no servidor de produção
+  - [ ] Verificar conexão WebSocket no dashboard
+  - [ ] Confirmar paper trading ativo (AUTO_TRADING=false)
   - [ ] Monitorar por 30 dias
 
 - [ ] Métricas de validação:
