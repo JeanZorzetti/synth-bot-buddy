@@ -19,13 +19,22 @@ import MarketMonitor from '@/components/abutre/MarketMonitor'
 import TradesTable from '@/components/abutre/TradesTable'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { useAbutreEvents } from '@/hooks/useAbutreEvents'
 import { useToast } from '@/hooks/use-toast'
 
 export default function AbutreDashboard() {
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
 
-  // Zustand store state
+  // NEW: Hook para eventos do XML (dados do Deriv Bot)
+  const {
+    stats: xmlStats,
+    trades: xmlTrades,
+    balanceHistory: xmlBalanceHistory,
+    loading: xmlLoading,
+  } = useAbutreEvents()
+
+  // OLD: Zustand store state (mantido para compatibilidade)
   const {
     isConnected,
     botStatus,
@@ -44,12 +53,16 @@ export default function AbutreDashboard() {
     setMounted(true)
   }, [])
 
-  // Calculate metrics from risk stats or use defaults
-  const balance = currentBalance || riskStats?.current_balance || 2000
-  const roi = riskStats?.roi_pct || 0
-  const winRate = riskStats?.win_rate_pct || 0
+  // Calculate metrics - prioriza dados do XML (Deriv Bot) sobre dados legacy
+  const balance = xmlStats?.current_balance || currentBalance || riskStats?.current_balance || 2000
+  const roi = xmlStats?.roi_pct || riskStats?.roi_pct || 0
+  const winRate = xmlStats?.win_rate_pct || riskStats?.win_rate_pct || 0
   const maxDrawdown = riskStats?.max_drawdown_pct ? riskStats.max_drawdown_pct * 100 : 0
-  const totalTrades = riskStats?.total_trades || 0
+  const totalTrades = xmlStats?.total_trades || riskStats?.total_trades || 0
+
+  // Use XML trades if available, fallback to legacy
+  const displayTrades = xmlTrades.length > 0 ? xmlTrades : trades
+  const displayBalanceHistory = xmlBalanceHistory.length > 0 ? xmlBalanceHistory : balanceHistory
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br'
 
@@ -265,7 +278,7 @@ export default function AbutreDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <EquityCurve data={balanceHistory} />
+              <EquityCurve data={displayBalanceHistory} />
             </CardContent>
           </Card>
         </div>
@@ -310,7 +323,7 @@ export default function AbutreDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TradesTable trades={trades} maxRows={8} />
+            <TradesTable trades={displayTrades} maxRows={8} />
           </CardContent>
         </Card>
       </div>
