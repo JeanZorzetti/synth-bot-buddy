@@ -131,19 +131,23 @@ export default function AbutreDashboard() {
         </div>
 
         <div className="flex gap-2">
-          {isRunning ? (
-            <>
-              <Button onClick={handleStop} variant="destructive">
-                <StopCircle className="h-4 w-4 mr-2" />
-                Parar
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleStart}>
-              <Play className="h-4 w-4 mr-2" />
-              Iniciar Bot
-            </Button>
-          )}
+          <Button
+            onClick={handleStart}
+            disabled={isRunning}
+            variant={isRunning ? "outline" : "default"}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            Iniciar Bot
+          </Button>
+
+          <Button
+            onClick={handleStop}
+            variant="destructive"
+            disabled={!isRunning}
+          >
+            <StopCircle className="h-4 w-4 mr-2" />
+            Parar
+          </Button>
         </div>
       </div>
 
