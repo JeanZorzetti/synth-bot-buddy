@@ -113,6 +113,9 @@ class MarketDataHandler:
         self.current_streak_count = 0
         self.current_streak_direction = 0  # 1 or -1
 
+        # Total candles processed counter
+        self.candle_count = 0
+
         logger.info(f"MarketDataHandler initialized (buffer: {buffer_size} candles)")
 
     async def process_tick(self, tick_data: Dict[str, Any]):
@@ -156,8 +159,9 @@ class MarketDataHandler:
         """
         candle.close_candle()
         self.candles.append(candle)
+        self.candle_count += 1
 
-        logger.info(f"Candle closed: {candle}")
+        logger.info(f"Candle #{self.candle_count} closed: {candle}")
 
         # Update streak tracking
         self._update_streak(candle)
@@ -224,6 +228,10 @@ class MarketDataHandler:
             (streak_count, direction)
         """
         return (self.current_streak_count, self.current_streak_direction)
+
+    def get_last_candle(self) -> Optional[Candle]:
+        """Get the most recent closed candle"""
+        return self.candles[-1] if self.candles else None
 
     def reset_streak(self):
         """Reset streak counter (e.g., after entering a trade)"""
