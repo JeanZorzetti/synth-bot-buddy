@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, status
 from datetime import datetime
 import logging
 
-from ...database.abutre_repository import get_abutre_repository
-from ..schemas.abutre_events import (
+from database.abutre_repository import get_abutre_repository
+from api.schemas.abutre_events import (
     CandleEvent,
     TriggerEvent,
     TradeOpenedEvent,
