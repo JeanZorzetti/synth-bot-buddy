@@ -180,7 +180,7 @@ class DerivAPIClient:
 
         request = {
             "authorize": self.api_token,
-            "req_id": f"auth_{datetime.now().timestamp()}"
+            "req_id": int(datetime.now().timestamp() * 1000)  # Integer timestamp in ms
         }
 
         response = await self._send_request(request)
@@ -215,7 +215,7 @@ class DerivAPIClient:
         request = {
             "ticks": symbol,
             "subscribe": 1,
-            "req_id": f"ticks_{datetime.now().timestamp()}"
+            "req_id": int(datetime.now().timestamp() * 1000)
         }
 
         response = await self._send_request(request)
@@ -240,7 +240,7 @@ class DerivAPIClient:
         request = {
             "balance": 1,
             "subscribe": 1,
-            "req_id": f"balance_{datetime.now().timestamp()}"
+            "req_id": int(datetime.now().timestamp() * 1000)
         }
 
         response = await self._send_request(request)
@@ -292,7 +292,7 @@ class DerivAPIClient:
             "duration": duration,
             "duration_unit": duration_unit,
             "symbol": symbol,
-            "req_id": f"proposal_{datetime.now().timestamp()}"
+            "req_id": int(datetime.now().timestamp() * 1000)
         }
 
         proposal_response = await self._send_request(proposal_request)
@@ -304,7 +304,7 @@ class DerivAPIClient:
         buy_request = {
             "buy": proposal_response['proposal']['id'],
             "price": amount,
-            "req_id": f"buy_{datetime.now().timestamp()}"
+            "req_id": int(datetime.now().timestamp() * 1000)
         }
 
         buy_response = await self._send_request(buy_request)
