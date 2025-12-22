@@ -12,7 +12,8 @@ import {
   Layers,
   History,
   BarChart3,
-  Bell
+  Bell,
+  Bird
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +37,14 @@ const navItems: NavItem[] = [
     description: 'Visão geral + ML XGBoost',
     badge: 'Completo',
     badgeVariant: 'default'
+  },
+  {
+    title: 'Abutre Bot',
+    href: 'http://localhost:3001',
+    icon: Bird,
+    description: 'Delayed Martingale System',
+    badge: 'FASE 3',
+    badgeVariant: 'destructive'
   },
   {
     title: 'Trading',
@@ -177,19 +186,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false }) => {
             {navItems.map((item) => {
               const isActive = location.pathname === item.href;
               const Icon = item.icon;
+              const isExternalLink = item.href.startsWith('http');
 
-              return (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground"
-                  )}
-                >
+              const linkClassName = cn(
+                "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "hover:bg-accent hover:text-accent-foreground",
+                isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              );
+
+              const linkContent = (
+                <>
                   <Icon className={cn("h-4 w-4", isCollapsed ? "" : "mr-3")} />
 
                   {!isCollapsed && (
@@ -209,6 +217,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false }) => {
                       </div>
                     </>
                   )}
+                </>
+              );
+
+              return isExternalLink ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClassName}
+                >
+                  {linkContent}
+                </a>
+              ) : (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  className={linkClassName}
+                >
+                  {linkContent}
                 </NavLink>
               );
             })}
