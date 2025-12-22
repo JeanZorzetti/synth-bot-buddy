@@ -1,0 +1,463 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" collection="false">
+  <variables>
+    <variable type="" id="Stake">Aposta Inicial</variable>
+    <variable type="" id="Martingale">Multiplicador</variable>
+    <variable type="" id="Target">Meta de Lucro</variable>
+    <variable type="" id="StopLoss">Limite de Perda</variable>
+    <variable type="" id="Delay">Velas para Esperar (Delay)</variable>
+    <variable type="" id="RedCount">Contador Vermelhas</variable>
+    <variable type="" id="GreenCount">Contador Verdes</variable>
+    <variable type="" id="CurrentStake">Aposta Atual</variable>
+    <variable type="" id="InitialBalance">Saldo Inicial</variable>
+    <variable type="" id="MaxLevel">Nivel Maximo</variable>
+    <variable type="" id="CurrentLevel">Nivel Atual</variable>
+  </variables>
+  <block type="trade_definition" id="trade_setup" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="market_setup" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="trade_type" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">callput</field>
+            <field name="TRADETYPE_LIST">callput</field>
+            <next>
+              <block type="trade_definition_contracttype" id="contract_type" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="candle_interval" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="restart_config" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="error_handling" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="init_balance">
+        <field name="VAR" id="InitialBalance" variabletype="">Saldo Inicial</field>
+        <value name="VALUE">
+          <block type="balance" id="get_initial_balance"></block>
+        </value>
+        <next>
+          <block type="variables_set" id="init_stake">
+            <field name="VAR" id="Stake" variabletype="">Aposta Inicial</field>
+            <value name="VALUE">
+              <block type="math_number" id="val_stake">
+                <field name="NUM">0.35</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="init_martingale">
+                <field name="VAR" id="Martingale" variabletype="">Multiplicador</field>
+                <value name="VALUE">
+                  <block type="math_number" id="val_martingale">
+                    <field name="NUM">2</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="init_delay">
+                    <field name="VAR" id="Delay" variabletype="">Velas para Esperar (Delay)</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="val_delay">
+                        <field name="NUM">8</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="init_max_level">
+                        <field name="VAR" id="MaxLevel" variabletype="">Nivel Maximo</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="val_max_level">
+                            <field name="NUM">10</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="init_current_level">
+                            <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="val_init_level">
+                                <field name="NUM">0</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="init_target">
+                                <field name="VAR" id="Target" variabletype="">Meta de Lucro</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="val_target">
+                                    <field name="NUM">10</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="init_stoploss">
+                                    <field name="VAR" id="StopLoss" variabletype="">Limite de Perda</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="val_stoploss">
+                                        <field name="NUM">100</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="variables_set" id="init_currentstake">
+                                        <field name="VAR" id="CurrentStake" variabletype="">Aposta Atual</field>
+                                        <value name="VALUE">
+                                          <block type="variables_get" id="get_init_stake">
+                                            <field name="VAR" id="Stake" variabletype="">Aposta Inicial</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="trade_opts">
+        <value name="DURATION">
+          <block type="math_number" id="duration_val">
+            <field name="NUM">1</field>
+          </block>
+        </value>
+        <value name="AMOUNT">
+          <block type="variables_get" id="amount_val">
+            <field name="VAR" id="CurrentStake" variabletype="">Aposta Atual</field>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" id="strategy_logic" x="0" y="600">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="check_color">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="is_candle_black" id="is_red">
+            <value name="OHLCOBJ">
+              <block type="get_ohlc" id="get_candle_data">
+                <field name="CANDLEINTERVAL_LIST">default</field>
+                <value name="CANDLEINDEX">
+                  <block type="math_number" id="candle_idx">
+                    <field name="NUM">1</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="inc_red">
+            <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+            <value name="VALUE">
+              <block type="math_arithmetic" id="math_red">
+                <field name="OP">ADD</field>
+                <value name="A">
+                  <block type="variables_get" id="get_red">
+                    <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="one_red">
+                    <field name="NUM">1</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="reset_green_var">
+                <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+                <value name="VALUE">
+                  <block type="math_number" id="zero_green">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="variables_set" id="inc_green">
+            <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+            <value name="VALUE">
+              <block type="math_arithmetic" id="math_green">
+                <field name="OP">ADD</field>
+                <value name="A">
+                  <block type="variables_get" id="get_green">
+                    <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="one_green">
+                    <field name="NUM">1</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="reset_red_var">
+                <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+                <value name="VALUE">
+                  <block type="math_number" id="zero_red">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <next>
+          <block type="notify" id="notify_display">
+            <field name="NOTIFICATION_TYPE">info</field>
+            <field name="NOTIFICATION_SOUND">silent</field>
+            <value name="MESSAGE">
+              <block type="text_join" id="join_msg">
+                <mutation items="6"></mutation>
+                <value name="ADD0">
+                  <block type="text" id="txt_red">
+                    <field name="TEXT">R:</field>
+                  </block>
+                </value>
+                <value name="ADD1">
+                  <block type="variables_get" id="disp_red">
+                    <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+                  </block>
+                </value>
+                <value name="ADD2">
+                  <block type="text" id="txt_green">
+                    <field name="TEXT"> G:</field>
+                  </block>
+                </value>
+                <value name="ADD3">
+                  <block type="variables_get" id="disp_green">
+                    <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+                  </block>
+                </value>
+                <value name="ADD4">
+                  <block type="text" id="txt_level">
+                    <field name="TEXT"> Lv:</field>
+                  </block>
+                </value>
+                <value name="ADD5">
+                  <block type="variables_get" id="disp_level">
+                    <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id="check_entry">
+                <mutation elseif="1"></mutation>
+                <value name="IF0">
+                  <block type="logic_compare" id="compare_red">
+                    <field name="OP">GTE</field>
+                    <value name="A">
+                      <block type="variables_get" id="val_red_check">
+                        <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="variables_get" id="val_delay_red">
+                        <field name="VAR" id="Delay" variabletype="">Velas para Esperar (Delay)</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="purchase" id="buy_call">
+                    <field name="PURCHASE_LIST">CALL</field>
+                  </block>
+                </statement>
+                <value name="IF1">
+                  <block type="logic_compare" id="compare_green">
+                    <field name="OP">GTE</field>
+                    <value name="A">
+                      <block type="variables_get" id="val_green_check">
+                        <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="variables_get" id="val_delay_green">
+                        <field name="VAR" id="Delay" variabletype="">Velas para Esperar (Delay)</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO1">
+                  <block type="purchase" id="buy_put">
+                    <field name="PURCHASE_LIST">PUT</field>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="after_purchase" id="after_purchase_logic" x="0" y="1200">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="result_check">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="contract_check_result" id="is_win">
+            <field name="CHECK_RESULT">win</field>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="reset_stake">
+            <field name="VAR" id="CurrentStake" variabletype="">Aposta Atual</field>
+            <value name="VALUE">
+              <block type="variables_get" id="get_base_stake">
+                <field name="VAR" id="Stake" variabletype="">Aposta Inicial</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="reset_level">
+                <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                <value name="VALUE">
+                  <block type="math_number" id="zero_level">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="reset_red_counter">
+                    <field name="VAR" id="RedCount" variabletype="">Contador Vermelhas</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="zero_red_cnt">
+                        <field name="NUM">0</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="reset_green_counter">
+                        <field name="VAR" id="GreenCount" variabletype="">Contador Verdes</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="zero_green_cnt">
+                            <field name="NUM">0</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="notify" id="win_msg">
+                            <field name="NOTIFICATION_TYPE">success</field>
+                            <field name="NOTIFICATION_SOUND">earned-money</field>
+                            <value name="MESSAGE">
+                              <block type="text" id="win_txt">
+                                <field name="TEXT">WIN! Reset counters</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="trade_again" id="trade_again_win"></block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="controls_if" id="check_max_level">
+            <value name="IF0">
+              <block type="logic_compare" id="compare_max_level">
+                <field name="OP">GTE</field>
+                <value name="A">
+                  <block type="variables_get" id="get_level_check">
+                    <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="variables_get" id="get_max_level">
+                    <field name="VAR" id="MaxLevel" variabletype="">Nivel Maximo</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="notify" id="max_level_warn">
+                <field name="NOTIFICATION_TYPE">error</field>
+                <field name="NOTIFICATION_SOUND">severe-error</field>
+                <value name="MESSAGE">
+                  <block type="text" id="max_level_text">
+                    <field name="TEXT">MAX LEVEL! Bot parado</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="trade_stop" id="stop_max_level">
+                    <field name="STOP_TYPE">1</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="variables_set" id="inc_level">
+                <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="add_one_level">
+                    <field name="OP">ADD</field>
+                    <value name="A">
+                      <block type="variables_get" id="current_level_get">
+                        <field name="VAR" id="CurrentLevel" variabletype="">Nivel Atual</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="math_number" id="one_to_add">
+                        <field name="NUM">1</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="martingale_calc">
+                    <field name="VAR" id="CurrentStake" variabletype="">Aposta Atual</field>
+                    <value name="VALUE">
+                      <block type="math_arithmetic" id="mult_stake">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <block type="variables_get" id="get_curr_stake">
+                            <field name="VAR" id="CurrentStake" variabletype="">Aposta Atual</field>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <block type="variables_get" id="get_mult">
+                            <field name="VAR" id="Martingale" variabletype="">Multiplicador</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="trade_again" id="trade_again_loss"></block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>
