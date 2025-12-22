@@ -1,8 +1,8 @@
-$API = 'http://localhost:8000/api/abutre/events'
+$API = 'https://botderivapi.roilabs.com.br/api/abutre/events'
 
-Write-Host "Adding more test data..." -ForegroundColor Yellow
+Write-Host "Populando PRODUCAO com dados de teste..." -ForegroundColor Yellow
 
-for ($i = 2; $i -le 10; $i++) {
+for ($i = 1; $i -le 15; $i++) {
     $timestamp = (Get-Date).AddMinutes(-$i * 2).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
     # Candle
