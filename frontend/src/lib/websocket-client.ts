@@ -259,7 +259,8 @@ let wsClient: WebSocketClient | null = null
  */
 export function getWebSocketClient(): WebSocketClient {
   if (!wsClient) {
-    const url = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000'
+    // Use VITE_WS_URL for production (same as main backend)
+    const url = (import.meta.env.VITE_WS_URL || 'http://localhost:8000').replace(/^ws/, 'http')
     wsClient = new WebSocketClient(url)
   }
   return wsClient
