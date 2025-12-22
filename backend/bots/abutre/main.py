@@ -30,7 +30,7 @@ from .utils.logger import default_logger as logger, trade_logger
 class AbutreBot:
     """Main bot orchestrator"""
 
-    def __init__(self, demo_mode: bool = False, paper_trading: bool = False, ws_port: int = 8000):
+    def __init__(self, demo_mode: bool = False, paper_trading: bool = False, ws_port: int = 8000, disable_ws: bool = False):
         """
         Initialize Abutre bot
 
@@ -38,9 +38,11 @@ class AbutreBot:
             demo_mode: Use demo account
             paper_trading: Monitor only, don't execute
             ws_port: WebSocket server port for dashboard
+            disable_ws: Disable WebSocket server (use when managed by FastAPI)
         """
         self.demo_mode = demo_mode
         self.paper_trading = paper_trading or not config.AUTO_TRADING
+        self.disable_ws = disable_ws
 
         # Components
         self.api_client: DerivAPIClient = None
@@ -48,7 +50,7 @@ class AbutreBot:
         self.strategy: AbutreStrategy = None
         self.risk_manager: RiskManager = None
         self.order_executor: OrderExecutor = None
-        self.ws_server: WebSocketServer = WebSocketServer(port=ws_port)
+        self.ws_server: WebSocketServer = None if disable_ws else WebSocketServer(port=ws_port)
 
         # State
         self.is_running = False
@@ -95,9 +97,10 @@ class AbutreBot:
         # 6. Initialize order executor
         self.order_executor = OrderExecutor(self.api_client)
 
-        # 7. Start WebSocket server
-        self.ws_server.set_bot_reference(self)
-        await self.ws_server.start()
+        # 7. Start WebSocket server (if enabled)
+        if self.ws_server:
+            self.ws_server.set_bot_reference(self)
+            await self.ws_server.start()
 
         # 8. Connect to Deriv API
         if not await self.api_client.connect():
@@ -124,11 +127,12 @@ class AbutreBot:
 
         # Emit to dashboard
         stats = self.risk_manager.get_stats()
-        await self.ws_server.emit_balance_update(
-            balance=stats['current_balance'],
-            peak=stats['peak_balance'],
-            drawdown_pct=stats['current_drawdown_pct']
-        )
+        if self.ws_server:
+            await self.ws_server.emit_balance_update(
+                balance=stats['current_balance'],
+                peak=stats['peak_balance'],
+                drawdown_pct=stats['current_drawdown_pct']
+            )
 
         # Log balance snapshot every 100 candles
         if self.market_handler.candle_count % 100 == 0:
@@ -161,22 +165,23 @@ class AbutreBot:
         streak_count, streak_direction = self.market_handler.get_current_streak()
 
         # Emit candle to dashboard
-        await self.ws_server.emit_new_candle({
-            'timestamp': candle.timestamp.isoformat(),
-            'open': candle.open,
-            'high': candle.high,
-            'low': candle.low,
-            'close': candle.close,
-            'color': candle.color
-        })
+        if self.ws_server:
+            await self.ws_server.emit_new_candle({
+                'timestamp': candle.timestamp.isoformat(),
+                'open': candle.open,
+                'high': candle.high,
+                'low': candle.low,
+                'close': candle.close,
+                'color': candle.color
+            })
 
-        # Emit market data
-        await self.ws_server.emit_market_data(
-            symbol=config.SYMBOL,
-            price=candle.close,
-            streak_count=streak_count,
-            streak_direction='GREEN' if streak_direction == 1 else 'RED'
-        )
+            # Emit market data
+            await self.ws_server.emit_market_data(
+                symbol=config.SYMBOL,
+                price=candle.close,
+                streak_count=streak_count,
+                streak_direction='GREEN' if streak_direction == 1 else 'RED'
+            )
 
         # Analyze with strategy
         signal = self.strategy.analyze_candle(candle, streak_count, streak_direction)
@@ -198,8 +203,9 @@ class AbutreBot:
         )
 
         # Emit to dashboard
-        await self.ws_server.emit_trigger_detected(streak_count, direction_str)
-        await self.ws_server.emit_system_alert('warning', f'Trigger detected: {streak_count} {direction_str} candles')
+        if self.ws_server:
+            await self.ws_server.emit_trigger_detected(streak_count, direction_str)
+            await self.ws_server.emit_system_alert('warning', f'Trigger detected: {streak_count} {direction_str} candles')
 
         # Log to database
         db.log_event(
@@ -244,7 +250,8 @@ class AbutreBot:
             self.risk_manager.validate_level(signal.level)
         except RiskViolation as e:
             logger.error(f"Risk violation: {e}")
-            await self.ws_server.emit_system_alert('error', f'Risk violation: {e}')
+            if self.ws_server:
+                await self.ws_server.emit_system_alert('error', f'Risk violation: {e}')
             return
 
         # Place order
@@ -259,25 +266,26 @@ class AbutreBot:
         self.strategy.execute_signal(signal)
 
         # Emit to dashboard
-        trade_data = {
-            'trade_id': order.order_id,
-            'entry_time': datetime.now().isoformat(),
-            'direction': signal.direction,
-            'level': signal.level,
-            'stake': signal.stake,
-            'entry_streak_size': self.market_handler.current_streak_count
-        }
-        await self.ws_server.emit_trade_opened(trade_data)
-        await self.ws_server.emit_position_update({
-            'in_position': True,
-            'direction': signal.direction,
-            'entry_timestamp': datetime.now().isoformat(),
-            'entry_streak_size': self.market_handler.current_streak_count,
-            'current_level': signal.level,
-            'current_stake': signal.stake,
-            'total_loss': 0,
-            'next_stake': signal.stake * self.strategy.multiplier
-        })
+        if self.ws_server:
+            trade_data = {
+                'trade_id': order.order_id,
+                'entry_time': datetime.now().isoformat(),
+                'direction': signal.direction,
+                'level': signal.level,
+                'stake': signal.stake,
+                'entry_streak_size': self.market_handler.current_streak_count
+            }
+            await self.ws_server.emit_trade_opened(trade_data)
+            await self.ws_server.emit_position_update({
+                'in_position': True,
+                'direction': signal.direction,
+                'entry_timestamp': datetime.now().isoformat(),
+                'entry_streak_size': self.market_handler.current_streak_count,
+                'current_level': signal.level,
+                'current_stake': signal.stake,
+                'total_loss': 0,
+                'next_stake': signal.stake * self.strategy.multiplier
+            })
 
         # Save to database
         db.insert_trade(
@@ -329,38 +337,39 @@ class AbutreBot:
         self.risk_manager.record_trade(profit=signal.stake, result=result)
 
         # Emit to dashboard
-        trade_data = {
-            'trade_id': str(self.strategy.position.entry_candle_idx),
-            'exit_time': datetime.now().isoformat(),
-            'result': result,
-            'profit': signal.stake,
-            'final_level': signal.level,
-            'balance': self.risk_manager.current_balance
-        }
-        await self.ws_server.emit_trade_closed(trade_data)
-        await self.ws_server.emit_position_update({
-            'in_position': False,
-            'direction': None,
-            'entry_timestamp': None,
-            'entry_streak_size': 0,
-            'current_level': 0,
-            'current_stake': 0,
-            'total_loss': 0,
-            'next_stake': 0
-        })
+        if self.ws_server:
+            trade_data = {
+                'trade_id': str(self.strategy.position.entry_candle_idx),
+                'exit_time': datetime.now().isoformat(),
+                'result': result,
+                'profit': signal.stake,
+                'final_level': signal.level,
+                'balance': self.risk_manager.current_balance
+            }
+            await self.ws_server.emit_trade_closed(trade_data)
+            await self.ws_server.emit_position_update({
+                'in_position': False,
+                'direction': None,
+                'entry_timestamp': None,
+                'entry_streak_size': 0,
+                'current_level': 0,
+                'current_stake': 0,
+                'total_loss': 0,
+                'next_stake': 0
+            })
 
-        # Emit risk stats
-        stats = self.risk_manager.get_stats()
-        await self.ws_server.emit_risk_stats({
-            'total_trades': stats['total_trades'],
-            'wins': stats['wins'],
-            'losses': stats['losses'],
-            'win_rate': stats['win_rate_pct'],
-            'roi': stats['roi_pct']
-        })
+            # Emit risk stats
+            stats = self.risk_manager.get_stats()
+            await self.ws_server.emit_risk_stats({
+                'total_trades': stats['total_trades'],
+                'wins': stats['wins'],
+                'losses': stats['losses'],
+                'win_rate': stats['win_rate_pct'],
+                'roi': stats['roi_pct']
+            })
 
-        alert_level = 'success' if result == 'WIN' else 'error'
-        await self.ws_server.emit_system_alert(alert_level, f"Trade closed: {result} | P&L: ${signal.stake:+.2f}")
+            alert_level = 'success' if result == 'WIN' else 'error'
+            await self.ws_server.emit_system_alert(alert_level, f"Trade closed: {result} | P&L: ${signal.stake:+.2f}")
 
         # Update database
         db.update_trade(
@@ -401,11 +410,9 @@ class AbutreBot:
 
         self.is_running = False
 
-        # Emit shutdown status
-        await self.ws_server.emit_bot_status('STOPPED', 'Bot shutdown complete')
-
-        # Stop WebSocket server
+        # Emit shutdown status and stop WebSocket server
         if self.ws_server:
+            await self.ws_server.emit_bot_status('STOPPED', 'Bot shutdown complete')
             await self.ws_server.stop()
 
         # Disconnect API

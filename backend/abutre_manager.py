@@ -81,10 +81,11 @@ class AbutreManager:
             self.start_time = datetime.now()
 
             # Criar instância do bot
+            # Desabilitar WebSocket interno pois FastAPI já tem /ws/dashboard
             self.bot = AbutreBot(
                 demo_mode=demo,
                 paper_trading=paper_trading,
-                ws_port=8000  # Mesma porta do FastAPI
+                disable_ws=True  # Evita conflito de porta com FastAPI
             )
 
             # Iniciar bot em background
@@ -213,6 +214,12 @@ class AbutreManager:
         """Task interna que roda o bot"""
         try:
             logger.info("🤖 Bot task iniciada")
+
+            # Inicializar componentes
+            if not await self.bot.initialize():
+                logger.error("❌ Falha na inicialização do bot")
+                self.is_running = False
+                return
 
             # Rodar bot
             await self.bot.run()
