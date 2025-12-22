@@ -7079,13 +7079,18 @@ async def websocket_abutre(websocket: WebSocket):
     - Sinais de trading
     - Status do bot
     """
-    from abutre_manager import get_ws_manager
+    from abutre_manager import get_ws_manager, get_abutre_manager
 
     ws_manager = get_ws_manager()
+    bot_manager = get_abutre_manager()
 
     try:
         await ws_manager.connect(websocket)
         logger.info("🔌 WebSocket Abutre conectado")
+
+        # Enviar estado inicial ao conectar
+        await bot_manager.broadcast_bot_status()
+        await bot_manager.broadcast_risk_stats()
 
         # Manter conexão aberta
         while True:

@@ -144,6 +144,10 @@ class AbutreManager:
 
             logger.info("✅ Abutre Bot iniciado com sucesso")
 
+            # Broadcast inicial de status e stats
+            await self.broadcast_bot_status()
+            await self.broadcast_risk_stats()
+
             return {
                 'status': 'success',
                 'message': 'Bot iniciado com sucesso',
@@ -207,6 +211,10 @@ class AbutreManager:
             self.bot_task = None
 
             logger.info("✅ Abutre Bot parado com sucesso")
+
+            # Broadcast status de parada
+            await self.broadcast_bot_status()
+            await self.broadcast_risk_stats()
 
             return {
                 'status': 'success',
@@ -288,6 +296,42 @@ class AbutreManager:
         await ws_manager.broadcast(message)
         logger.debug(f"📊 Market data broadcast: {symbol} @ {price} | Streak: {streak_count} {streak_direction}")
 
+    async def broadcast_bot_status(self):
+        """Envia status atual do bot para todos os clientes conectados"""
+        ws_manager = get_ws_manager()
+
+        status = 'running' if self.is_running else 'stopped'
+
+        message = {
+            'event': 'bot_status',
+            'data': {
+                'status': status,
+                'message': f'Bot {status}',
+                'is_running': self.is_running,
+                'demo_mode': self.demo_mode,
+                'paper_trading': self.paper_trading,
+            }
+        }
+
+        await ws_manager.broadcast(message)
+
+    async def broadcast_risk_stats(self):
+        """Envia estatísticas de risco para todos os clientes conectados"""
+        ws_manager = get_ws_manager()
+
+        # Obter stats do bot se estiver rodando
+        if self.is_running and self.bot and self.bot.risk_manager:
+            stats = self.bot.risk_manager.get_stats()
+            self.stats.update(stats)
+
+        message = {
+            'event': 'risk_stats',
+            'data': self.stats
+        }
+
+        await ws_manager.broadcast(message)
+        logger.debug(f"📈 Risk stats broadcast: Balance ${self.stats.get('current_balance', 0):.2f}")
+
     async def _on_market_data_callback(self, symbol: str, price: float, streak_count: int, streak_direction: str):
         """
         Callback chamado pelo bot quando há novos dados de mercado
@@ -299,6 +343,10 @@ class AbutreManager:
             streak_direction: Direção ('GREEN' ou 'RED')
         """
         await self.broadcast_market_data(symbol, price, streak_count, streak_direction)
+
+        # Broadcast risk_stats a cada 10 candles (10 minutos)
+        if streak_count % 10 == 0:
+            await self.broadcast_risk_stats()
 
     async def _run_bot(self):
         """Task interna que roda o bot"""
