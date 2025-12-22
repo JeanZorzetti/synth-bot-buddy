@@ -38,6 +38,10 @@ class WebSocketManager:
 
     async def broadcast(self, message: dict):
         """Envia mensagem para todos os clientes conectados"""
+        # Otimização: Não fazer nada se não houver clientes
+        if not self.active_connections:
+            return
+
         dead_connections = set()
 
         for connection in self.active_connections:

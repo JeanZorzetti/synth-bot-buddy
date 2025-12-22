@@ -21,6 +21,7 @@ from .core.deriv_api_client import DerivAPIClient
 from .core.market_data_handler import MarketDataHandler, Candle
 from .core.order_executor import OrderExecutor
 from .core.database import db
+from .core.async_db_writer import AsyncDatabaseWriter, get_async_db_writer
 from .core.websocket_server import WebSocketServer
 from .strategies.abutre_strategy import AbutreStrategy
 from .strategies.risk_manager import RiskManager, RiskViolation
@@ -53,6 +54,7 @@ class AbutreBot:
         self.risk_manager: RiskManager = None
         self.order_executor: OrderExecutor = None
         self.ws_server: WebSocketServer = None if disable_ws else WebSocketServer(port=ws_port)
+        self.async_db: AsyncDatabaseWriter = None
 
         # State
         self.is_running = False
@@ -99,17 +101,22 @@ class AbutreBot:
         # 6. Initialize order executor
         self.order_executor = OrderExecutor(self.api_client)
 
-        # 7. Start WebSocket server (if enabled)
+        # 7. Initialize async database writer
+        self.async_db = get_async_db_writer(db)
+        await self.async_db.start()
+        logger.info("✅ AsyncDatabaseWriter iniciado")
+
+        # 8. Start WebSocket server (if enabled)
         if self.ws_server:
             self.ws_server.set_bot_reference(self)
             await self.ws_server.start()
 
-        # 8. Connect to Deriv API
+        # 9. Connect to Deriv API
         if not await self.api_client.connect():
             logger.critical("Failed to connect to Deriv API!")
             return False
 
-        # 9. Subscribe to data streams
+        # 10. Subscribe to data streams
         await self.api_client.subscribe_ticks(config.SYMBOL)
         await self.api_client.subscribe_balance()
 
@@ -150,10 +157,10 @@ class AbutreBot:
 
     async def on_candle_closed(self, candle: Candle):
         """Handle candle close"""
-        logger.info(f"Candle closed: {candle}")
+        logger.debug(f"Candle #{self.market_handler.candle_count}: {candle}")
 
-        # Save to database
-        db.insert_candle(
+        # Save to database (async, non-blocking)
+        await self.async_db.insert_candle(
             timestamp=candle.timestamp,
             open=candle.open,
             high=candle.high,
@@ -197,7 +204,11 @@ class AbutreBot:
         # Analyze with strategy
         signal = self.strategy.analyze_candle(candle, streak_count, streak_direction)
 
-        logger.info(f"Strategy signal: {signal}")
+        # Log apenas sinais não-WAIT
+        if signal.action != 'WAIT':
+            logger.info(f"📊 Strategy signal: {signal}")
+        else:
+            logger.debug(f"Strategy signal: {signal}")
 
         # Execute signal
         if signal.action != 'WAIT':
@@ -218,8 +229,8 @@ class AbutreBot:
             await self.ws_server.emit_trigger_detected(streak_count, direction_str)
             await self.ws_server.emit_system_alert('warning', f'Trigger detected: {streak_count} {direction_str} candles')
 
-        # Log to database
-        db.log_event(
+        # Log to database (async)
+        await self.async_db.log_event(
             event_type='TRIGGER',
             severity='WARNING',
             message=f"Streak trigger: {streak_count} {direction_str} candles",
@@ -415,11 +426,20 @@ class AbutreBot:
         # Start listening to WebSocket
         await self.api_client.listen()
 
+    async def stop(self):
+        """Stop bot (called by AbutreManager)"""
+        await self.shutdown()
+
     async def shutdown(self):
         """Graceful shutdown"""
         logger.info("Shutting down...")
 
         self.is_running = False
+
+        # Stop async database writer (flush pending operations)
+        if self.async_db:
+            await self.async_db.stop()
+            logger.info("✅ AsyncDatabaseWriter parado")
 
         # Emit shutdown status and stop WebSocket server
         if self.ws_server:
