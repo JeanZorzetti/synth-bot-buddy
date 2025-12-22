@@ -7067,3 +7067,43 @@ async def get_abutre_status():
     except Exception as e:
         logger.error(f"❌ Erro ao obter status do Abutre Bot: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.websocket("/ws/abutre")
+async def websocket_abutre(websocket: WebSocket):
+    """
+    WebSocket endpoint para dashboard do Abutre Bot
+
+    Envia atualizações em tempo real de:
+    - Market data (streak, preço, símbolo)
+    - Sinais de trading
+    - Status do bot
+    """
+    from abutre_manager import get_ws_manager
+
+    ws_manager = get_ws_manager()
+
+    try:
+        await ws_manager.connect(websocket)
+        logger.info("🔌 WebSocket Abutre conectado")
+
+        # Manter conexão aberta
+        while True:
+            try:
+                # Aguardar mensagens do cliente (se houver)
+                data = await websocket.receive_text()
+                logger.debug(f"📨 Mensagem recebida: {data}")
+
+                # Processar comandos do cliente (futuro)
+                # Ex: request_state, ping, etc
+
+            except WebSocketDisconnect:
+                logger.info("🔌 WebSocket Abutre desconectado (cliente)")
+                break
+            except Exception as e:
+                logger.error(f"❌ Erro no WebSocket Abutre: {e}")
+                break
+
+    finally:
+        ws_manager.disconnect(websocket)
+        logger.info("🔌 WebSocket Abutre finalizado")

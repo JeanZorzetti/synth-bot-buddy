@@ -29,7 +29,7 @@ export class WebSocketClient {
 
   constructor(url: string = 'http://localhost:8000') {
     // Convert HTTP URL to WebSocket URL for native WebSocket (not Socket.IO)
-    this.url = url.replace(/^http/, 'ws') + '/ws/dashboard'
+    this.url = url.replace(/^http/, 'ws') + '/ws/abutre'
   }
 
   /**

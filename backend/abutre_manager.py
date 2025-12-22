@@ -6,16 +6,61 @@ Permite iniciar/parar o bot via API e enviar dados para o dashboard.
 """
 import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set
 from datetime import datetime
 import sys
 from pathlib import Path
+from fastapi import WebSocket
 
 # Adicionar backend ao path para imports
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
 logger = logging.getLogger(__name__)
+
+
+class WebSocketManager:
+    """Gerencia conexões WebSocket para broadcast de dados"""
+
+    def __init__(self):
+        self.active_connections: Set[WebSocket] = set()
+
+    async def connect(self, websocket: WebSocket):
+        """Adiciona nova conexão"""
+        await websocket.accept()
+        self.active_connections.add(websocket)
+        logger.info(f"WebSocket conectado. Total: {len(self.active_connections)}")
+
+    def disconnect(self, websocket: WebSocket):
+        """Remove conexão"""
+        self.active_connections.discard(websocket)
+        logger.info(f"WebSocket desconectado. Total: {len(self.active_connections)}")
+
+    async def broadcast(self, message: dict):
+        """Envia mensagem para todos os clientes conectados"""
+        dead_connections = set()
+
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.warning(f"Erro ao enviar para WebSocket: {e}")
+                dead_connections.add(connection)
+
+        # Remove conexões mortas
+        for conn in dead_connections:
+            self.active_connections.discard(conn)
+
+
+# Singleton do WebSocket manager
+_ws_manager: Optional[WebSocketManager] = None
+
+def get_ws_manager() -> WebSocketManager:
+    """Retorna instância singleton do WebSocket manager"""
+    global _ws_manager
+    if _ws_manager is None:
+        _ws_manager = WebSocketManager()
+    return _ws_manager
 
 
 class AbutreManager:
@@ -85,7 +130,8 @@ class AbutreManager:
             self.bot = AbutreBot(
                 demo_mode=demo,
                 paper_trading=paper_trading,
-                disable_ws=True  # Evita conflito de porta com FastAPI
+                disable_ws=True,  # Evita conflito de porta com FastAPI
+                on_market_data=self._on_market_data_callback  # Hook para broadcast
             )
 
             # Iniciar bot em background
@@ -209,6 +255,46 @@ class AbutreManager:
             stats: Novas estatísticas
         """
         self.stats.update(stats)
+
+    async def broadcast_market_data(self, symbol: str, price: float, streak_count: int, streak_direction: str):
+        """
+        Envia dados de mercado para todos os clientes WebSocket conectados
+
+        Args:
+            symbol: Símbolo do ativo (ex: 1HZ100V)
+            price: Preço atual
+            streak_count: Contador de streak
+            streak_direction: Direção do streak ('GREEN' ou 'RED')
+        """
+        ws_manager = get_ws_manager()
+
+        # Converter direção para número: GREEN=1, RED=-1
+        direction_num = 1 if streak_direction == 'GREEN' else -1
+
+        message = {
+            'event': 'market_data',
+            'data': {
+                'symbol': symbol,
+                'current_price': price,
+                'current_streak_count': streak_count,
+                'current_streak_direction': direction_num,
+            }
+        }
+
+        await ws_manager.broadcast(message)
+        logger.debug(f"📊 Market data broadcast: {symbol} @ {price} | Streak: {streak_count} {streak_direction}")
+
+    async def _on_market_data_callback(self, symbol: str, price: float, streak_count: int, streak_direction: str):
+        """
+        Callback chamado pelo bot quando há novos dados de mercado
+
+        Args:
+            symbol: Símbolo do ativo
+            price: Preço atual
+            streak_count: Contador de streak
+            streak_direction: Direção ('GREEN' ou 'RED')
+        """
+        await self.broadcast_market_data(symbol, price, streak_count, streak_direction)
 
     async def _run_bot(self):
         """Task interna que roda o bot"""

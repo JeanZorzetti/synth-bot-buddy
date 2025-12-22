@@ -30,7 +30,7 @@ from .utils.logger import default_logger as logger, trade_logger
 class AbutreBot:
     """Main bot orchestrator"""
 
-    def __init__(self, demo_mode: bool = False, paper_trading: bool = False, ws_port: int = 8000, disable_ws: bool = False):
+    def __init__(self, demo_mode: bool = False, paper_trading: bool = False, ws_port: int = 8000, disable_ws: bool = False, on_market_data=None):
         """
         Initialize Abutre bot
 
@@ -39,10 +39,12 @@ class AbutreBot:
             paper_trading: Monitor only, don't execute
             ws_port: WebSocket server port for dashboard
             disable_ws: Disable WebSocket server (use when managed by FastAPI)
+            on_market_data: Callback para broadcast de market data (FastAPI integration)
         """
         self.demo_mode = demo_mode
         self.paper_trading = paper_trading or not config.AUTO_TRADING
         self.disable_ws = disable_ws
+        self.on_market_data_callback = on_market_data
 
         # Components
         self.api_client: DerivAPIClient = None
@@ -177,6 +179,15 @@ class AbutreBot:
 
             # Emit market data
             await self.ws_server.emit_market_data(
+                symbol=config.SYMBOL,
+                price=candle.close,
+                streak_count=streak_count,
+                streak_direction='GREEN' if streak_direction == 1 else 'RED'
+            )
+
+        # Emit via FastAPI callback (when disable_ws=True)
+        if self.on_market_data_callback:
+            await self.on_market_data_callback(
                 symbol=config.SYMBOL,
                 price=candle.close,
                 streak_count=streak_count,
