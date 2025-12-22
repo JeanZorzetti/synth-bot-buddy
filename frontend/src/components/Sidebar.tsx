@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
   },
   {
     title: 'Abutre Bot',
-    href: 'https://botderiv.rollabs.com.br/abutre',
+    href: '/abutre',
     icon: Bird,
     description: 'Delayed Martingale System',
     badge: 'FASE 3',
