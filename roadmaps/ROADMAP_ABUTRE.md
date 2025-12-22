@@ -374,7 +374,7 @@ Lucro/Trade: $0.79
 - ✅ WebSocket migrado de Socket.IO para FastAPI nativo
 - ✅ Conexão ao backend Easypanel (VPS)
 
-#### 3.1. Forward Test (30 dias)
+#### 3.1. Forward Test (30 dias) - 🟢 EM ANDAMENTO
 
 - [x] Configurar ambiente de produção
   - [x] Dashboard integrado ao frontend principal
