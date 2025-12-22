@@ -43,6 +43,9 @@ class AbutreConfig:
     # API Token (from Deriv dashboard)
     DERIV_API_TOKEN = os.getenv('DERIV_API_TOKEN', '')
 
+    # App ID (REQUIRED - register at api.deriv.com)
+    DERIV_APP_ID = os.getenv('DERIV_APP_ID', '1089')  # Default public app_id
+
     # Deriv WebSocket URL
     DERIV_WS_URL = os.getenv('DERIV_WS_URL', 'wss://ws.derivws.com/websockets/v3')
 

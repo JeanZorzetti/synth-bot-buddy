@@ -27,6 +27,7 @@ class DerivAPIClient:
         self,
         api_token: str = None,
         ws_url: str = None,
+        app_id: str = None,
         on_tick: Callable = None,
         on_balance: Callable = None,
         on_trade_result: Callable = None
@@ -37,12 +38,17 @@ class DerivAPIClient:
         Args:
             api_token: Deriv API token
             ws_url: WebSocket URL
+            app_id: Deriv App ID (required - register at api.deriv.com)
             on_tick: Callback for tick updates (func(tick_data))
             on_balance: Callback for balance updates (func(balance))
             on_trade_result: Callback for trade results (func(result))
         """
         self.api_token = api_token or config.DERIV_API_TOKEN
-        self.ws_url = ws_url or config.DERIV_WS_URL
+        self.app_id = app_id or config.DERIV_APP_ID
+
+        # Build WebSocket URL with app_id parameter
+        base_url = ws_url or config.DERIV_WS_URL
+        self.ws_url = f"{base_url}?app_id={self.app_id}"
 
         # Callbacks
         self.on_tick = on_tick
