@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Play,
@@ -13,7 +12,6 @@ import {
   Target,
   AlertTriangle,
   Activity,
-  Clock,
 } from 'lucide-react'
 import EquityCurve from '@/components/abutre/EquityCurve'
 import CurrentPosition from '@/components/abutre/CurrentPosition'
@@ -53,29 +51,57 @@ export default function AbutreDashboard() {
   const maxDrawdown = riskStats?.max_drawdown_pct ? riskStats.max_drawdown_pct * 100 : 0
   const totalTrades = riskStats?.total_trades || 0
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://botderivapi.roilabs.com.br'
+
   const handleStart = async () => {
-    toast({
-      title: 'Bot Iniciando',
-      description: 'Aguardando gatilho (8+ velas consecutivas)',
-    })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/abutre/start`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (data.status === 'success') {
+        toast({
+          title: 'Bot Iniciado',
+          description: 'Aguardando gatilho (8+ velas consecutivas)',
+        })
+      } else {
+        throw new Error(data.message || 'Erro ao iniciar bot')
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Iniciar',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleStop = async () => {
-    toast({
-      title: 'Bot Parado',
-      description: 'Sistema interrompido com segurança',
-      variant: 'destructive',
-    })
-  }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/abutre/stop`, {
+        method: 'POST',
+      })
 
-  const formatDuration = (seconds: number) => {
-    const days = Math.floor(seconds / 86400)
-    const hours = Math.floor((seconds % 86400) / 3600)
-    const mins = Math.floor((seconds % 3600) / 60)
+      const data = await response.json()
 
-    if (days > 0) return `${days}d ${hours}h ${mins}m`
-    if (hours > 0) return `${hours}h ${mins}m`
-    return `${mins}m`
+      if (data.status === 'success') {
+        toast({
+          title: 'Bot Parado',
+          description: 'Sistema interrompido com segurança',
+          variant: 'destructive',
+        })
+      } else {
+        throw new Error(data.message || 'Erro ao parar bot')
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Parar',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
   }
 
   if (!mounted) {

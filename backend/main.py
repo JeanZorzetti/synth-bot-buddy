@@ -6991,3 +6991,79 @@ async def rollback_model(version: str):
     except Exception as e:
         logger.error(f"Erro ao fazer rollback: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== ABUTRE BOT ENDPOINTS ====================
+
+@app.post("/api/abutre/start")
+async def start_abutre_bot():
+    """
+    Inicia o bot Abutre (Delayed Martingale Strategy)
+
+    Returns:
+        Status da operação e configuração do bot
+    """
+    try:
+        from abutre_manager import get_abutre_manager
+
+        manager = get_abutre_manager()
+        result = await manager.start_bot(demo=True, paper_trading=True)
+
+        if result['status'] == 'success':
+            logger.info("✅ Abutre Bot iniciado via API")
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao iniciar Abutre Bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/abutre/stop")
+async def stop_abutre_bot():
+    """
+    Para o bot Abutre
+
+    Returns:
+        Status da operação e estatísticas finais
+    """
+    try:
+        from abutre_manager import get_abutre_manager
+
+        manager = get_abutre_manager()
+        result = await manager.stop_bot()
+
+        if result['status'] == 'success':
+            logger.info("⏹️ Abutre Bot parado via API")
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao parar Abutre Bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/abutre/status")
+async def get_abutre_status():
+    """
+    Retorna status atual do bot Abutre
+
+    Returns:
+        Status completo incluindo métricas e configuração
+    """
+    try:
+        from abutre_manager import get_abutre_manager
+
+        manager = get_abutre_manager()
+        status = manager.get_status()
+
+        return {
+            "status": "success",
+            "data": status
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter status do Abutre Bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
