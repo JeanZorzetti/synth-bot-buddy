@@ -55,7 +55,15 @@
       "Bash(Remove-Item -Recurse -Force .venv)",
       "Bash(.venv/Scripts/python.exe -m pip:*)",
       "Bash(.venv/Scripts/python.exe:*)",
-      "Bash(../../../.venv/Scripts/python.exe:*)"
+      "Bash(../../../.venv/Scripts/python.exe:*)",
+      "Bash(timeout 30 ../../../.venv/Scripts/python.exe:*)",
+      "Bash(tee:*)",
+      "Bash(timeout /t 10)",
+      "Bash(timeout 600 ../../../.venv/Scripts/python.exe:*)",
+      "Bash(timeout 60 ../../../.venv/Scripts/python.exe:*)",
+      "Bash(timeout 120 ../../../.venv/Scripts/python.exe:*)",
+      "Bash(timeout:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

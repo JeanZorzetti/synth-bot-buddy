@@ -382,11 +382,11 @@ Lucro/Trade: $0.79
   - [x] Token DEMO configurado
   - [x] Guia de configuração completo
 
-- [ ] Rodar bot em **DEMO account**
-  - [ ] Iniciar bot no servidor de produção
-  - [ ] Verificar conexão WebSocket no dashboard
-  - [ ] Confirmar paper trading ativo (AUTO_TRADING=false)
-  - [ ] Monitorar por 30 dias
+- [x] Rodar bot em **DEMO account**
+  - [x] Iniciar bot no servidor de produção
+  - [x] Verificar conexão WebSocket no dashboard
+  - [x] Confirmar paper trading ativo (AUTO_TRADING=false)
+  - [ ] Monitorar por 30 dias (DIA 1/30 - INICIADO 22/12/2025)
 
 - [ ] Métricas de validação:
   - [ ] ROI esperado: +6-7% (40%/6 meses)
@@ -397,6 +397,12 @@ Lucro/Trade: $0.79
 - [ ] **Critério de Aprovação:**
   - ✅ Se ROI > 5% E Win Rate > 90% → Avançar Fase 3.2
   - ❌ Se ROI < 0% OU Bust → Aumentar Delay para 10 e repetir
+
+**📊 Monitoramento:**
+- Log de acompanhamento: `backend/bots/abutre/FORWARD_TEST_LOG.md`
+- Atualização: Diária (preencher métricas e eventos)
+- Dashboard: https://botderiv.rollabs.com.br/abutre
+- Logs: `backend/bots/abutre/logs/abutre.log`
 
 #### 3.2. Paper Trading (60 dias)
 - [ ] Monitoramento sem execução
