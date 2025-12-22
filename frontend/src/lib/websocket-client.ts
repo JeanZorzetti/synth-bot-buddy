@@ -1,17 +1,25 @@
 /**
  * ABUTRE DASHBOARD - WebSocket Client
  *
- * Real-time connection to backend using Socket.IO
+ * Real-time connection to backend using Native WebSocket (FastAPI)
  * Handles all WebSocket events and updates Zustand store
  */
 
-import { io, Socket } from 'socket.io-client'
 import type { WSEvent } from '@/types'
 
 type EventCallback = (data: any) => void
 
+// Simplified Socket interface for native WebSocket
+interface SocketInterface {
+  connected: boolean
+  on: (event: string, callback: any) => void
+  emit: (event: string, data?: any) => void
+  disconnect: () => void
+  connect: () => void
+}
+
 export class WebSocketClient {
-  private socket: Socket | null = null
+  private socket: SocketInterface | null = null
   private url: string
   private reconnectAttempts = 0
   private maxReconnectAttempts = 5
@@ -20,11 +28,12 @@ export class WebSocketClient {
   private eventCallbacks: Map<string, Set<EventCallback>> = new Map()
 
   constructor(url: string = 'http://localhost:8000') {
-    this.url = url
+    // Convert HTTP URL to WebSocket URL for native WebSocket (not Socket.IO)
+    this.url = url.replace(/^http/, 'ws') + '/ws/dashboard'
   }
 
   /**
-   * Connect to WebSocket server
+   * Connect to WebSocket server (Native WebSocket, not Socket.IO)
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -41,29 +50,44 @@ export class WebSocketClient {
 
       this.isConnecting = true
 
-      console.log(`[WebSocket] Connecting to ${this.url}...`)
+      console.log(`[WebSocket] Connecting to ${this.url}... (Native WebSocket)`)
 
-      this.socket = io(this.url, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: this.reconnectDelay,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        timeout: 10000,
-      })
+      // Use native WebSocket instead of Socket.IO
+      const ws = new WebSocket(this.url)
 
-      // Connection success
-      this.socket.on('connect', () => {
+      // Wrap native WebSocket to match Socket.IO interface
+      this.socket = {
+        connected: false,
+        on: (event: string, callback: any) => {
+          // Store callbacks for native WebSocket events
+          if (!this.eventCallbacks.has(event)) {
+            this.eventCallbacks.set(event, new Set())
+          }
+          this.eventCallbacks.get(event)?.add(callback)
+        },
+        emit: (event: string, data?: any) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ event, data }))
+          }
+        },
+        disconnect: () => ws.close(),
+        connect: () => {
+          // Native WebSocket doesn't have reconnect method
+          console.warn('[WebSocket] Native WebSocket does not support manual reconnect')
+        }
+      } as any
+
+      ws.onopen = () => {
         console.log('[WebSocket] Connected successfully')
         this.isConnecting = false
         this.reconnectAttempts = 0
+        this.socket!.connected = true
         this.emit('connected', { connected: true })
         resolve()
-      })
+      }
 
-      // Connection error
-      this.socket.on('connect_error', (error) => {
-        console.error('[WebSocket] Connection error:', error.message)
+      ws.onerror = (error) => {
+        console.error('[WebSocket] Connection error:', error)
         this.isConnecting = false
         this.reconnectAttempts++
 
@@ -72,100 +96,42 @@ export class WebSocketClient {
           this.emit('connected', { connected: false })
           reject(new Error('Failed to connect after maximum attempts'))
         }
-      })
+      }
 
-      // Disconnection
-      this.socket.on('disconnect', (reason) => {
-        console.log('[WebSocket] Disconnected:', reason)
+      ws.onclose = (event) => {
+        console.log('[WebSocket] Disconnected:', event.reason)
+        this.socket!.connected = false
         this.emit('connected', { connected: false })
 
-        if (reason === 'io server disconnect') {
-          // Server initiated disconnect, reconnect manually
-          this.socket?.connect()
+        // Auto-reconnect after delay
+        if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
+          setTimeout(() => {
+            console.log('[WebSocket] Attempting to reconnect...')
+            this.connect()
+          }, this.reconnectDelay)
         }
-      })
+      }
 
-      // Reconnection attempt
-      this.socket.on('reconnect_attempt', (attempt) => {
-        console.log(`[WebSocket] Reconnection attempt ${attempt}`)
-      })
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
 
-      // Reconnection success
-      this.socket.on('reconnect', (attempt) => {
-        console.log(`[WebSocket] Reconnected after ${attempt} attempts`)
-        this.reconnectAttempts = 0
-        this.emit('connected', { connected: true })
-      })
-
-      // Register event listeners
-      this.registerEventListeners()
-    })
-  }
-
-  /**
-   * Register all WebSocket event listeners
-   */
-  private registerEventListeners() {
-    if (!this.socket) return
-
-    // Balance update
-    this.socket.on('balance_update', (data) => {
-      console.log('[WebSocket] balance_update:', data)
-      this.emit('balance_update', data)
-    })
-
-    // New candle
-    this.socket.on('new_candle', (data) => {
-      console.log('[WebSocket] new_candle:', data)
-      this.emit('new_candle', data)
-    })
-
-    // Trigger detected
-    this.socket.on('trigger_detected', (data) => {
-      console.log('[WebSocket] trigger_detected:', data)
-      this.emit('trigger_detected', data)
-    })
-
-    // Trade opened
-    this.socket.on('trade_opened', (data) => {
-      console.log('[WebSocket] trade_opened:', data)
-      this.emit('trade_opened', data)
-    })
-
-    // Trade closed
-    this.socket.on('trade_closed', (data) => {
-      console.log('[WebSocket] trade_closed:', data)
-      this.emit('trade_closed', data)
-    })
-
-    // Position update
-    this.socket.on('position_update', (data) => {
-      console.log('[WebSocket] position_update:', data)
-      this.emit('position_update', data)
-    })
-
-    // System alert
-    this.socket.on('system_alert', (data) => {
-      console.log('[WebSocket] system_alert:', data)
-      this.emit('system_alert', data)
-    })
-
-    // Bot status
-    this.socket.on('bot_status', (data) => {
-      console.log('[WebSocket] bot_status:', data)
-      this.emit('bot_status', data)
-    })
-
-    // Market data update
-    this.socket.on('market_data', (data) => {
-      console.log('[WebSocket] market_data:', data)
-      this.emit('market_data', data)
-    })
-
-    // Risk stats update
-    this.socket.on('risk_stats', (data) => {
-      console.log('[WebSocket] risk_stats:', data)
-      this.emit('risk_stats', data)
+          // Handle different message formats from FastAPI WebSocket
+          if (message.event && message.data) {
+            // Format: { event: "balance_update", data: {...} }
+            this.emit(message.event, message.data)
+          } else if (message.type) {
+            // Format: { type: "balance_update", ...rest }
+            const { type, ...data } = message
+            this.emit(type, data)
+          } else {
+            // Direct data format
+            this.emit('message', message)
+          }
+        } catch (error) {
+          console.error('[WebSocket] Failed to parse message:', error)
+        }
+      }
     })
   }
 
