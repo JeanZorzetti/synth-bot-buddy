@@ -291,7 +291,45 @@ Lucro/Trade: $0.79
 
 ---
 
-### 🧪 FASE 3: Validação (CRÍTICA)
+### 🧪 FASE 3: Validação (EM ANDAMENTO)
+
+**Status:** 🟡 Em Progresso | **Início:** 2025-01-21
+
+#### 3.0. Integração Backend-Frontend ✅
+- [x] Criar servidor WebSocket (Socket.IO) no backend
+  - [x] `core/websocket_server.py` (320 linhas)
+  - [x] 11 eventos emitidos para frontend
+  - [x] 2 comandos recebidos (bot_command, update_settings)
+  - [x] Auto-reconnect e error handling
+
+- [x] Integrar WebSocket com AbutreBot
+  - [x] Emissão de eventos em tempo real:
+    - `balance_update` - Atualização de saldo
+    - `new_candle` - Nova vela fechada
+    - `trigger_detected` - Streak >= 8 detectado
+    - `trade_opened` - Trade iniciado
+    - `trade_closed` - Trade finalizado
+    - `position_update` - Estado da posição Martingale
+    - `market_data` - Dados do mercado (preço, streak)
+    - `risk_stats` - Estatísticas de risco
+    - `bot_status` - Status do bot (RUNNING/PAUSED/STOPPED)
+    - `system_alert` - Alertas do sistema
+  - [x] Comandos do frontend:
+    - `start` - Iniciar trading
+    - `pause` - Pausar (paper trading)
+    - `stop` - Desligar bot
+    - `update_settings` - Atualizar parâmetros
+
+- [x] Atualizar requirements.txt
+  - [x] python-socketio==5.10.0
+  - [x] python-engineio==4.8.0
+
+**Arquivos modificados:** 2 arquivos, ~450 linhas adicionadas
+- `backend/bots/abutre/main.py` - Integração WebSocket
+- `backend/bots/abutre/requirements.txt` - Dependências
+
+**Arquivos criados:** 1 arquivo, 320 linhas
+- `backend/bots/abutre/core/websocket_server.py` - Servidor Socket.IO
 
 #### 3.1. Forward Test (30 dias)
 - [ ] Rodar bot em **DEMO account**
