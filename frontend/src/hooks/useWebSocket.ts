@@ -8,7 +8,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useDashboard } from './useDashboard'
-import { initializeWebSocket, getWebSocketClient, WebSocketClient } from '@/lib/websocket-client'
+import { initializeWebSocket, getWebSocketClient, WebSocketClient } from '@/lib/websocket-client.ts'
 
 export function useWebSocket() {
   const wsClientRef = useRef<WebSocketClient | null>(null)
