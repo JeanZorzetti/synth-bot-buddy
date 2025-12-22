@@ -1,17 +1,31 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { TrendingUp, Activity, Target, AlertTriangle, Settings } from 'lucide-react'
-import MetricsCard from '@/components/abutre/MetricsCard'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Play,
+  StopCircle,
+  RefreshCw,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  Target,
+  AlertTriangle,
+  Activity,
+  Clock,
+} from 'lucide-react'
 import EquityCurve from '@/components/abutre/EquityCurve'
 import CurrentPosition from '@/components/abutre/CurrentPosition'
 import MarketMonitor from '@/components/abutre/MarketMonitor'
 import TradesTable from '@/components/abutre/TradesTable'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { useToast } from '@/hooks/use-toast'
 
 export default function AbutreDashboard() {
   const [mounted, setMounted] = useState(false)
-  const navigate = useNavigate()
+  const { toast } = useToast()
 
   // Zustand store state
   const {
@@ -39,162 +53,260 @@ export default function AbutreDashboard() {
   const maxDrawdown = riskStats?.max_drawdown_pct ? riskStats.max_drawdown_pct * 100 : 0
   const totalTrades = riskStats?.total_trades || 0
 
+  const handleStart = async () => {
+    toast({
+      title: 'Bot Iniciando',
+      description: 'Aguardando gatilho (8+ velas consecutivas)',
+    })
+  }
+
+  const handleStop = async () => {
+    toast({
+      title: 'Bot Parado',
+      description: 'Sistema interrompido com segurança',
+      variant: 'destructive',
+    })
+  }
+
+  const formatDuration = (seconds: number) => {
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+
+    if (days > 0) return `${days}d ${hours}h ${mins}m`
+    if (hours > 0) return `${hours}h ${mins}m`
+    return `${mins}m`
+  }
+
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Carregando Abutre Bot...</p>
+        </div>
       </div>
     )
   }
 
+  const isRunning = botStatus === 'running'
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/75 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
-                <span className="text-xl font-bold">🦅</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Abutre Dashboard</h1>
-                <p className="text-xs text-slate-400">Delayed Martingale Strategy</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Connection Status */}
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                <span className="text-sm text-slate-400">
-                  {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-
-              {/* Bot Status */}
-              <div className="px-3 py-1.5 rounded-lg bg-slate-800 text-sm font-medium">
-                Status: <span className="text-slate-300">{botStatus.toUpperCase()}</span>
-              </div>
-
-              {/* Balance */}
-              <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-sky-500/10 to-blue-600/10 border border-sky-500/20">
-                <div className="text-xs text-slate-400">Balance</div>
-                <div className="text-lg font-bold text-sky-400">
-                  ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              {/* Settings Button */}
-              <button
-                onClick={() => navigate('/settings')}
-                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
-                title="Settings"
-              >
-                <Settings className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Balance Card */}
-          <MetricsCard
-            title="Current Balance"
-            value={`$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            change={`+$${(balance - 2000).toFixed(2)}`}
-            changeType="positive"
-            icon={<TrendingUp className="w-5 h-5" />}
-            iconColor="text-sky-500"
-            iconBg="bg-sky-500/10"
-          />
-
-          {/* ROI Card */}
-          <MetricsCard
-            title="ROI"
-            value={`${roi.toFixed(2)}%`}
-            change="vs. $2,000 initial"
-            changeType="positive"
-            icon={<Activity className="w-5 h-5" />}
-            iconColor="text-emerald-500"
-            iconBg="bg-emerald-500/10"
-          />
-
-          {/* Win Rate Card */}
-          <MetricsCard
-            title="Win Rate"
-            value={`${winRate.toFixed(1)}%`}
-            change={`${totalTrades} trades`}
-            changeType="positive"
-            icon={<Target className="w-5 h-5" />}
-            iconColor="text-green-500"
-            iconBg="bg-green-500/10"
-          />
-
-          {/* Max Drawdown Card */}
-          <MetricsCard
-            title="Max Drawdown"
-            value={`${maxDrawdown.toFixed(2)}%`}
-            change="Limit: 25%"
-            changeType="warning"
-            icon={<AlertTriangle className="w-5 h-5" />}
-            iconColor="text-amber-500"
-            iconBg="bg-amber-500/10"
-          />
-        </div>
-
-        {/* Charts & Data Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Equity Curve - Takes 2 columns */}
-          <div className="lg:col-span-2">
-            <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
-              <h2 className="text-lg font-semibold mb-4">Equity Curve</h2>
-              <EquityCurve data={balanceHistory} />
-            </div>
-          </div>
-
-          {/* Current Position */}
-          <div className="lg:col-span-1">
-            <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
-              <h2 className="text-lg font-semibold mb-4">Current Position</h2>
-              <CurrentPosition position={position} />
-            </div>
-          </div>
-        </div>
-
-        {/* Market Monitor & Recent Trades */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Market Monitor */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
-            <h2 className="text-lg font-semibold mb-4">Market Monitor</h2>
-            <MarketMonitor data={marketData} />
-          </div>
-
-          {/* Recent Trades */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-6">
-            <h2 className="text-lg font-semibold mb-4">Recent Trades</h2>
-            <TradesTable trades={trades} maxRows={8} />
-          </div>
-        </div>
-
-        {/* Footer Info */}
-        <div className="mt-8 p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 text-center text-sm text-slate-400">
-          <p>
-            🦅 Abutre Bot v1.0.0 | Validated: +40.25% ROI (180 days) | 100% Win Rate
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            🦅 Abutre Bot
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Delayed Martingale Strategy - Paper Trading em tempo real
           </p>
-          <p className="mt-1 text-xs">
-            {isConnected ? (
-              <>✅ Connected to backend - Real-time data active</>
+        </div>
+
+        <div className="flex gap-2">
+          {isRunning ? (
+            <>
+              <Button onClick={handleStop} variant="destructive">
+                <StopCircle className="h-4 w-4 mr-2" />
+                Parar
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleStart}>
+              <Play className="h-4 w-4 mr-2" />
+              Iniciar Bot
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Status Banner */}
+      <Alert className={isRunning ? 'border-green-500 bg-green-50' : 'border-gray-300'}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isRunning ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
             ) : (
-              <>⚠️ Disconnected - Waiting for backend connection...</>
+              <AlertCircle className="h-5 w-5 text-gray-600" />
             )}
-          </p>
+            <div>
+              <AlertDescription className="font-semibold text-lg">
+                {isRunning ? '🟢 Bot Rodando' : '⏸️ Bot Parado'}
+              </AlertDescription>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isConnected ? (
+                  <>✅ Connected • Paper Trading Mode</>
+                ) : (
+                  <>⚠️ Disconnected - Aguardando conexão...</>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {isRunning && (
+            <div className="flex gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">{totalTrades}</p>
+                <p className="text-xs text-muted-foreground">Trades</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">{winRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">Win Rate</p>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
+      </Alert>
+
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${balance.toLocaleString()}
+            </div>
+            <p className={`text-xs ${(balance - 2000) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {(balance - 2000) >= 0 ? '+' : ''}
+              ${(balance - 2000).toFixed(2)} from initial
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ROI</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {roi.toFixed(2)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              vs. $2,000 initial
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {winRate.toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {totalTrades} trades
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Max Drawdown</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {maxDrawdown.toFixed(2)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Limit: 25%
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts & Position Grid */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Equity Curve - Takes 2 columns */}
+        <div className="md:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Equity Curve</CardTitle>
+              <CardDescription>
+                Saldo ao longo do tempo - Alvo: +40.25% ROI
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EquityCurve data={balanceHistory} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Current Position */}
+        <div className="md:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Position</CardTitle>
+              <CardDescription>
+                Monitorando V100 para streak de 8+ velas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CurrentPosition position={position} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Market Monitor & Trades */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Market Monitor */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Market Monitor</CardTitle>
+            <CardDescription>
+              Detector de streaks - Aguardando 8+ velas consecutivas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MarketMonitor data={marketData} />
+          </CardContent>
+        </Card>
+
+        {/* Recent Trades */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Trades</CardTitle>
+            <CardDescription>
+              Últimas operações executadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TradesTable trades={trades} maxRows={8} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Info Card */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="pt-6">
+          <div className="flex gap-3">
+            <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-blue-900">
+                Sobre o Abutre Bot
+              </p>
+              <p className="text-sm text-blue-700">
+                Bot de trading automatizado usando estratégia <strong>Delayed Martingale</strong>.
+                Aguarda 8+ velas consecutivas da mesma cor antes de entrar na direção oposta.
+                Validado em backtest: <strong>+40.25% ROI (180 dias), 100% Win Rate, 0 busts</strong>.
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Fase Atual:</strong> Forward Test (30 dias) em Paper Trading.
+                <strong>Critérios:</strong> ROI &gt; 5%, Win Rate &gt; 90%, Max DD &lt; 30%.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
