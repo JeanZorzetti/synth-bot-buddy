@@ -399,10 +399,11 @@ Lucro/Trade: $0.79
   - ❌ Se ROI < 0% OU Bust → Aumentar Delay para 10 e repetir
 
 **📊 Monitoramento:**
-- Log de acompanhamento: `backend/bots/abutre/FORWARD_TEST_LOG.md`
-- Atualização: Diária (preencher métricas e eventos)
-- Dashboard: https://botderiv.rollabs.com.br/abutre
-- Logs: `backend/bots/abutre/logs/abutre.log`
+- [x] Log de acompanhamento criado: `backend/bots/abutre/FORWARD_TEST_LOG.md`
+- [x] Script automático de métricas: `python scripts/get_daily_metrics.py`
+- [x] Dashboard: <https://botderiv.rollabs.com.br/abutre>
+- [x] Logs: `backend/bots/abutre/logs/abutre.log`
+- [ ] Atualização diária do log (executar script + commit diário)
 
 #### 3.2. Paper Trading (60 dias)
 - [ ] Monitoramento sem execução
