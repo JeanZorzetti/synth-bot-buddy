@@ -39,7 +39,7 @@ export default function PeriodSelector({ onPeriodChange, onSync, isLoading = fal
     await onSync(days)
   }
 
-  const handleCustomPeriod = () => {
+  const handleCustomPeriod = async () => {
     if (!customDateFrom || !customDateTo) {
       alert('Por favor, selecione ambas as datas')
       return
@@ -61,6 +61,11 @@ export default function PeriodSelector({ onPeriodChange, onSync, isLoading = fal
     }
 
     setSelectedPreset(null)
+
+    // Sincronizar período customizado antes de buscar
+    await onSync()
+
+    // Buscar trades do período
     onPeriodChange(customDateFrom, customDateTo)
   }
 
@@ -146,10 +151,10 @@ export default function PeriodSelector({ onPeriodChange, onSync, isLoading = fal
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Buscando Trades...</span>
+                <span>Sincronizando e Buscando...</span>
               </div>
             ) : (
-              'Buscar Período'
+              'Sincronizar e Buscar Período'
             )}
           </button>
         </div>
