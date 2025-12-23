@@ -123,7 +123,7 @@ class AbutreRepositoryPostgres:
         high: float,
         low: float,
         close: float,
-        color: str,
+        color: int,
         symbol: str = '1HZ100V',
         source: str = 'deriv_bot_xml'
     ) -> int:

@@ -9,6 +9,10 @@ import asyncio
 import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 from websocket_manager import DerivWebSocketManager, ConnectionState
 from enhanced_websocket_manager import EnhancedDerivWebSocket, ErrorType
