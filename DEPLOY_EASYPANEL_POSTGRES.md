@@ -94,7 +94,7 @@ DATABASE_URL=postgresql://botderiv:PAz0I8**@dados_botderiv:5432/botderiv
 
 # Deriv API
 DERIV_API_TOKEN=paE5sSemx3oANLE
-DERIV_APP_ID=1089
+DERIV_APP_ID=99188
 
 # Auto-Sync Config
 ABUTRE_API_URL=http://localhost:8000/api/abutre/events
