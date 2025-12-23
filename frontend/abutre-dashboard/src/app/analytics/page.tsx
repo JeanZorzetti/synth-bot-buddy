@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, RefreshCw, Calendar, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
-import { useAnalytics } from '@/hooks/useAnalytics'
+import { useAnalytics, SurvivalMetrics, PerformanceMetrics as PerformanceMetricsType, HourlyAnalysis, EquityCurveData } from '@/hooks/useAnalytics'
 import PerformanceMetrics from '@/components/PerformanceMetrics'
 import SurvivalCard from '@/components/SurvivalCard'
 import EquityCurveChart from '@/components/EquityCurveChart'
@@ -20,10 +20,10 @@ export default function AnalyticsPage() {
     getEquityCurve
   } = useAnalytics()
 
-  const [survivalData, setSurvivalData] = useState(null)
-  const [performanceData, setPerformanceData] = useState(null)
-  const [hourlyData, setHourlyData] = useState(null)
-  const [equityData, setEquityData] = useState(null)
+  const [survivalData, setSurvivalData] = useState<SurvivalMetrics | null>(null)
+  const [performanceData, setPerformanceData] = useState<PerformanceMetricsType | null>(null)
+  const [hourlyData, setHourlyData] = useState<HourlyAnalysis | null>(null)
+  const [equityData, setEquityData] = useState<EquityCurveData | null>(null)
 
   const [period, setPeriod] = useState<{ from: string; to: string }>({
     from: '',
