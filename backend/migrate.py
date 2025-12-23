@@ -25,17 +25,20 @@ logger = logging.getLogger(__name__)
 
 
 def run_migrations():
-    """Executa todas as migrações necessárias"""
+    """Executa todas as migrações necessárias - PostgreSQL OBRIGATÓRIO"""
     try:
         DATABASE_URL = os.getenv("DATABASE_URL", "")
 
         if not DATABASE_URL:
-            logger.warning("DATABASE_URL não configurada, pulando migrações")
+            logger.error("❌ DATABASE_URL não configurada!")
+            logger.error("Configure a variável de ambiente DATABASE_URL com a conexão PostgreSQL.")
+            logger.error("Exemplo: DATABASE_URL=postgresql://user:pass@host:5432/database")
             return False
 
         if not DATABASE_URL.startswith("postgresql"):
-            logger.info("Usando SQLite, não precisa de migrações")
-            return True
+            logger.error(f"❌ Apenas PostgreSQL é suportado!")
+            logger.error(f"DATABASE_URL deve começar com 'postgresql://', recebido: {DATABASE_URL}")
+            return False
 
         logger.info("=" * 60)
         logger.info("INICIANDO MIGRAÇÕES DO BANCO DE DADOS")
