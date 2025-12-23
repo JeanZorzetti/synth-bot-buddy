@@ -29,24 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def check_if_needs_sync():
-    """Verifica se o banco está vazio e precisa de sincronização"""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{ABUTRE_API_URL}/stats")
-            if response.status_code == 200:
-                data = response.json()
-                total_trades = data.get("data", {}).get("total_trades", 0)
-
-                if total_trades == 0:
-                    logger.warning("Banco vazio detectado! Iniciando sincronizacao automatica...")
-                    return True
-                else:
-                    logger.info(f"Banco ja possui {total_trades} trades. Sincronizacao nao necessaria.")
-                    return False
-    except Exception as e:
-        logger.error(f"Erro ao verificar status do banco: {e}")
-        return True  # Se falhar, tenta sincronizar de qualquer forma
+# Removido check_if_needs_sync() - sempre sincroniza para manter dados atualizados em tempo real
 
 
 async def sync_deriv_history():
@@ -313,19 +296,13 @@ async def auto_sync_on_startup():
     logger.info("PASSO 2: Aguardando API ficar pronta...")
     await asyncio.sleep(5)
 
-    # PASSO 3: Verificar se precisa sincronizar
-    logger.info("PASSO 3: Verificando se banco precisa de sincronização...")
-    needs_sync = await check_if_needs_sync()
-
-    if needs_sync:
-        logger.info("PASSO 4: Sincronizando histórico da Deriv...")
-        success = await sync_deriv_history()
-        if success:
-            logger.info("✅ Sincronização automática completada com sucesso!")
-        else:
-            logger.error("❌ Falha na sincronização automática!")
+    # PASSO 3: Sincronizar histórico (sempre executa para manter dados atualizados)
+    logger.info("PASSO 3: Sincronizando histórico da Deriv...")
+    success = await sync_deriv_history()
+    if success:
+        logger.info("✅ Sincronização automática completada com sucesso!")
     else:
-        logger.info("⏭️ Sincronização não necessária, banco já possui dados.")
+        logger.error("❌ Falha na sincronização automática!")
 
     logger.info("=" * 60)
 
