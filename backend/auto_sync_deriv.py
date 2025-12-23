@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def check_if_needs_sync():
     """Verifica se o banco está vazio e precisa de sincronização"""
     try:
-        response = requests.get(f"{ABUTRE_API_URL}/stats", timeout=5)
+        response = requests.get(f"{ABUTRE_API_URL}/stats", timeout=10)
         if response.status_code == 200:
             data = response.json()
             total_trades = data.get("data", {}).get("total_trades", 0)
@@ -115,7 +115,7 @@ async def sync_deriv_history():
                     response = requests.post(
                         f"{ABUTRE_API_URL}/trade_opened",
                         json=trade_opened,
-                        timeout=10
+                        timeout=30
                     )
 
                     if response.status_code != 201:
@@ -136,7 +136,7 @@ async def sync_deriv_history():
                         requests.post(
                             f"{ABUTRE_API_URL}/trade_closed",
                             json=trade_closed,
-                            timeout=10
+                            timeout=30
                         )
 
                     trades_sent += 1
@@ -175,9 +175,9 @@ async def auto_sync_on_startup():
         logger.error("Abortando auto-sync.")
         return
 
-    # PASSO 2: Aguardar 3 segundos para garantir que a API está pronta
+    # PASSO 2: Aguardar 5 segundos para garantir que a API está pronta
     logger.info("PASSO 2: Aguardando API ficar pronta...")
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
 
     # PASSO 3: Verificar se precisa sincronizar
     logger.info("PASSO 3: Verificando se banco precisa de sincronização...")
