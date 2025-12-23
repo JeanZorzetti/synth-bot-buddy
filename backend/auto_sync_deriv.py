@@ -13,7 +13,7 @@ import logging
 
 # Configuração
 DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=99188"
-ABUTRE_API_URL = os.getenv("ABUTRE_API_URL", "http://localhost:8000/api/abutre/events")
+ABUTRE_API_URL = os.getenv("ABUTRE_API_URL", "http://127.0.0.1:8000/api/abutre/events")
 DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN", "paE5sSemx3oANLE")
 
 # Logging

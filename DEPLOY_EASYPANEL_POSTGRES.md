@@ -96,8 +96,8 @@ DATABASE_URL=postgresql://botderiv:PAzoI8**@dados_botderiv:5432/botderiv
 DERIV_API_TOKEN=paE5sSemx3oANLE
 DERIV_APP_ID=99188
 
-# Auto-Sync Config
-ABUTRE_API_URL=http://localhost:8000/api/abutre/events
+# Auto-Sync Config (usar 127.0.0.1 para evitar problemas DNS)
+ABUTRE_API_URL=http://127.0.0.1:8000/api/abutre/events
 AUTO_SYNC_ON_STARTUP=true
 ```
 
