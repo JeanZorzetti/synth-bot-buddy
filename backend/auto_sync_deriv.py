@@ -166,10 +166,11 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             # 2. Buscar profit table (máximo de trades que conseguimos buscar)
             # A API da Deriv limita o número de trades por request
+            # Aumentado para 1000 para cobrir períodos mais longos
             await ws.send(json.dumps({
                 "profit_table": 1,
                 "description": 1,
-                "limit": 500,  # Limite seguro para a API
+                "limit": 1000,  # Máximo permitido pela API
                 "sort": "DESC"
             }))
 
@@ -187,12 +188,24 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             # 3. Filtrar trades pelo período
             filtered_transactions = []
+            oldest_trade_time = None
+
             for tx in all_transactions:
                 purchase_time = datetime.fromtimestamp(tx.get("purchase_time", 0))
+
+                # Rastrear o trade mais antigo
+                if oldest_trade_time is None or purchase_time < oldest_trade_time:
+                    oldest_trade_time = purchase_time
+
                 if date_from <= purchase_time <= date_to:
                     filtered_transactions.append(tx)
 
             logger.info(f"{len(filtered_transactions)} trades encontrados no período (de {len(all_transactions)} totais)")
+
+            # Avisar se o período solicitado é mais antigo que os trades disponíveis
+            if oldest_trade_time and date_from < oldest_trade_time:
+                logger.warning(f"⚠️ ATENÇÃO: O período solicitado começa em {date_from.date()}, mas o trade mais antigo disponível é de {oldest_trade_time.date()}")
+                logger.warning(f"⚠️ Pode haver trades faltando. A API da Deriv retorna no máximo 1000 trades mais recentes.")
 
             if not filtered_transactions:
                 logger.warning("Nenhum trade encontrado no período especificado!")
