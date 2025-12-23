@@ -437,6 +437,24 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
+    def get_balance_history(self, limit: int = 1000) -> List[Dict]:
+        """Get balance history snapshots"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT * FROM abutre_balance_history
+                ORDER BY timestamp DESC
+                LIMIT %s
+            """, (limit,))
+
+            return [dict(row) for row in cursor.fetchall()]
+
+        finally:
+            cursor.close()
+            conn.close()
+
 
 # Singleton instance
 _repository: Optional[AbutreRepositoryPostgres] = None
