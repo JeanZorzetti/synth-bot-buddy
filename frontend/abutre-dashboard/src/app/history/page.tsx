@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
+import Link from 'next/link'
 import PeriodSelector from '@/components/PeriodSelector'
 import SyncStatus from '@/components/SyncStatus'
 import TradesTable from '@/components/TradesTable'
@@ -113,6 +114,14 @@ export default function HistoryPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              <Link
+                href="/analytics"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Link>
+
               {totalTrades > 0 && (
                 <>
                   <div className="px-4 py-2 rounded-lg bg-slate-800 text-sm">
