@@ -42,6 +42,7 @@ from ml_retrain_service import MLRetrainService, get_retrain_service
 # Abutre Events API
 from api.routes.abutre_events import router as abutre_events_router
 from api.routes.sync_routes import router as sync_router
+from api.routes.analytics_routes import router as analytics_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -366,6 +367,7 @@ app.add_middleware(
 # Register Abutre Events routes
 app.include_router(abutre_events_router)
 app.include_router(sync_router)
+app.include_router(analytics_router)
 
 # --- Event Handlers ---
 
