@@ -9,6 +9,10 @@ import os
 import sys
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent))

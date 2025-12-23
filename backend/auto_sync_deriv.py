@@ -10,6 +10,10 @@ import httpx  # Async HTTP client
 from datetime import datetime
 import os
 import logging
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
 
 # Configuração
 DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=99188"
