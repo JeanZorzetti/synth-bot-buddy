@@ -1,0 +1,9 @@
+ERROR:database:\u274c DATABASE_URL não configurada! Configure a variável de ambiente.
+Traceback (most recent call last):
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\main.py", line 39, in <module>
+    from api.routes.abutre_events import router as abutre_events_router
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\api\routes\abutre_events.py", line 10, in <module>
+    from database import get_abutre_repository
+  File "C:\Users\jeanz\OneDrive\Desktop\Jizreel\synth-bot-buddy-main\backend\database\__init__.py", line 14, in <module>
+    raise RuntimeError("DATABASE_URL environment variable is required. Please configure PostgreSQL connection.")
+RuntimeError: DATABASE_URL environment variable is required. Please configure PostgreSQL connection.

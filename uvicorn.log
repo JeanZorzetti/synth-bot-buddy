@@ -1,0 +1,82 @@
+INFO:risk_manager:RiskManager inicializado - Capital: $1000.0
+INFO:     Started server process [140936]
+INFO:     Waiting for application startup.
+INFO:main:Iniciando aplicação Cérebro...
+INFO:main:Configuration loaded:
+INFO:main:  - App ID: 99188
+INFO:main:  - Environment: development
+INFO:main:  - Initial Capital: $10.0
+INFO:main:  - WebSocket URL: wss://ws.derivws.com/websockets/v3?app_id=99188
+INFO:capital_manager:Capital Manager initialized - Initial Capital: $10.0
+INFO:trading_engine:Trading engine initialized
+INFO:contract_proposals_engine:Contract Proposals Engine iniciado
+INFO:metrics:Metrics manager inicializado
+INFO:main:Metrics manager initialized
+INFO:main:Trading engine, WebSocket manager and Deriv adapter initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63428 - "GET /health HTTP/1.1" 200 OK
+INFO:database.abutre_repository:\u2705 Abutre tables ensured
+INFO:     127.0.0.1:63476 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f6a8 Trigger #1: 8 GREEN candles
+INFO:     127.0.0.1:63476 - "POST /api/abutre/events/trigger HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_1703271060 | PUT | $1.00 @ Level 1
+INFO:     127.0.0.1:63476 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_1703271060 | WIN | +0.95 | Balance: $10001.95
+INFO:     127.0.0.1:63476 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63476 - "POST /api/abutre/events/balance HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63476 - "GET /api/abutre/events/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63476 - "GET /api/abutre/events/trades?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63476 - "GET /api/abutre/events/balance_history?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63500 - "GET /api/abutre/events/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_2 | CALL | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_2 | WIN | +0.95 | Balance: $10003.40
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_3 | PUT | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\u274c Trade closed: trade_3 | LOSS | -1.00 | Balance: $10001.95
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_4 | CALL | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_4 | WIN | +0.95 | Balance: $10004.40
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_5 | PUT | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_5 | WIN | +0.95 | Balance: $10004.90
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_6 | CALL | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\u274c Trade closed: trade_6 | LOSS | -1.00 | Balance: $10003.45
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_7 | PUT | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_7 | WIN | +0.95 | Balance: $10005.90
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_8 | CALL | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_8 | WIN | +0.95 | Balance: $10006.40
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_9 | PUT | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\u274c Trade closed: trade_9 | LOSS | -1.00 | Balance: $10004.95
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/candle HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f4c8 Trade opened: trade_10 | CALL | $1.00 @ Level 1
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_opened HTTP/1.1" 201 Created
+INFO:database.abutre_repository:\U0001f3af Trade closed: trade_10 | WIN | +0.95 | Balance: $10007.40
+INFO:     127.0.0.1:52245 - "POST /api/abutre/events/trade_closed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52245 - "GET /api/abutre/events/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57811 - "GET /api/abutre/events/trades?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54433 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54433 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54433 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57648 - "GET /api/abutre/events/stats HTTP/1.1" 200 OK

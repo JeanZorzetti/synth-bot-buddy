@@ -63,7 +63,8 @@
       "Bash(timeout 60 ../../../.venv/Scripts/python.exe:*)",
       "Bash(timeout 120 ../../../.venv/Scripts/python.exe:*)",
       "Bash(timeout:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(start /B ../.venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []
