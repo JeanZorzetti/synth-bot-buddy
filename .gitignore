@@ -1,4 +1,5 @@
-Lib/
+# Python virtual environment (case-sensitive for Windows)
+/Lib/
 *.pyc
 __pycache__/
 
