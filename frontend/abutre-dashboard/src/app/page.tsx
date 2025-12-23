@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, Activity, Target, AlertTriangle, Settings } from 'lucide-react'
+import { TrendingUp, Activity, Target, AlertTriangle, Settings, History } from 'lucide-react'
 import MetricsCard from '@/components/MetricsCard'
 import EquityCurve from '@/components/EquityCurve'
 import CurrentPosition from '@/components/CurrentPosition'
@@ -87,6 +87,15 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* History Button */}
+              <button
+                onClick={() => router.push('/history')}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                title="Histórico de Trades"
+              >
+                <History className="w-5 h-5 text-slate-400" />
+              </button>
+
               {/* Settings Button */}
               <button
                 onClick={() => router.push('/settings')}
@@ -105,7 +114,7 @@ export default function DashboardPage() {
         {/* Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Balance Card */}
-          <MetricCard
+          <MetricsCard
             title="Current Balance"
             value={`$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             change={`+$${(balance - 2000).toFixed(2)}`}
@@ -116,7 +125,7 @@ export default function DashboardPage() {
           />
 
           {/* ROI Card */}
-          <MetricCard
+          <MetricsCard
             title="ROI"
             value={`${roi.toFixed(2)}%`}
             change="vs. $2,000 initial"
@@ -127,7 +136,7 @@ export default function DashboardPage() {
           />
 
           {/* Win Rate Card */}
-          <MetricCard
+          <MetricsCard
             title="Win Rate"
             value={`${winRate.toFixed(1)}%`}
             change={`${totalTrades} trades`}
@@ -138,7 +147,7 @@ export default function DashboardPage() {
           />
 
           {/* Max Drawdown Card */}
-          <MetricCard
+          <MetricsCard
             title="Max Drawdown"
             value={`${maxDrawdown.toFixed(2)}%`}
             change="Limit: 25%"
