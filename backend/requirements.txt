@@ -36,9 +36,11 @@ numba>=0.60.0
 joblib>=1.4.0
 
 # PyTorch for CRASH500 Survival Analysis (LSTM)
-# Using CPU-only version for lighter deployment
-torch>=2.0.0
-# If GPU available, replace with: torch>=2.0.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+# Using CPU-only version for lighter deployment (NO NVIDIA/CUDA dependencies)
+# This saves ~4GB by not installing nvidia-cudnn, nvidia-cublas, etc.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.1+cpu
+# If GPU available later, replace with: torch>=2.0.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
 
 # System monitoring dependencies (Phase 5)
 psutil>=6.1.0
