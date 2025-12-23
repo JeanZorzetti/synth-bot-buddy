@@ -25,8 +25,11 @@
 No Easypanel, vá em **Settings → Environment Variables** e adicione:
 
 ```bash
-# PostgreSQL (já configurado no Easypanel)
+# PostgreSQL - Conexão Interna (dentro do Easypanel)
 DATABASE_URL=postgresql://botderiv:PAz0I8**@dados_botderiv:5432/botderiv
+
+# PostgreSQL - Conexão Externa (para acesso de fora)
+DATABASE_URL_EXTERNAL=postgresql://botderiv:PAz0I8**@31.97.23.166:5439/botderiv
 
 # Deriv API
 DERIV_API_TOKEN=paE5sSemx3oANLE
@@ -40,6 +43,10 @@ ABUTRE_API_URL=http://localhost:8000/api/abutre/events
 INITIAL_CAPITAL=10.0
 ENVIRONMENT=production
 ```
+
+**IMPORTANTE**:
+- Use `DATABASE_URL` (conexão interna) para o backend dentro do Easypanel
+- Use `DATABASE_URL_EXTERNAL` (porta 5439) para acessar de fora do Easypanel
 
 ### Passo 2: Instalar Dependências
 
@@ -174,12 +181,22 @@ python -c "from backend.auto_sync_deriv import auto_sync_on_startup; print('OK')
 **Solução**: Verificar DATABASE_URL
 
 ```bash
+# Dentro do Easypanel (conexão interna)
 echo $DATABASE_URL
 # Deve retornar: postgresql://botderiv:PAz0I8**@dados_botderiv:5432/botderiv
 
-# Testar conexão
+# Testar conexão interna
 psql $DATABASE_URL -c "SELECT 1"
+
+# Testar conexão externa (de fora do Easypanel)
+psql postgresql://botderiv:PAz0I8**@31.97.23.166:5439/botderiv -c "SELECT 1"
 ```
+
+**Notas sobre a conexão**:
+- **Porta Interna**: 5432 (dentro do Easypanel)
+- **Porta Externa**: 5439 (exposta para internet)
+- **Host Interno**: `dados_botderiv` (DNS interno do Easypanel)
+- **Host Externo**: `31.97.23.166` (IP público)
 
 ### Problema: psycopg2 não instalado
 
