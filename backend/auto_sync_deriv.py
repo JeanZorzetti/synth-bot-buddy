@@ -161,18 +161,37 @@ async def auto_sync_on_startup():
     logger.info("AUTO SYNC DERIV - STARTUP")
     logger.info("=" * 60)
 
-    # Aguardar 3 segundos para garantir que a API está pronta
+    # PASSO 1: Garantir que as tabelas existem
+    logger.info("PASSO 1: Verificando/criando tabelas do banco de dados...")
+    try:
+        from migrate import run_migrations
+        migration_success = run_migrations()
+        if not migration_success:
+            logger.error("Falha ao criar tabelas! Abortando auto-sync.")
+            return
+        logger.info("✅ Tabelas verificadas/criadas com sucesso!")
+    except Exception as e:
+        logger.error(f"Erro ao executar migrações: {e}")
+        logger.error("Abortando auto-sync.")
+        return
+
+    # PASSO 2: Aguardar 3 segundos para garantir que a API está pronta
+    logger.info("PASSO 2: Aguardando API ficar pronta...")
     await asyncio.sleep(3)
 
-    # Verificar se precisa sincronizar
+    # PASSO 3: Verificar se precisa sincronizar
+    logger.info("PASSO 3: Verificando se banco precisa de sincronização...")
     needs_sync = await check_if_needs_sync()
 
     if needs_sync:
+        logger.info("PASSO 4: Sincronizando histórico da Deriv...")
         success = await sync_deriv_history()
         if success:
-            logger.info("Sincronizacao automatica completada com sucesso!")
+            logger.info("✅ Sincronização automática completada com sucesso!")
         else:
-            logger.error("Falha na sincronizacao automatica!")
+            logger.error("❌ Falha na sincronização automática!")
+    else:
+        logger.info("⏭️ Sincronização não necessária, banco já possui dados.")
 
     logger.info("=" * 60)
 
