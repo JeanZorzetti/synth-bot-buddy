@@ -314,6 +314,10 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
+    def get_trade_stats(self) -> Dict[str, Any]:
+        """Alias for get_stats() - for compatibility with API endpoints"""
+        return self.get_stats()
+
 
 # Singleton instance
 _repository: Optional[AbutreRepositoryPostgres] = None
