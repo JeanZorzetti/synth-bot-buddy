@@ -13,7 +13,7 @@ import os
 logger = logging.getLogger(__name__)
 
 # Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://botderiv:PAz0I8**@dados_botderiv:5432/botderiv")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://botderiv:PAzoI8**@dados_botderiv:5432/botderiv")
 
 
 class AbutreRepositoryPostgres:
