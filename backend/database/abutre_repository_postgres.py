@@ -343,6 +343,10 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
+    def get_recent_trades(self, limit: int = 50) -> List[Dict]:
+        """Alias for get_trades() - for compatibility with API endpoints"""
+        return self.get_trades(limit=limit)
+
     def get_stats(self) -> Dict[str, Any]:
         """Get trading statistics"""
         conn = self._get_connection()
