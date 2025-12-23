@@ -166,11 +166,12 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             # 2. Buscar profit table (máximo de trades que conseguimos buscar)
             # A API da Deriv limita o número de trades por request
-            # Aumentado para 1000 para cobrir períodos mais longos
+            # Testado: limit 1000 retorna erro "Input validation failed"
+            # Usando 999 que é o máximo real aceito pela API
             await ws.send(json.dumps({
                 "profit_table": 1,
                 "description": 1,
-                "limit": 1000,  # Máximo permitido pela API
+                "limit": 999,  # Máximo real aceito pela API Deriv
                 "sort": "DESC"
             }))
 
