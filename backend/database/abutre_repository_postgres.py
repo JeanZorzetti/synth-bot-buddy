@@ -318,6 +318,25 @@ class AbutreRepositoryPostgres:
         """Alias for get_stats() - for compatibility with API endpoints"""
         return self.get_stats()
 
+    def get_latest_balance(self) -> Optional[float]:
+        """Get latest balance from balance history"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT balance FROM abutre_balance_history
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """)
+
+            row = cursor.fetchone()
+            return row['balance'] if row else None
+
+        finally:
+            cursor.close()
+            conn.close()
+
 
 # Singleton instance
 _repository: Optional[AbutreRepositoryPostgres] = None
