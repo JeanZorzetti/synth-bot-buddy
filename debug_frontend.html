@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend - Abutre</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        .test {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        button {
+            background: #0066ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DEBUG FRONTEND - ABUTRE DASHBOARD</h1>
+
+    <div class="test">
+        <h3>1. Verificar URL da API</h3>
+        <button onclick="testApiUrl()">Testar API URL</button>
+        <div id="api-url-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>2. Testar Endpoint /trades</h3>
+        <button onclick="testTradesEndpoint()">Buscar Trades</button>
+        <div id="trades-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>3. Testar Endpoint /stats</h3>
+        <button onclick="testStatsEndpoint()">Buscar Stats</button>
+        <div id="stats-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>4. Simular Hook useAbutreEvents</h3>
+        <button onclick="simulateHook()">Simular Hook</button>
+        <div id="hook-result"></div>
+    </div>
+
+    <div class="test">
+        <h3>5. Verificar CORS</h3>
+        <button onclick="testCORS()">Testar CORS</button>
+        <div id="cors-result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://botderivapi.roilabs.com.br';
+
+        function log(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            const span = document.createElement('p');
+            span.className = type;
+            span.innerHTML = message;
+            element.appendChild(span);
+        }
+
+        async function testApiUrl() {
+            const resultDiv = document.getElementById('api-url-result');
+            resultDiv.innerHTML = '';
+
+            log('api-url-result', `API Base URL: ${API_BASE_URL}`, 'success');
+            log('api-url-result', `Trades URL: ${API_BASE_URL}/api/abutre/events/trades`, 'success');
+        }
+
+        async function testTradesEndpoint() {
+            const resultDiv = document.getElementById('trades-result');
+            resultDiv.innerHTML = '<p class="warning">Carregando...</p>';
+
+            try {
+                const url = `${API_BASE_URL}/api/abutre/events/trades?limit=5`;
+                log('trades-result', `Fetching: ${url}`, 'success');
+
+                const response = await fetch(url);
+                log('trades-result', `Status: ${response.status} ${response.statusText}`, 'success');
+
+                const data = await response.json();
+                log('trades-result', `Data status: ${data.status}`, 'success');
+                log('trades-result', `Trades count: ${data.data?.length || 0}`, data.data?.length > 0 ? 'success' : 'error');
+
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2);
+                resultDiv.appendChild(pre);
+            } catch (error) {
+                log('trades-result', `ERRO: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStatsEndpoint() {
+            const resultDiv = document.getElementById('stats-result');
+            resultDiv.innerHTML = '<p class="warning">Carregando...</p>';
+
+            try {
+                const url = `${API_BASE_URL}/api/abutre/events/stats`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                log('stats-result', `Total trades: ${data.data?.total_trades || 0}`, data.data?.total_trades > 0 ? 'success' : 'error');
+                log('stats-result', `Wins: ${data.data?.wins || 0}`, 'success');
+                log('stats-result', `Win Rate: ${data.data?.win_rate_pct?.toFixed(2) || 0}%`, 'success');
+
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2);
+                resultDiv.appendChild(pre);
+            } catch (error) {
+                log('stats-result', `ERRO: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateHook() {
+            const resultDiv = document.getElementById('hook-result');
+            resultDiv.innerHTML = '<p class="warning">Simulando hook useAbutreEvents...</p>';
+
+            try {
+                // Simular exatamente o que o hook faz
+                const API_BASE = 'https://botderivapi.roilabs.com.br';
+
+                log('hook-result', 'Step 1: Fetching trades...', 'warning');
+                const response = await fetch(`${API_BASE}/api/abutre/events/trades?limit=50`);
+
+                log('hook-result', `Step 2: Response status: ${response.status}`, 'success');
+                const result = await response.json();
+
+                log('hook-result', `Step 3: Result status: ${result.status}`, 'success');
+
+                if (result.status === 'success') {
+                    log('hook-result', `Step 4: setTrades(${result.data.length} trades)`, result.data.length > 0 ? 'success' : 'error');
+
+                    if (result.data.length === 0) {
+                        log('hook-result', 'PROBLEMA: API retornou array vazio!', 'error');
+                    } else {
+                        log('hook-result', `Primeiros 3 trades:`, 'success');
+                        const pre = document.createElement('pre');
+                        pre.textContent = JSON.stringify(result.data.slice(0, 3), null, 2);
+                        resultDiv.appendChild(pre);
+                    }
+                } else {
+                    log('hook-result', `ERRO: result.status !== 'success'`, 'error');
+                }
+            } catch (error) {
+                log('hook-result', `ERRO: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCORS() {
+            const resultDiv = document.getElementById('cors-result');
+            resultDiv.innerHTML = '<p class="warning">Testando CORS...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/abutre/events/trades?limit=1`);
+                const headers = response.headers;
+
+                log('cors-result', `Access-Control-Allow-Origin: ${headers.get('access-control-allow-origin') || 'NAO ENCONTRADO'}`,
+                    headers.get('access-control-allow-origin') ? 'success' : 'error');
+
+                log('cors-result', `Content-Type: ${headers.get('content-type')}`, 'success');
+
+                const data = await response.json();
+                log('cors-result', 'CORS OK - Request completado com sucesso', 'success');
+            } catch (error) {
+                if (error.message.includes('CORS')) {
+                    log('cors-result', `ERRO DE CORS: ${error.message}`, 'error');
+                } else {
+                    log('cors-result', `Outro erro (nao CORS): ${error.message}`, 'warning');
+                }
+            }
+        }
+
+        // Auto-run tests on load
+        window.onload = () => {
+            console.log('=== DEBUG FRONTEND ABUTRE ===');
+            testApiUrl();
+        };
+    </script>
+</body>
+</html>

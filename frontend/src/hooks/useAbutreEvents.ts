@@ -134,6 +134,8 @@ export function useAbutreEvents() {
     } catch (err) {
       console.error('Error fetching trades:', err)
       setError('Failed to fetch trades')
+    } finally {
+      setLoading(false)
     }
   }
 
