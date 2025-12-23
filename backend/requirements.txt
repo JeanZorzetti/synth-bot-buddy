@@ -4,6 +4,7 @@ uvicorn>=0.34.0
 pydantic>=2.10.0
 python-dotenv>=1.0.0
 requests>=2.32.0
+httpx>=0.27.0  # Para requests assíncronos no auto-sync
 
 # Trading engine dependencies
 numpy>=1.24.0

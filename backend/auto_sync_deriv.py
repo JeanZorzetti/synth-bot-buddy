@@ -6,7 +6,7 @@ Sincroniza automaticamente o histórico de trades da Deriv no startup do servido
 import asyncio
 import websockets
 import json
-import requests
+import httpx  # Async HTTP client
 from datetime import datetime
 import os
 import logging
@@ -27,17 +27,18 @@ logger = logging.getLogger(__name__)
 async def check_if_needs_sync():
     """Verifica se o banco está vazio e precisa de sincronização"""
     try:
-        response = requests.get(f"{ABUTRE_API_URL}/stats", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            total_trades = data.get("data", {}).get("total_trades", 0)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{ABUTRE_API_URL}/stats")
+            if response.status_code == 200:
+                data = response.json()
+                total_trades = data.get("data", {}).get("total_trades", 0)
 
-            if total_trades == 0:
-                logger.warning("Banco vazio detectado! Iniciando sincronizacao automatica...")
-                return True
-            else:
-                logger.info(f"Banco ja possui {total_trades} trades. Sincronizacao nao necessaria.")
-                return False
+                if total_trades == 0:
+                    logger.warning("Banco vazio detectado! Iniciando sincronizacao automatica...")
+                    return True
+                else:
+                    logger.info(f"Banco ja possui {total_trades} trades. Sincronizacao nao necessaria.")
+                    return False
     except Exception as e:
         logger.error(f"Erro ao verificar status do banco: {e}")
         return True  # Se falhar, tenta sincronizar de qualquer forma
@@ -84,66 +85,65 @@ async def sync_deriv_history():
 
             logger.info(f"{len(transactions)} trades encontrados. Sincronizando...")
 
-            # 3. Enviar trades
+            # 3. Enviar trades (usar async client)
             trades_sent = 0
             trades_failed = 0
 
-            for tx in transactions:
-                try:
-                    contract_id = str(tx.get("contract_id", ""))
-                    buy_time = datetime.fromtimestamp(tx.get("purchase_time", 0))
-                    sell_time = datetime.fromtimestamp(tx.get("sell_time", 0)) if tx.get("sell_time") else None
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for tx in transactions:
+                    try:
+                        contract_id = str(tx.get("contract_id", ""))
+                        buy_time = datetime.fromtimestamp(tx.get("purchase_time", 0))
+                        sell_time = datetime.fromtimestamp(tx.get("sell_time", 0)) if tx.get("sell_time") else None
 
-                    contract_type = tx.get("contract_type", "")
-                    direction = "CALL" if "CALL" in contract_type.upper() else "PUT"
+                        contract_type = tx.get("contract_type", "")
+                        direction = "CALL" if "CALL" in contract_type.upper() else "PUT"
 
-                    buy_price = float(tx.get("buy_price", 0))
-                    profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
-                    result = "WIN" if profit > 0 else "LOSS"
-                    balance_after = float(balance)
+                        buy_price = float(tx.get("buy_price", 0))
+                        profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
+                        result = "WIN" if profit > 0 else "LOSS"
+                        balance_after = float(balance)
 
-                    # Enviar trade_opened
-                    trade_opened = {
-                        "timestamp": buy_time.isoformat() + "Z",
-                        "trade_id": contract_id,
-                        "contract_id": contract_id,
-                        "direction": direction,
-                        "stake": buy_price,
-                        "level": 1
-                    }
-
-                    response = requests.post(
-                        f"{ABUTRE_API_URL}/trade_opened",
-                        json=trade_opened,
-                        timeout=30
-                    )
-
-                    if response.status_code != 201:
-                        trades_failed += 1
-                        continue
-
-                    # Enviar trade_closed
-                    if sell_time:
-                        trade_closed = {
-                            "timestamp": sell_time.isoformat() + "Z",
+                        # Enviar trade_opened
+                        trade_opened = {
+                            "timestamp": buy_time.isoformat() + "Z",
                             "trade_id": contract_id,
-                            "result": result,
-                            "profit": profit,
-                            "balance": balance_after,
-                            "max_level_reached": 1
+                            "contract_id": contract_id,
+                            "direction": direction,
+                            "stake": buy_price,
+                            "level": 1
                         }
 
-                        requests.post(
-                            f"{ABUTRE_API_URL}/trade_closed",
-                            json=trade_closed,
-                            timeout=30
+                        response = await client.post(
+                            f"{ABUTRE_API_URL}/trade_opened",
+                            json=trade_opened
                         )
 
-                    trades_sent += 1
+                        if response.status_code != 201:
+                            trades_failed += 1
+                            continue
 
-                except Exception as e:
-                    logger.error(f"Erro ao processar trade: {e}")
-                    trades_failed += 1
+                        # Enviar trade_closed
+                        if sell_time:
+                            trade_closed = {
+                                "timestamp": sell_time.isoformat() + "Z",
+                                "trade_id": contract_id,
+                                "result": result,
+                                "profit": profit,
+                                "balance": balance_after,
+                                "max_level_reached": 1
+                            }
+
+                            await client.post(
+                                f"{ABUTRE_API_URL}/trade_closed",
+                                json=trade_closed
+                            )
+
+                        trades_sent += 1
+
+                    except Exception as e:
+                        logger.error(f"Erro ao processar trade: {e}")
+                        trades_failed += 1
 
             logger.info(f"Sincronizacao concluida! Enviados: {trades_sent} | Erros: {trades_failed}")
             return True
