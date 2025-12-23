@@ -51,3 +51,7 @@ SQLAlchemy>=2.0.23
 python-socketio>=5.10.0
 python-engineio>=4.8.0
 alembic>=1.13.0
+
+# PostgreSQL support
+psycopg2-binary>=2.9.9
+websockets>=13.0

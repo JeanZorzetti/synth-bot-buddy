@@ -270,9 +270,17 @@ bot_status = {
 async def lifespan(app: FastAPI):
     """Manage application lifespan"""
     global ws_manager, capital_manager, enhanced_ws_manager, trading_engine, deriv_adapter, proposals_engine
-    
+
     # Startup
     logger.info("Iniciando aplicação Cérebro...")
+
+    # Auto-sync Deriv history on startup
+    try:
+        from auto_sync_deriv import auto_sync_on_startup
+        asyncio.create_task(auto_sync_on_startup())
+        logger.info("Auto-sync Deriv iniciado em background")
+    except Exception as e:
+        logger.error(f"Erro ao iniciar auto-sync: {e}")
     
     # Log current configuration
     app_id = os.getenv("DERIV_APP_ID", "99188")
