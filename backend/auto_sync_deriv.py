@@ -73,7 +73,26 @@ async def sync_deriv_history():
 
             logger.info(f"{len(transactions)} trades encontrados. Sincronizando...")
 
-            # 3. Enviar trades (usar async client)
+            # 3. Inferir níveis de Martingale pela sequência de perdas
+            logger.info("🔍 Inferindo níveis de Martingale baseado em sequência de perdas...")
+
+            consecutive_losses = 0
+            for i, tx in enumerate(transactions):
+                profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
+                result = "WIN" if profit > 0 else "LOSS"
+
+                if result == "LOSS":
+                    consecutive_losses += 1
+                    inferred_level = consecutive_losses + 1
+                else:
+                    inferred_level = consecutive_losses + 1
+                    consecutive_losses = 0
+
+                tx['inferred_level'] = inferred_level
+
+            logger.info(f"✅ Níveis inferidos para {len(transactions)} trades")
+
+            # 4. Enviar trades (usar async client)
             trades_sent = 0
             trades_failed = 0
 
@@ -92,6 +111,9 @@ async def sync_deriv_history():
                         result = "WIN" if profit > 0 else "LOSS"
                         balance_after = float(balance)
 
+                        # Usar nível inferido pela análise de sequência
+                        inferred_level = tx.get('inferred_level', 1)
+
                         # Enviar trade_opened
                         trade_opened = {
                             "timestamp": buy_time.isoformat() + "Z",
@@ -99,7 +121,7 @@ async def sync_deriv_history():
                             "contract_id": contract_id,
                             "direction": direction,
                             "stake": buy_price,
-                            "level": 1
+                            "level": inferred_level
                         }
 
                         response = await client.post(
@@ -119,7 +141,7 @@ async def sync_deriv_history():
                                 "result": result,
                                 "profit": profit,
                                 "balance": balance_after,
-                                "max_level_reached": 1
+                                "max_level_reached": inferred_level
                             }
 
                             await client.post(
@@ -213,7 +235,29 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
                 logger.warning("Nenhum trade encontrado no período especificado!")
                 return {"success": True, "trades_synced": 0, "trades_failed": 0}
 
-            # 4. Enviar trades
+            # 4. Inferir níveis de Martingale pela sequência de perdas
+            logger.info("🔍 Inferindo níveis de Martingale baseado em sequência de perdas...")
+
+            consecutive_losses = 0
+            for i, tx in enumerate(filtered_transactions):
+                profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
+                result = "WIN" if profit > 0 else "LOSS"
+
+                if result == "LOSS":
+                    consecutive_losses += 1
+                    # Próximo trade estará no nível: consecutive_losses + 1
+                    inferred_level = consecutive_losses + 1
+                else:
+                    # WIN reseta a sequência, próximo trade volta ao nível 1
+                    inferred_level = consecutive_losses + 1  # O trade atual está neste nível
+                    consecutive_losses = 0
+
+                # Armazenar nível inferido no dicionário
+                tx['inferred_level'] = inferred_level
+
+            logger.info(f"✅ Níveis inferidos para {len(filtered_transactions)} trades")
+
+            # 5. Enviar trades
             trades_sent = 0
             trades_failed = 0
 
@@ -232,6 +276,9 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
                         result = "WIN" if profit > 0 else "LOSS"
                         balance_after = float(balance)
 
+                        # Usar nível inferido pela análise de sequência
+                        inferred_level = tx.get('inferred_level', 1)
+
                         # Enviar trade_opened
                         trade_opened = {
                             "timestamp": buy_time.isoformat() + "Z",
@@ -239,7 +286,7 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
                             "contract_id": contract_id,
                             "direction": direction,
                             "stake": buy_price,
-                            "level": 1
+                            "level": inferred_level
                         }
 
                         response = await client.post(
@@ -259,7 +306,7 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
                                 "result": result,
                                 "profit": profit,
                                 "balance": balance_after,
-                                "max_level_reached": 1
+                                "max_level_reached": inferred_level
                             }
 
                             await client.post(
