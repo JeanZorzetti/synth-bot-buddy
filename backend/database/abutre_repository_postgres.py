@@ -116,7 +116,17 @@ class AbutreRepositoryPostgres:
 
     # Insert methods (same logic as SQLite version but with PostgreSQL syntax)
 
-    def insert_candle(self, data: Dict[str, Any]) -> int:
+    def insert_candle(
+        self,
+        timestamp: datetime,
+        open: float,
+        high: float,
+        low: float,
+        close: float,
+        color: str,
+        symbol: str = '1HZ100V',
+        source: str = 'deriv_bot_xml'
+    ) -> int:
         """Insert candle event"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -127,14 +137,14 @@ class AbutreRepositoryPostgres:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
-                data['timestamp'],
-                data.get('symbol', '1HZ100V'),
-                data['open'],
-                data['high'],
-                data['low'],
-                data['close'],
-                data['color'],
-                data.get('source', 'deriv_bot_xml')
+                timestamp,
+                symbol,
+                open,
+                high,
+                low,
+                close,
+                color,
+                source
             ))
 
             row = cursor.fetchone()
@@ -149,7 +159,13 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
-    def insert_trigger(self, data: Dict[str, Any]) -> int:
+    def insert_trigger(
+        self,
+        timestamp: datetime,
+        streak_count: int,
+        direction: str,
+        source: str = 'deriv_bot_xml'
+    ) -> int:
         """Insert trigger event"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -160,10 +176,10 @@ class AbutreRepositoryPostgres:
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
             """, (
-                data['timestamp'],
-                data['streak_count'],
-                data['direction'],
-                data.get('source', 'deriv_bot_xml')
+                timestamp,
+                streak_count,
+                direction,
+                source
             ))
 
             row = cursor.fetchone()
@@ -178,7 +194,16 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
-    def insert_trade_opened(self, data: Dict[str, Any]) -> int:
+    def insert_trade_opened(
+        self,
+        trade_id: str,
+        timestamp: datetime,
+        direction: str,
+        stake: float,
+        level: int = 1,
+        contract_id: Optional[str] = None,
+        source: str = 'deriv_bot_xml'
+    ) -> int:
         """Insert trade opened event"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -191,14 +216,14 @@ class AbutreRepositoryPostgres:
                 ON CONFLICT (trade_id) DO NOTHING
                 RETURNING id
             """, (
-                data['trade_id'],
-                data.get('contract_id'),
-                data['timestamp'],
-                data['direction'],
-                data['stake'],
-                data['stake'],
-                data.get('level', 1),
-                data.get('source', 'deriv_bot_xml')
+                trade_id,
+                contract_id,
+                timestamp,
+                direction,
+                stake,
+                stake,
+                level,
+                source
             ))
 
             row = cursor.fetchone()
@@ -213,7 +238,15 @@ class AbutreRepositoryPostgres:
             cursor.close()
             conn.close()
 
-    def update_trade_closed(self, data: Dict[str, Any]) -> bool:
+    def update_trade_closed(
+        self,
+        trade_id: str,
+        exit_time: datetime,
+        result: str,
+        profit: float,
+        balance: float,
+        max_level: int = 1
+    ) -> bool:
         """Update trade with closed information"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -229,12 +262,12 @@ class AbutreRepositoryPostgres:
                     updated_at = CURRENT_TIMESTAMP
                 WHERE trade_id = %s
             """, (
-                data['timestamp'],
-                data['result'],
-                data['profit'],
-                data['balance'],
-                data.get('max_level_reached', 1),
-                data['trade_id']
+                exit_time,
+                result,
+                profit,
+                balance,
+                max_level,
+                trade_id
             ))
 
             conn.commit()
@@ -244,6 +277,50 @@ class AbutreRepositoryPostgres:
             logger.error(f"Error updating trade: {e}")
             conn.rollback()
             return False
+        finally:
+            cursor.close()
+            conn.close()
+
+    def insert_balance_snapshot(
+        self,
+        timestamp: datetime,
+        balance: float,
+        peak_balance: float,
+        drawdown_pct: float,
+        total_trades: int,
+        wins: int,
+        losses: int,
+        roi_pct: float
+    ) -> int:
+        """Insert balance history snapshot"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                INSERT INTO abutre_balance_history
+                (timestamp, balance, peak_balance, drawdown_pct, total_trades, wins, losses, roi_pct)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                timestamp,
+                balance,
+                peak_balance,
+                drawdown_pct,
+                total_trades,
+                wins,
+                losses,
+                roi_pct
+            ))
+
+            row = cursor.fetchone()
+            conn.commit()
+            return row['id'] if row else -1
+
+        except Exception as e:
+            logger.error(f"Error inserting balance snapshot: {e}")
+            conn.rollback()
+            return -1
         finally:
             cursor.close()
             conn.close()
