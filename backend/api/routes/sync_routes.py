@@ -3,7 +3,7 @@ SYNC ROUTES - Endpoints para sincronização de histórico por período
 
 Permite buscar e sincronizar trades da Deriv API por período específico
 """
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Path, status
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 from typing import Optional
@@ -153,7 +153,7 @@ async def trigger_sync_period(request: SyncPeriodRequest):
 
 
 @router.get("/quick/{days}", response_model=SyncResponse, status_code=status.HTTP_200_OK)
-async def quick_sync_last_days(days: int = Query(..., ge=1, le=90, description="Número de dias")):
+async def quick_sync_last_days(days: int = Path(..., ge=1, le=90, description="Número de dias")):
     """
     Sincronização rápida dos últimos N dias
 
