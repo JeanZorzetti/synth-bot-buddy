@@ -2,7 +2,7 @@
 
 ## 📊 Resumo Executivo
 
-Durante o deploy do sistema com PostgreSQL no Easypanel, foram encontrados e resolvidos **4 problemas sequenciais**. Cada problema só apareceu depois que o anterior foi corrigido.
+Durante o deploy do sistema com PostgreSQL no Easypanel, foram encontrados e resolvidos **5 problemas sequenciais**. Cada problema só apareceu depois que o anterior foi corrigido.
 
 ---
 
@@ -130,6 +130,121 @@ def get_latest_balance(self) -> Optional[float]:
 
 ---
 
+## 🐛 Problema 5: Assinaturas de Métodos Incompatíveis (CRÍTICO!)
+
+### Sintoma
+```
+ERROR: AbutreRepositoryPostgres.insert_trade_opened() got an unexpected keyword argument 'trade_id'
+INFO:     127.0.0.1:40836 - "POST /api/abutre/events/trade_opened HTTP/1.1" 500 Internal Server Error
+```
+
+Erro repetido **100 vezes** (uma para cada trade sendo sincronizado).
+
+### Causa
+**TODOS** os métodos insert/update do repository PostgreSQL esperavam dicionários:
+```python
+def insert_trade_opened(self, data: Dict[str, Any]) -> int:
+    # Usa data['trade_id'], data['timestamp'], etc.
+```
+
+Mas endpoints chamavam com keyword arguments:
+```python
+repo.insert_trade_opened(
+    trade_id=event.trade_id,
+    timestamp=event.timestamp,
+    direction=event.direction,
+    stake=event.stake,
+    level=event.level,
+    contract_id=event.contract_id
+)
+```
+
+### Impacto CRÍTICO
+- ❌ Auto-sync encontrou 100 trades mas **TODOS falharam** ao salvar
+- ❌ Endpoint `/api/abutre/events/trade_opened` erro 500
+- ❌ Endpoint `/api/abutre/events/trade_closed` erro 500
+- ❌ Tabelas PostgreSQL continuavam **vazias**
+- ❌ Sistema **100% não operacional**
+
+### Solução (Commit `4536006`)
+
+**5 métodos corrigidos** para aceitar keyword arguments:
+
+#### 1. `insert_candle()`
+```python
+def insert_candle(
+    self,
+    timestamp: datetime,
+    open: float,
+    high: float,
+    low: float,
+    close: float,
+    color: str,
+    symbol: str = '1HZ100V',
+    source: str = 'deriv_bot_xml'
+) -> int:
+```
+
+#### 2. `insert_trigger()`
+```python
+def insert_trigger(
+    self,
+    timestamp: datetime,
+    streak_count: int,
+    direction: str,
+    source: str = 'deriv_bot_xml'
+) -> int:
+```
+
+#### 3. `insert_trade_opened()`
+```python
+def insert_trade_opened(
+    self,
+    trade_id: str,
+    timestamp: datetime,
+    direction: str,
+    stake: float,
+    level: int = 1,
+    contract_id: Optional[str] = None,
+    source: str = 'deriv_bot_xml'
+) -> int:
+```
+
+#### 4. `update_trade_closed()`
+```python
+def update_trade_closed(
+    self,
+    trade_id: str,
+    exit_time: datetime,
+    result: str,
+    profit: float,
+    balance: float,
+    max_level: int = 1
+) -> bool:
+```
+
+#### 5. `insert_balance_snapshot()` - **MÉTODO NOVO**
+```python
+def insert_balance_snapshot(
+    self,
+    timestamp: datetime,
+    balance: float,
+    peak_balance: float,
+    drawdown_pct: float,
+    total_trades: int,
+    wins: int,
+    losses: int,
+    roi_pct: float
+) -> int:
+```
+
+### Resultado
+✅ Todos os endpoints de API agora funcionam
+✅ Auto-sync pode salvar trades no PostgreSQL
+✅ Sistema **100% operacional**
+
+---
+
 ## 📈 Evolução do Sistema
 
 ### Estado Inicial
@@ -174,6 +289,16 @@ Sistema 100% operacional
     ✅ PRONTO PARA PRODUÇÃO
 ```
 
+### Após Problema 5 Resolvido (FINAL!)
+```
+Assinaturas de métodos corrigidas
+    ↓
+Auto-sync salva 100 trades com sucesso
+    ↓
+PostgreSQL populado com dados reais
+    ✅ SISTEMA 100% OPERACIONAL!
+```
+
 ---
 
 ## 🎯 Commits Realizados (Ordem Cronológica)
@@ -186,6 +311,7 @@ Sistema 100% operacional
 | 4 | `3772414` | refactor: Renomear abutre_repository.py → _OLD | ✅ |
 | 5 | `d15aea0` | docs: Documentação problema cache Python | ✅ |
 | 6 | `f0ea063` | fix: Adicionar get_latest_balance | ✅ |
+| 7 | `4536006` | fix: Corrigir assinaturas de métodos PostgreSQL | ✅ |
 
 ---
 
