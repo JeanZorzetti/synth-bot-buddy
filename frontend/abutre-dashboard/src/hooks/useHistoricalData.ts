@@ -9,7 +9,7 @@
 import { useState, useCallback } from 'react'
 import { useDashboard } from './useDashboard'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000'
 
 interface SyncResult {
   success: boolean
