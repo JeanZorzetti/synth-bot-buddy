@@ -1,0 +1,6 @@
+2025-12-23 11:14:06,888 - INFO - ============================================================
+2025-12-23 11:14:06,889 - INFO - AUTO SYNC DERIV - STARTUP
+2025-12-23 11:14:06,889 - INFO - ============================================================
+2025-12-23 11:14:06,889 - INFO - PASSO 1: Verificando/criando tabelas do banco de dados...
+2025-12-23 11:14:06,896 - WARNING - DATABASE_URL não configurada, pulando migrações
+2025-12-23 11:14:06,896 - ERROR - Falha ao criar tabelas! Abortando auto-sync.

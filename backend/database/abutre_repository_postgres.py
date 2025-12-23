@@ -347,6 +347,25 @@ class AbutreRepositoryPostgres:
         """Alias for get_trades() - for compatibility with API endpoints"""
         return self.get_trades(limit=limit)
 
+    def get_trades_by_period(self, date_from: datetime, date_to: datetime, limit: int = 1000) -> List[Dict]:
+        """Get trades within a specific date range"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT * FROM abutre_trades
+                WHERE entry_time >= %s AND entry_time <= %s
+                ORDER BY entry_time DESC
+                LIMIT %s
+            """, (date_from, date_to, limit))
+
+            return [dict(row) for row in cursor.fetchall()]
+
+        finally:
+            cursor.close()
+            conn.close()
+
     def get_stats(self) -> Dict[str, Any]:
         """Get trading statistics"""
         conn = self._get_connection()
