@@ -37,28 +37,28 @@ export interface PerformanceMetrics {
   sharpe_ratio: number | null
 }
 
-export interface HourlyAnalysis {
+export interface HourlyStat {
   hour: number
-  trades: number
+  trade_count: number
   win_rate: number
   avg_profit: number
   risk_score: number
 }
 
-export interface EquityCurve {
-  data: Array<{
-    timestamp: string
+export interface HourlyAnalysis {
+  hourly_stats: HourlyStat[]
+  best_hour: HourlyStat | null
+  worst_hour: HourlyStat | null
+}
+
+export interface EquityCurveData {
+  equity_curve: Array<{
+    time: string
     balance: number
     cumulative_profit: number
-    trade_id: string
   }>
-  summary: {
-    initial_balance: number
-    final_balance: number
-    total_profit: number
-    peak_balance: number
-    lowest_balance: number
-  }
+  peak_balance: number
+  lowest_balance: number
 }
 
 export function useAnalytics() {
@@ -119,7 +119,7 @@ export function useAnalytics() {
     }
   }, [])
 
-  const getHourlyAnalysis = useCallback(async (dateFrom?: string, dateTo?: string): Promise<HourlyAnalysis[] | null> => {
+  const getHourlyAnalysis = useCallback(async (dateFrom?: string, dateTo?: string): Promise<HourlyAnalysis | null> => {
     setIsLoading(true)
     setError(null)
 
@@ -134,8 +134,31 @@ export function useAnalytics() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json()
-      return data
+      const rawData: Array<{ hour: number; trades: number; win_rate: number; avg_profit: number; risk_score: number }> = await response.json()
+
+      // Transform backend response to match component expectations
+      const hourly_stats: HourlyStat[] = rawData.map(item => ({
+        hour: item.hour,
+        trade_count: item.trades,
+        win_rate: item.win_rate / 100, // Backend returns percentage, component expects decimal
+        avg_profit: item.avg_profit,
+        risk_score: item.risk_score
+      }))
+
+      // Find best and worst hours
+      const best_hour = hourly_stats.length > 0
+        ? hourly_stats.reduce((best, current) => current.win_rate > best.win_rate ? current : best)
+        : null
+
+      const worst_hour = hourly_stats.length > 0
+        ? hourly_stats.reduce((worst, current) => current.win_rate < worst.win_rate ? current : worst)
+        : null
+
+      return {
+        hourly_stats,
+        best_hour,
+        worst_hour
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
@@ -146,7 +169,7 @@ export function useAnalytics() {
     }
   }, [])
 
-  const getEquityCurve = useCallback(async (dateFrom?: string, dateTo?: string): Promise<EquityCurve | null> => {
+  const getEquityCurve = useCallback(async (dateFrom?: string, dateTo?: string): Promise<EquityCurveData | null> => {
     setIsLoading(true)
     setError(null)
 
@@ -162,9 +185,16 @@ export function useAnalytics() {
       }
 
       const result = await response.json()
+
+      // Transform backend response to match component expectations
       return {
-        data: result.data,
-        summary: result.summary
+        equity_curve: result.data.map((item: any) => ({
+          time: item.timestamp,
+          balance: item.balance,
+          cumulative_profit: item.cumulative_profit
+        })),
+        peak_balance: result.summary.peak_balance,
+        lowest_balance: result.summary.lowest_balance
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'

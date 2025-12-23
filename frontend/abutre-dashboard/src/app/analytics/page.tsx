@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, RefreshCw, Calendar, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
-import { useAnalytics, SurvivalMetrics, PerformanceMetrics as PerformanceMetricsType, HourlyAnalysis, EquityCurveData } from '@/hooks/useAnalytics'
+import {
+  useAnalytics,
+  SurvivalMetrics,
+  PerformanceMetrics as PerformanceMetricsType,
+  HourlyAnalysis,
+  EquityCurveData
+} from '@/hooks/useAnalytics'
 import PerformanceMetrics from '@/components/PerformanceMetrics'
 import SurvivalCard from '@/components/SurvivalCard'
 import EquityCurveChart from '@/components/EquityCurveChart'
