@@ -90,7 +90,7 @@ Configure no Easypanel:
 
 ```bash
 # PostgreSQL (Conexão Interna)
-DATABASE_URL=postgresql://botderiv:PAzoI8**@dados_botderiv:5432/botderiv
+DATABASE_URL=postgresql://botderiv:PAzo18**@dados_botderiv:5432/botderiv
 
 # Deriv API
 DERIV_API_TOKEN=paE5sSemx3oANLE
