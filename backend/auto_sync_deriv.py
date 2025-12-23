@@ -16,9 +16,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuração
-DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=99188"
-ABUTRE_API_URL = os.getenv("ABUTRE_API_URL", "http://127.0.0.1:8000/api/abutre/events")
+DERIV_APP_ID = os.getenv("DERIV_APP_ID", "99188")
 DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN", "paE5sSemx3oANLE")
+DERIV_WS_URL = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
+ABUTRE_API_URL = os.getenv("ABUTRE_API_URL", "http://127.0.0.1:8000/api/abutre/events")
 
 # Logging
 logging.basicConfig(
