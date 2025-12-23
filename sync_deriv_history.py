@@ -16,7 +16,7 @@ ABUTRE_API_URL = "https://botderivapi.roilabs.com.br/api/abutre/events"
 
 # ⚠️ IMPORTANTE: Configure seu API token aqui
 # Criar token em: https://app.deriv.com/account/api-token
-DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN", "")
+DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN", "paE5sSemx3oANLE")
 
 if not DERIV_API_TOKEN:
     print("❌ ERRO: Você precisa configurar DERIV_API_TOKEN!")
@@ -44,13 +44,13 @@ async def fetch_deriv_history():
     """Busca histórico de trades da Deriv"""
 
     print("=" * 60)
-    print("SYNC DERIV HISTORY → ABUTRE DASHBOARD")
+    print("SYNC DERIV HISTORY -> ABUTRE DASHBOARD")
     print("=" * 60)
     print("")
 
     async with websockets.connect(DERIV_WS_URL) as ws:
         # 1. Authorize com API token
-        print("🔐 Fazendo login na Deriv...")
+        print("Fazendo login na Deriv...")
         await ws.send(json.dumps({
             "authorize": DERIV_API_TOKEN
         }))
@@ -58,17 +58,17 @@ async def fetch_deriv_history():
         auth_response = json.loads(await ws.recv())
 
         if "error" in auth_response:
-            print(f"❌ Erro ao fazer login: {auth_response['error']['message']}")
+            print(f"ERRO ao fazer login: {auth_response['error']['message']}")
             return
 
-        print(f"✅ Login bem-sucedido!")
+        print(f"Login bem-sucedido!")
         print(f"   Conta: {auth_response['authorize']['loginid']}")
         print(f"   Balance: ${auth_response['authorize']['balance']:.2f}")
         print(f"   Currency: {auth_response['authorize']['currency']}")
         print("")
 
         # 2. Buscar profit table (histórico de trades)
-        print("📊 Buscando histórico de trades...")
+        print("Buscando historico de trades...")
         await ws.send(json.dumps({
             "profit_table": 1,
             "description": 1,
@@ -79,20 +79,20 @@ async def fetch_deriv_history():
         profit_response = json.loads(await ws.recv())
 
         if "error" in profit_response:
-            print(f"❌ Erro ao buscar histórico: {profit_response['error']['message']}")
+            print(f"ERRO ao buscar historico: {profit_response['error']['message']}")
             return
 
         transactions = profit_response.get("profit_table", {}).get("transactions", [])
 
         if not transactions:
-            print("⚠️  Nenhum trade encontrado no histórico!")
+            print("Nenhum trade encontrado no historico!")
             return
 
-        print(f"✅ {len(transactions)} trades encontrados!")
+        print(f"{len(transactions)} trades encontrados!")
         print("")
 
         # 3. Processar e enviar cada trade para API
-        print("📤 Enviando trades para dashboard...")
+        print("Enviando trades para dashboard...")
         print("")
 
         trades_sent = 0
@@ -128,8 +128,7 @@ async def fetch_deriv_history():
                     "contract_id": contract_id,
                     "direction": direction,
                     "stake": buy_price,
-                    "level": 1,
-                    "source": "deriv_api_sync"
+                    "level": 1
                 }
 
                 response = requests.post(
@@ -139,7 +138,7 @@ async def fetch_deriv_history():
                 )
 
                 if response.status_code != 201:
-                    print(f"  ⚠️  Erro ao enviar trade {contract_id}: {response.status_code}")
+                    print(f"  AVISO: Erro ao enviar trade {contract_id}: {response.status_code}")
                     trades_failed += 1
                     continue
 
@@ -150,8 +149,8 @@ async def fetch_deriv_history():
                         "trade_id": contract_id,
                         "result": result,
                         "profit": profit,
-                        "balance_after": balance_after,
-                        "level_reached": 1
+                        "balance": balance_after,
+                        "max_level_reached": 1
                     }
 
                     response = requests.post(
@@ -161,25 +160,25 @@ async def fetch_deriv_history():
                     )
 
                     if response.status_code != 200:
-                        print(f"  ⚠️  Erro ao fechar trade {contract_id}: {response.status_code}")
+                        print(f"  AVISO: Erro ao fechar trade {contract_id}: {response.status_code}")
 
                 trades_sent += 1
 
                 # Log
                 profit_str = f"+${profit:.2f}" if profit > 0 else f"-${abs(profit):.2f}"
-                print(f"  ✅ {contract_id[:8]}... | {direction:4} | {result:4} | {profit_str:>10}")
+                print(f"  OK {contract_id[:8]}... | {direction:4} | {result:4} | {profit_str:>10}")
 
             except Exception as e:
-                print(f"  ❌ Erro ao processar trade: {e}")
+                print(f"  ERRO ao processar trade: {e}")
                 trades_failed += 1
 
         print("")
         print("=" * 60)
-        print(f"✅ Sincronização concluída!")
+        print(f"Sincronizacao concluida!")
         print(f"   Trades enviados: {trades_sent}")
         print(f"   Trades com erro: {trades_failed}")
         print("")
-        print(f"🌐 Acesse: https://botderiv.roilabs.com.br/abutre")
+        print(f"Acesse: https://botderiv.roilabs.com.br/abutre")
         print("=" * 60)
 
 
@@ -187,9 +186,9 @@ async def main():
     try:
         await fetch_deriv_history()
     except KeyboardInterrupt:
-        print("\n\n👋 Cancelado pelo usuário")
+        print("\n\nCancelado pelo usuario")
     except Exception as e:
-        print(f"\n❌ Erro fatal: {e}")
+        print(f"\nERRO fatal: {e}")
         raise
 
 
