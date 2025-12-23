@@ -21,8 +21,9 @@ interface TradesTableProps {
 }
 
 export default function TradesTable({ trades, maxRows = 10 }: TradesTableProps) {
-  // Show most recent trades first
-  const recentTrades = [...trades].reverse().slice(0, maxRows)
+  // Don't reverse if trades are already sorted (for history page pagination)
+  // Only slice if maxRows is specified and less than total trades
+  const displayTrades = trades.length > maxRows ? trades.slice(0, maxRows) : trades
 
   if (trades.length === 0) {
     return (
@@ -50,18 +51,11 @@ export default function TradesTable({ trades, maxRows = 10 }: TradesTableProps) 
           </tr>
         </thead>
         <tbody>
-          {recentTrades.map((trade) => (
+          {displayTrades.map((trade) => (
             <TradeRow key={trade.id} trade={trade} />
           ))}
         </tbody>
       </table>
-
-      {/* Show total count if more than maxRows */}
-      {trades.length > maxRows && (
-        <div className="mt-3 text-center text-xs text-slate-500">
-          Showing {maxRows} of {trades.length} trades
-        </div>
-      )}
     </div>
   )
 }

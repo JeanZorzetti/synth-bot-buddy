@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import PeriodSelector from '@/components/PeriodSelector'
 import SyncStatus from '@/components/SyncStatus'
 import TradesTable from '@/components/TradesTable'
@@ -15,15 +15,22 @@ export default function HistoryPage() {
   const [trades, setTrades] = useState<any[]>([])
   const [period, setPeriod] = useState<{ from: string; to: string } | null>(null)
   const [totalTrades, setTotalTrades] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 50
 
   const handlePeriodChange = async (dateFrom: string, dateTo: string) => {
     setPeriod({ from: dateFrom, to: dateTo })
+    setCurrentPage(1) // Reset to first page when period changes
 
     // Buscar trades do período
     const result = await fetchTradesByPeriod(dateFrom, dateTo)
 
     if (result.success) {
-      setTrades(result.trades)
+      // Sort by entry_time descending (most recent first)
+      const sortedTrades = [...result.trades].sort((a, b) => {
+        return new Date(b.entry_time).getTime() - new Date(a.entry_time).getTime()
+      })
+      setTrades(sortedTrades)
       setTotalTrades(result.count)
     }
   }
@@ -70,6 +77,20 @@ export default function HistoryPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  // Pagination calculations
+  const totalPages = Math.ceil(totalTrades / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentTrades = trades.slice(startIndex, endIndex)
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+      // Scroll to top of table
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   return (
@@ -162,7 +183,86 @@ export default function HistoryPage() {
                 </div>
               </div>
             ) : trades.length > 0 ? (
-              <TradesTable trades={trades} maxRows={50} />
+              <>
+                <TradesTable trades={currentTrades} maxRows={itemsPerPage} />
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-between">
+                    <div className="text-sm text-slate-400">
+                      Mostrando {startIndex + 1} a {Math.min(endIndex, totalTrades)} de {totalTrades} trades
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Previous Button */}
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-2 rounded-lg flex items-center gap-1 transition-colors ${
+                          currentPage === 1
+                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Anterior
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {[...Array(totalPages)].map((_, index) => {
+                          const page = index + 1
+                          // Show first page, last page, current page, and pages around current
+                          const showPage =
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+
+                          if (!showPage) {
+                            // Show ellipsis
+                            if (page === currentPage - 2 || page === currentPage + 2) {
+                              return (
+                                <span key={page} className="px-2 text-slate-500">
+                                  ...
+                                </span>
+                              )
+                            }
+                            return null
+                          }
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => goToPage(page)}
+                              className={`px-3 py-2 rounded-lg min-w-[40px] transition-colors ${
+                                currentPage === page
+                                  ? 'bg-sky-500 text-white font-semibold'
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Next Button */}
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-2 rounded-lg flex items-center gap-1 transition-colors ${
+                          currentPage === totalPages
+                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        Próximo
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-slate-400 mb-2">Nenhum trade encontrado neste período</p>
