@@ -54,4 +54,4 @@ alembic>=1.13.0
 
 # PostgreSQL support
 psycopg2-binary>=2.9.9
-websockets>=13.0
+# websockets>=13.0  # REMOVIDO: Conflita com python-deriv-api que requer ==10.3
