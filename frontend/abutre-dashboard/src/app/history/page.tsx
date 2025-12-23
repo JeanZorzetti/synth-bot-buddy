@@ -10,7 +10,7 @@ import { useHistoricalData } from '@/hooks/useHistoricalData'
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { isLoading, syncResult, fetchTradesByPeriod, quickSync } = useHistoricalData()
+  const { isLoading, syncResult, fetchTradesByPeriod, quickSync, syncPeriod } = useHistoricalData()
 
   const [trades, setTrades] = useState<any[]>([])
   const [period, setPeriod] = useState<{ from: string; to: string } | null>(null)
@@ -40,8 +40,8 @@ export default function HistoryPage() {
       // Sincronização rápida
       await quickSync(days)
     } else if (period) {
-      // Sincronização customizada (não implementada ainda - requer endpoint adicional)
-      console.log('Custom sync not implemented yet')
+      // Sincronização do período atual
+      await syncPeriod(period.from, period.to, false)
     }
   }
 
@@ -165,7 +165,12 @@ export default function HistoryPage() {
 
               {trades.length > 0 && (
                 <button
-                  onClick={() => handlePeriodChange(period.from, period.to)}
+                  onClick={async () => {
+                    // First sync from Deriv API to DB
+                    await handleSync()
+                    // Then reload trades from DB
+                    await handlePeriodChange(period.from, period.to)
+                  }}
                   disabled={isLoading}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors text-sm"
                 >
