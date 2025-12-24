@@ -193,20 +193,11 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             # 2. SYNC INCREMENTAL: Buscar apenas trades novos
             # Consultar último trade no DB
-            from database import get_abutre_repository
-            repo = get_abutre_repository()
+            from database.abutre_repository_async import get_async_repository
 
             try:
-                conn = repo._get_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT MAX(entry_time) as last_sync
-                    FROM abutre_trades
-                """)
-                result = cursor.fetchone()
-                last_sync_time = result['last_sync'] if result and result['last_sync'] else None
-                cursor.close()
-                conn.close()
+                repo = await get_async_repository()
+                last_sync_time = await repo.get_last_sync_time()
             except Exception as e:
                 logger.warning(f"Erro ao consultar último sync: {e}")
                 last_sync_time = None
