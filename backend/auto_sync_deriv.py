@@ -188,13 +188,12 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             # 2. Buscar profit table (máximo de trades que conseguimos buscar)
             # A API da Deriv limita o número de trades por request
-            # Testado: limit 1000 retorna erro "Input validation failed"
-            # Usando 999 que é o máximo real aceito pela API
-            logger.info("🔵 COMMIT 23c6fc4: Usando limit=999 (CPU-only PyTorch)")
+            # TESTE: Tentando limit 500 para ver se 999 também está dando problema
+            logger.info("🔵 TESTE: Usando limit=500 temporariamente")
             await ws.send(json.dumps({
                 "profit_table": 1,
                 "description": 1,
-                "limit": 999,  # Máximo real aceito pela API Deriv
+                "limit": 500,  # TESTE: Reduzido de 999 para 500
                 "sort": "DESC"
             }))
 
