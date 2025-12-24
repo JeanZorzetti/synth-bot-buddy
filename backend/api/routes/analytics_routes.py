@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 import numpy as np
 
-from database import get_abutre_repository
+from database.abutre_repository_async import get_async_repository
 
 router = APIRouter(prefix="/api/abutre/analytics", tags=["Analytics"])
 logger = logging.getLogger(__name__)
@@ -60,15 +60,15 @@ async def get_survival_metrics(
     Morte = Atingir nível máximo permitido (ex: nível 9 com stake $89.60)
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Buscar trades
         if date_from and date_to:
             dt_from = datetime.fromisoformat(date_from + "T00:00:00")
             dt_to = datetime.fromisoformat(date_to + "T23:59:59")
-            trades = repo.get_trades_by_period(dt_from, dt_to, limit=10000)
+            trades = await repo.get_trades_by_period(dt_from, dt_to, limit=10000)
         else:
-            trades = repo.get_recent_trades(limit=10000)
+            trades = await repo.get_recent_trades(limit=10000)
 
         if not trades:
             raise HTTPException(status_code=404, detail="No trades found")
@@ -129,15 +129,15 @@ async def get_performance_metrics(
     Métricas de performance: win rate, profit factor, drawdown, streaks
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Buscar trades
         if date_from and date_to:
             dt_from = datetime.fromisoformat(date_from + "T00:00:00")
             dt_to = datetime.fromisoformat(date_to + "T23:59:59")
-            trades = repo.get_trades_by_period(dt_from, dt_to, limit=10000)
+            trades = await repo.get_trades_by_period(dt_from, dt_to, limit=10000)
         else:
-            trades = repo.get_recent_trades(limit=10000)
+            trades = await repo.get_recent_trades(limit=10000)
 
         if not trades:
             raise HTTPException(status_code=404, detail="No trades found")
@@ -224,15 +224,15 @@ async def get_hourly_analysis(
     Análise por horário: identifica horários mais arriscados e lucrativos
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Buscar trades
         if date_from and date_to:
             dt_from = datetime.fromisoformat(date_from + "T00:00:00")
             dt_to = datetime.fromisoformat(date_to + "T23:59:59")
-            trades = repo.get_trades_by_period(dt_from, dt_to, limit=10000)
+            trades = await repo.get_trades_by_period(dt_from, dt_to, limit=10000)
         else:
-            trades = repo.get_recent_trades(limit=10000)
+            trades = await repo.get_recent_trades(limit=10000)
 
         if not trades:
             raise HTTPException(status_code=404, detail="No trades found")
@@ -285,15 +285,15 @@ async def get_equity_curve(
     Retorna a curva de equity (saldo acumulado ao longo do tempo)
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Buscar trades
         if date_from and date_to:
             dt_from = datetime.fromisoformat(date_from + "T00:00:00")
             dt_to = datetime.fromisoformat(date_to + "T23:59:59")
-            trades = repo.get_trades_by_period(dt_from, dt_to, limit=10000)
+            trades = await repo.get_trades_by_period(dt_from, dt_to, limit=10000)
         else:
-            trades = repo.get_recent_trades(limit=10000)
+            trades = await repo.get_recent_trades(limit=10000)
 
         if not trades:
             raise HTTPException(status_code=404, detail="No trades found")

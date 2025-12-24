@@ -1,0 +1,204 @@
+"""
+ABUTRE REPOSITORY - Async Version with Connection Pooling
+
+Performance improvements:
+- asyncpg (async driver) instead of psycopg2 (sync)
+- Connection pooling (reuse connections)
+- No event loop blocking
+"""
+import asyncpg
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+
+class AbutreRepositoryAsync:
+    """Async PostgreSQL repository for Abutre trades with connection pooling"""
+
+    def __init__(self, db_url: str):
+        self.db_url = db_url
+        self._pool: Optional[asyncpg.Pool] = None
+
+    async def connect(self):
+        """Create connection pool (call once on startup)"""
+        if not self._pool:
+            logger.info("Creating asyncpg connection pool...")
+            self._pool = await asyncpg.create_pool(
+                self.db_url,
+                min_size=2,
+                max_size=10,
+                command_timeout=60
+            )
+            logger.info("✅ Connection pool created successfully")
+
+    async def close(self):
+        """Close connection pool (call on shutdown)"""
+        if self._pool:
+            await self._pool.close()
+            logger.info("Connection pool closed")
+
+    async def save_trade(self, trade: Dict[str, Any]) -> bool:
+        """Save trade to database (INSERT IGNORE on conflict)"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    INSERT INTO abutre_trades (
+                        trade_id, contract_id, entry_time, exit_time,
+                        direction, initial_stake, result, profit,
+                        balance_after, max_level_reached
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ON CONFLICT (trade_id) DO NOTHING
+                """,
+                    trade.get("trade_id"),
+                    trade.get("contract_id"),
+                    trade.get("entry_time"),
+                    trade.get("exit_time"),
+                    trade.get("direction"),
+                    trade.get("initial_stake"),
+                    trade.get("result"),
+                    trade.get("profit"),
+                    trade.get("balance_after"),
+                    trade.get("max_level_reached")
+                )
+                return True
+            except Exception as e:
+                logger.error(f"Error saving trade: {e}")
+                return False
+
+    async def update_trade(self, trade_id: str, updates: Dict[str, Any]) -> bool:
+        """Update existing trade"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                set_clauses = []
+                values = []
+                param_num = 1
+
+                for key, value in updates.items():
+                    set_clauses.append(f"{key} = ${param_num}")
+                    values.append(value)
+                    param_num += 1
+
+                values.append(trade_id)
+                query = f"UPDATE abutre_trades SET {', '.join(set_clauses)} WHERE trade_id = ${param_num}"
+
+                await conn.execute(query, *values)
+                return True
+            except Exception as e:
+                logger.error(f"Error updating trade: {e}")
+                return False
+
+    async def get_trades(self, limit: int = 50) -> List[Dict]:
+        """Get recent trades (ordered by entry_time DESC)"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT * FROM abutre_trades
+                ORDER BY entry_time DESC
+                LIMIT $1
+            """, limit)
+
+            return [dict(row) for row in rows]
+
+    async def get_recent_trades(self, limit: int = 50) -> List[Dict]:
+        """Alias for get_trades - for compatibility"""
+        return await self.get_trades(limit=limit)
+
+    async def get_trades_by_period(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        limit: int = 10000
+    ) -> List[Dict]:
+        """Get trades within a specific date range"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT * FROM abutre_trades
+                WHERE entry_time >= $1 AND entry_time <= $2
+                ORDER BY entry_time DESC
+                LIMIT $3
+            """, date_from, date_to, limit)
+
+            return [dict(row) for row in rows]
+
+    async def get_stats(self) -> Dict[str, Any]:
+        """Get trading statistics"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            stats = {}
+
+            # Total trades
+            total_trades = await conn.fetchval("SELECT COUNT(*) FROM abutre_trades")
+            stats['total_trades'] = total_trades or 0
+
+            # Wins and losses
+            wins = await conn.fetchval("SELECT COUNT(*) FROM abutre_trades WHERE result = 'WIN'")
+            losses = await conn.fetchval("SELECT COUNT(*) FROM abutre_trades WHERE result = 'LOSS'")
+
+            stats['wins'] = wins or 0
+            stats['losses'] = losses or 0
+            stats['win_rate'] = (wins / total_trades * 100) if total_trades > 0 else 0
+
+            # Total profit
+            total_profit = await conn.fetchval("SELECT SUM(profit) FROM abutre_trades WHERE profit IS NOT NULL")
+            stats['total_profit'] = float(total_profit) if total_profit else 0.0
+
+            # Current balance (last trade)
+            current_balance = await conn.fetchval("""
+                SELECT balance_after FROM abutre_trades
+                WHERE balance_after IS NOT NULL
+                ORDER BY exit_time DESC
+                LIMIT 1
+            """)
+            stats['current_balance'] = float(current_balance) if current_balance else 10000.0
+
+            # ROI
+            initial_balance = 10000.0
+            stats['roi_pct'] = ((stats['current_balance'] - initial_balance) / initial_balance * 100)
+
+            return stats
+
+    async def get_last_sync_time(self) -> Optional[datetime]:
+        """Get timestamp of the most recent trade in DB"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            result = await conn.fetchval("""
+                SELECT MAX(entry_time) FROM abutre_trades
+            """)
+            return result
+
+
+# Singleton instance
+_repository_instance: Optional[AbutreRepositoryAsync] = None
+
+
+async def get_async_repository() -> AbutreRepositoryAsync:
+    """Get singleton async repository instance"""
+    global _repository_instance
+
+    if _repository_instance is None:
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url:
+            raise ValueError("DATABASE_URL not configured!")
+
+        _repository_instance = AbutreRepositoryAsync(db_url)
+        await _repository_instance.connect()
+
+    return _repository_instance

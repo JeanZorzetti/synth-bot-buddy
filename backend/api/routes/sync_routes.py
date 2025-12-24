@@ -10,7 +10,7 @@ from typing import Optional
 import logging
 import asyncio
 
-from database import get_abutre_repository
+from database.abutre_repository_async import get_async_repository
 
 router = APIRouter(prefix="/api/abutre/sync", tags=["Sync"])
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ async def get_trades_by_period(
     PostgreSQL aguenta tranquilamente retornar todo o histórico sincronizado.
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         if date_from and date_to:
             # Parse dates
@@ -68,10 +68,10 @@ async def get_trades_by_period(
                 )
 
             # Buscar trades por período
-            trades = repo.get_trades_by_period(dt_from, dt_to, limit)
+            trades = await repo.get_trades_by_period(dt_from, dt_to, limit)
         else:
             # Buscar trades recentes
-            trades = repo.get_recent_trades(limit=limit)
+            trades = await repo.get_recent_trades(limit=limit)
 
         return {
             "status": "success",

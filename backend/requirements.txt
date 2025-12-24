@@ -56,5 +56,6 @@ python-engineio>=4.8.0
 alembic>=1.13.0
 
 # PostgreSQL support
-psycopg2-binary>=2.9.9
+# psycopg2-binary>=2.9.9  # DEPRECATED: Sync driver, blocks event loop
+asyncpg>=0.29.0  # Async driver with connection pooling
 # websockets>=13.0  # REMOVIDO: Conflita com python-deriv-api que requer ==10.3
