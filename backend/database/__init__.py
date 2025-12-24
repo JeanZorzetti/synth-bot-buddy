@@ -18,6 +18,6 @@ if not DATABASE_URL.startswith("postgresql"):
     raise RuntimeError(f"Only PostgreSQL is supported. DATABASE_URL must start with 'postgresql://', got: {DATABASE_URL}")
 
 logger.info(f"Using PostgreSQL database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'unknown'}")
-from .abutre_repository_postgres import get_abutre_repository
+from .abutre_repository_async import get_async_repository
 
-__all__ = ["get_abutre_repository"]
+__all__ = ["get_async_repository"]
