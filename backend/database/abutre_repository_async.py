@@ -184,6 +184,211 @@ class AbutreRepositoryAsync:
             """)
             return result
 
+    async def insert_candle(
+        self,
+        timestamp: datetime,
+        open: float,
+        high: float,
+        low: float,
+        close: float,
+        color: int,
+        symbol: str = '1HZ100V',
+        source: str = 'deriv_bot_xml'
+    ) -> int:
+        """Insert candle event"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                result = await conn.fetchval("""
+                    INSERT INTO abutre_candles (timestamp, symbol, open, high, low, close, color, source)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING id
+                """, timestamp, symbol, open, high, low, close, color, source)
+                return result
+            except Exception as e:
+                logger.error(f"Error inserting candle: {e}")
+                return -1
+
+    async def insert_trigger(
+        self,
+        timestamp: datetime,
+        streak_count: int,
+        direction: str,
+        source: str = 'deriv_bot_xml'
+    ) -> int:
+        """Insert trigger event"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                result = await conn.fetchval("""
+                    INSERT INTO abutre_triggers (timestamp, streak_count, direction, source)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING id
+                """, timestamp, streak_count, direction, source)
+                return result
+            except Exception as e:
+                logger.error(f"Error inserting trigger: {e}")
+                return -1
+
+    async def insert_trade_opened(
+        self,
+        trade_id: str,
+        timestamp: datetime,
+        direction: str,
+        stake: float,
+        level: int = 1,
+        contract_id: Optional[str] = None,
+        source: str = 'deriv_bot_xml'
+    ) -> int:
+        """Insert trade opened event"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                result = await conn.fetchval("""
+                    INSERT INTO abutre_trades
+                    (trade_id, contract_id, entry_time, direction, initial_stake, total_staked, max_level_reached, source)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    ON CONFLICT (trade_id) DO NOTHING
+                    RETURNING id
+                """, trade_id, contract_id, timestamp, direction, stake, stake, level, source)
+                return result if result else -1
+            except Exception as e:
+                logger.error(f"Error inserting trade: {e}")
+                return -1
+
+    async def update_trade_closed(
+        self,
+        trade_id: str,
+        exit_time: datetime,
+        result: str,
+        profit: float,
+        balance: float,
+        max_level: int = 1
+    ) -> bool:
+        """Update trade with closed information"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    UPDATE abutre_trades
+                    SET exit_time = $1,
+                        result = $2,
+                        profit = $3,
+                        balance_after = $4,
+                        max_level_reached = $5,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE trade_id = $6
+                """, exit_time, result, profit, balance, max_level, trade_id)
+                return True
+            except Exception as e:
+                logger.error(f"Error updating trade: {e}")
+                return False
+
+    async def get_trade_stats(self) -> Dict[str, Any]:
+        """Get trading statistics"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT
+                    COUNT(*) as total_trades,
+                    SUM(CASE WHEN result = 'WIN' THEN 1 ELSE 0 END) as wins,
+                    SUM(CASE WHEN result = 'LOSS' THEN 1 ELSE 0 END) as losses,
+                    COALESCE(SUM(profit), 0) as total_profit,
+                    COALESCE(AVG(CASE WHEN result = 'WIN' THEN profit END), 0) as avg_win,
+                    COALESCE(AVG(CASE WHEN result = 'LOSS' THEN profit END), 0) as avg_loss,
+                    MAX(max_level_reached) as max_level_used
+                FROM abutre_trades
+                WHERE result IS NOT NULL
+            """)
+
+            stats = dict(row)
+
+            # Calculate win rate
+            total = stats['total_trades']
+            wins = stats['wins'] or 0
+            stats['win_rate_pct'] = (wins / total * 100) if total > 0 else 0.0
+
+            # Get current balance
+            balance_row = await conn.fetchrow("""
+                SELECT balance_after FROM abutre_trades
+                WHERE balance_after IS NOT NULL
+                ORDER BY exit_time DESC
+                LIMIT 1
+            """)
+
+            stats['current_balance'] = balance_row['balance_after'] if balance_row else 10000.0
+
+            # Calculate ROI
+            initial_balance = 10000.0
+            stats['roi_pct'] = ((stats['current_balance'] - initial_balance) / initial_balance * 100)
+
+            return stats
+
+    async def get_latest_balance(self) -> Optional[float]:
+        """Get latest balance from balance history"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            result = await conn.fetchval("""
+                SELECT balance FROM abutre_balance_history
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """)
+            return result
+
+    async def insert_balance_snapshot(
+        self,
+        timestamp: datetime,
+        balance: float,
+        peak_balance: float,
+        drawdown_pct: float,
+        total_trades: int,
+        wins: int,
+        losses: int,
+        roi_pct: float
+    ) -> int:
+        """Insert balance history snapshot"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            try:
+                result = await conn.fetchval("""
+                    INSERT INTO abutre_balance_history
+                    (timestamp, balance, peak_balance, drawdown_pct, total_trades, wins, losses, roi_pct)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING id
+                """, timestamp, balance, peak_balance, drawdown_pct, total_trades, wins, losses, roi_pct)
+                return result if result else -1
+            except Exception as e:
+                logger.error(f"Error inserting balance snapshot: {e}")
+                return -1
+
+    async def get_balance_history(self, limit: int = 1000) -> List[Dict]:
+        """Get balance history snapshots"""
+        if not self._pool:
+            await self.connect()
+
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT * FROM abutre_balance_history
+                ORDER BY timestamp DESC
+                LIMIT $1
+            """, limit)
+
+            return [dict(row) for row in rows]
+
 
 # Singleton instance
 _repository_instance: Optional[AbutreRepositoryAsync] = None

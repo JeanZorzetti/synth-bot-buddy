@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, status
 from datetime import datetime
 import logging
 
-from database import get_abutre_repository
+from database.abutre_repository_async import get_async_repository
 from api.schemas.abutre_events import (
     CandleEvent,
     TriggerEvent,
@@ -52,10 +52,10 @@ async def post_candle_event(event: CandleEvent):
         EventResponse with event_id
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Insert into database
-        candle_id = repo.insert_candle(
+        candle_id = await repo.insert_candle(
             timestamp=event.timestamp,
             symbol=event.symbol,
             open=event.open,
@@ -112,10 +112,10 @@ async def post_trigger_event(event: TriggerEvent):
         EventResponse with event_id
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Insert into database
-        trigger_id = repo.insert_trigger(
+        trigger_id = await repo.insert_trigger(
             timestamp=event.timestamp,
             streak_count=event.streak_count,
             direction=event.direction
@@ -164,10 +164,10 @@ async def post_trade_opened_event(event: TradeOpenedEvent):
         EventResponse with event_id
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Insert into database
-        trade_id = repo.insert_trade_opened(
+        trade_id = await repo.insert_trade_opened(
             trade_id=event.trade_id,
             timestamp=event.timestamp,
             direction=event.direction,
@@ -222,10 +222,10 @@ async def post_trade_closed_event(event: TradeClosedEvent):
         EventResponse
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Update trade in database
-        success = repo.update_trade_closed(
+        success = await repo.update_trade_closed(
             trade_id=event.trade_id,
             exit_time=event.timestamp,
             result=event.result,
@@ -241,15 +241,15 @@ async def post_trade_closed_event(event: TradeClosedEvent):
             )
 
         # Calculate and store balance snapshot
-        stats = repo.get_trade_stats()
+        stats = await repo.get_trade_stats()
 
         # Get latest balance or use initial
-        latest_balance = repo.get_latest_balance() or 10000.0
+        latest_balance = await repo.get_latest_balance() or 10000.0
         peak_balance = max(latest_balance, event.balance)
         drawdown_pct = ((peak_balance - event.balance) / peak_balance * 100) if peak_balance > 0 else 0.0
         roi_pct = ((event.balance - 10000.0) / 10000.0 * 100)
 
-        repo.insert_balance_snapshot(
+        await repo.insert_balance_snapshot(
             timestamp=event.timestamp,
             balance=event.balance,
             peak_balance=peak_balance,
@@ -324,19 +324,19 @@ async def post_balance_event(event: BalanceEvent):
         EventResponse
     """
     try:
-        repo = get_abutre_repository()
+        repo = await get_async_repository()
 
         # Get current stats
-        stats = repo.get_trade_stats()
+        stats = await repo.get_trade_stats()
 
         # Calculate metrics
-        latest_balance = repo.get_latest_balance() or 10000.0
+        latest_balance = await repo.get_latest_balance() or 10000.0
         peak_balance = max(latest_balance, event.balance)
         drawdown_pct = ((peak_balance - event.balance) / peak_balance * 100) if peak_balance > 0 else 0.0
         roi_pct = ((event.balance - 10000.0) / 10000.0 * 100)
 
         # Insert balance snapshot
-        snapshot_id = repo.insert_balance_snapshot(
+        snapshot_id = await repo.insert_balance_snapshot(
             timestamp=event.timestamp,
             balance=event.balance,
             peak_balance=peak_balance,
@@ -381,9 +381,9 @@ async def post_balance_event(event: BalanceEvent):
 async def get_stats():
     """Get aggregated statistics"""
     try:
-        repo = get_abutre_repository()
-        stats = repo.get_trade_stats()
-        latest_balance = repo.get_latest_balance() or 10000.0
+        repo = await get_async_repository()
+        stats = await repo.get_trade_stats()
+        latest_balance = await repo.get_latest_balance() or 10000.0
 
         return {
             "status": "success",
@@ -406,8 +406,8 @@ async def get_stats():
 async def get_trades(limit: int = 50):
     """Get recent trades"""
     try:
-        repo = get_abutre_repository()
-        trades = repo.get_recent_trades(limit=limit)
+        repo = await get_async_repository()
+        trades = await repo.get_recent_trades(limit=limit)
 
         return {
             "status": "success",
@@ -426,8 +426,8 @@ async def get_trades(limit: int = 50):
 async def get_balance_history(limit: int = 1000):
     """Get balance history for equity curve"""
     try:
-        repo = get_abutre_repository()
-        history = repo.get_balance_history(limit=limit)
+        repo = await get_async_repository()
+        history = await repo.get_balance_history(limit=limit)
 
         return {
             "status": "success",
