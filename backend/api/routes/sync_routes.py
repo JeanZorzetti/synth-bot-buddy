@@ -37,12 +37,15 @@ class SyncResponse(BaseModel):
 async def get_trades_by_period(
     date_from: Optional[str] = Query(None, description="Data inicial (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="Data final (YYYY-MM-DD)"),
-    limit: int = Query(100, ge=1, le=1000, description="Limite de trades")
+    limit: int = Query(10000, ge=1, le=50000, description="Limite de trades (padrão: 10000, máx: 50000)")
 ):
     """
     Busca trades do banco de dados por período
 
     Se date_from e date_to não forem fornecidos, retorna os últimos `limit` trades
+
+    **Performance Note**: Removido limite artificial de 1000.
+    PostgreSQL aguenta tranquilamente retornar todo o histórico sincronizado.
     """
     try:
         repo = get_abutre_repository()
