@@ -16,8 +16,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuração
-DERIV_APP_ID = os.getenv("DERIV_APP_ID", "99188")
-DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN", "paE5sSemx3oANLE")
+DERIV_APP_ID = os.getenv("DERIV_APP_ID")
+DERIV_API_TOKEN = os.getenv("DERIV_API_TOKEN")
+
+if not DERIV_APP_ID or not DERIV_API_TOKEN:
+    raise ValueError("❌ DERIV_APP_ID e DERIV_API_TOKEN devem estar configurados nas variáveis de ambiente!")
+
 DERIV_WS_URL = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
 ABUTRE_API_URL = os.getenv("ABUTRE_API_URL", "http://127.0.0.1:8000/api/abutre/events")
 
@@ -51,12 +55,12 @@ async def sync_deriv_history():
             balance = auth_response['authorize']['balance']
             logger.info(f"Login OK - Conta: {account} | Balance: ${balance:.2f}")
 
-            # 2. Buscar profit table
+            # 2. Buscar profit table (SEMPRE ASC para inferir Martingale corretamente)
             await ws.send(json.dumps({
                 "profit_table": 1,
                 "description": 1,
                 "limit": 100,
-                "sort": "DESC"
+                "sort": "ASC"  # CRÍTICO: Do mais antigo para o novo
             }))
 
             profit_response = json.loads(await ws.recv())
@@ -78,17 +82,18 @@ async def sync_deriv_history():
 
             consecutive_losses = 0
             for i, tx in enumerate(transactions):
+                # O nível ATUAL é baseado nas perdas ACUMULADAS ANTES deste trade
+                current_level = consecutive_losses + 1
+                tx['inferred_level'] = current_level
+
+                # Agora calcular resultado para atualizar contador para o PRÓXIMO trade
                 profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
                 result = "WIN" if profit > 0 else "LOSS"
 
                 if result == "LOSS":
-                    consecutive_losses += 1
-                    inferred_level = consecutive_losses + 1
+                    consecutive_losses += 1  # Prepara para o próximo
                 else:
-                    inferred_level = consecutive_losses + 1
-                    consecutive_losses = 0
-
-                tx['inferred_level'] = inferred_level
+                    consecutive_losses = 0  # Reseta para o próximo
 
             logger.info(f"✅ Níveis inferidos para {len(transactions)} trades")
 
@@ -294,20 +299,18 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
 
             consecutive_losses = 0
             for i, tx in enumerate(filtered_transactions):
+                # O nível ATUAL é baseado nas perdas ACUMULADAS ANTES deste trade
+                current_level = consecutive_losses + 1
+                tx['inferred_level'] = current_level
+
+                # Agora calcular resultado para atualizar contador para o PRÓXIMO trade
                 profit = float(tx.get("sell_price", 0) - tx.get("buy_price", 0))
                 result = "WIN" if profit > 0 else "LOSS"
 
                 if result == "LOSS":
-                    consecutive_losses += 1
-                    # Próximo trade estará no nível: consecutive_losses + 1
-                    inferred_level = consecutive_losses + 1
+                    consecutive_losses += 1  # Prepara para o próximo
                 else:
-                    # WIN reseta a sequência, próximo trade volta ao nível 1
-                    inferred_level = consecutive_losses + 1  # O trade atual está neste nível
-                    consecutive_losses = 0
-
-                # Armazenar nível inferido no dicionário
-                tx['inferred_level'] = inferred_level
+                    consecutive_losses = 0  # Reseta para o próximo
 
             logger.info(f"✅ Níveis inferidos para {len(filtered_transactions)} trades")
 
