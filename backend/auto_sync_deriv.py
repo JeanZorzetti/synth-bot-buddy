@@ -186,24 +186,79 @@ async def sync_deriv_history_period(date_from: datetime, date_to: datetime, forc
             balance = auth_response['authorize']['balance']
             logger.info(f"Login OK - Conta: {account} | Balance: ${balance:.2f}")
 
-            # 2. Buscar profit table (máximo de trades que conseguimos buscar)
-            # A API da Deriv limita o número de trades por request
-            # TESTE: Tentando limit 500 para ver se 999 também está dando problema
-            logger.info("🔵 TESTE: Usando limit=500 temporariamente")
-            await ws.send(json.dumps({
-                "profit_table": 1,
-                "description": 1,
-                "limit": 500,  # TESTE: Reduzido de 999 para 500
-                "sort": "DESC"
-            }))
+            # 2. SYNC INCREMENTAL: Buscar apenas trades novos
+            # Consultar último trade no DB
+            from database import get_abutre_repository
+            repo = get_abutre_repository()
 
-            profit_response = json.loads(await ws.recv())
+            try:
+                conn = repo._get_connection()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT MAX(entry_time) as last_sync
+                    FROM abutre_trades
+                """)
+                result = cursor.fetchone()
+                last_sync_time = result['last_sync'] if result and result['last_sync'] else None
+                cursor.close()
+                conn.close()
+            except Exception as e:
+                logger.warning(f"Erro ao consultar último sync: {e}")
+                last_sync_time = None
 
-            if "error" in profit_response:
-                logger.error(f"Erro ao buscar histórico: {profit_response['error']['message']}")
-                return {"success": False, "error": "Failed to fetch profit table"}
+            # Converter para epoch se houver
+            date_from_epoch = None
+            if last_sync_time:
+                date_from_epoch = int(last_sync_time.timestamp()) + 1  # +1s para não duplicar
+                logger.info(f"📅 Último trade no DB: {last_sync_time} (epoch: {date_from_epoch})")
+            else:
+                logger.info("📅 DB vazio - buscando histórico completo")
 
-            all_transactions = profit_response.get("profit_table", {}).get("transactions", [])
+            # 3. Paginação incremental (50 por vez para respeitar rate limit)
+            batch_size = 50
+            offset = 0
+            all_transactions = []
+
+            logger.info("🔄 Iniciando sync incremental...")
+
+            while True:
+                request_payload = {
+                    "profit_table": 1,
+                    "description": 1,
+                    "limit": batch_size,
+                    "offset": offset,
+                    "sort": "ASC"  # Do mais antigo para o novo
+                }
+
+                # Adicionar filtro de data se houver último sync
+                if date_from_epoch:
+                    request_payload["date_from"] = date_from_epoch
+
+                await ws.send(json.dumps(request_payload))
+                profit_response = json.loads(await ws.recv())
+
+                if "error" in profit_response:
+                    logger.error(f"Erro ao buscar histórico: {profit_response['error']['message']}")
+                    break
+
+                transactions = profit_response.get("profit_table", {}).get("transactions", [])
+
+                if not transactions:
+                    logger.info(f"✅ Fim da paginação (offset={offset})")
+                    break
+
+                all_transactions.extend(transactions)
+                logger.info(f"📥 Batch {offset//batch_size + 1}: {len(transactions)} trades")
+
+                # Se veio menos que o limite, chegamos ao fim
+                if len(transactions) < batch_size:
+                    logger.info(f"✅ Última página alcançada")
+                    break
+
+                offset += batch_size
+
+                # Rate limit protection
+                await asyncio.sleep(0.5)
 
             if not all_transactions:
                 logger.warning("Nenhum trade encontrado no histórico!")
